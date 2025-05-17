@@ -9,7 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
-import { Package, MapPin, CalendarCheck } from "lucide-react";
+import { Package, MapPin, CalendarCheck, Plus, Trash2 } from "lucide-react";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 
 const SellerOnboarding = () => {
   const { currentUser, isAuthenticated } = useAuth();
@@ -28,7 +35,7 @@ const SellerOnboarding = () => {
   // Delivery options
   const [offerPickup, setOfferPickup] = useState(true);
   const [offerDelivery, setOfferDelivery] = useState(false);
-  const [pickupAddress, setPickupAddress] = useState("");
+  const [pickupAddresses, setPickupAddresses] = useState([{ address: "", label: "" }]);
   const [deliveryZipCodes, setDeliveryZipCodes] = useState("");
   
   useEffect(() => {
@@ -47,16 +54,53 @@ const SellerOnboarding = () => {
     window.scrollTo(0, 0);
   };
   
+  const handleAddPickupAddress = () => {
+    if (pickupAddresses.length < 5) {
+      setPickupAddresses([...pickupAddresses, { address: "", label: "" }]);
+    } else {
+      toast({
+        title: "Maximum reached",
+        description: "You can have up to 5 pickup locations.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemovePickupAddress = (index) => {
+    if (pickupAddresses.length > 1) {
+      const newAddresses = [...pickupAddresses];
+      newAddresses.splice(index, 1);
+      setPickupAddresses(newAddresses);
+    } else {
+      toast({
+        description: "You need at least one pickup location.",
+      });
+    }
+  };
+
+  const handlePickupAddressChange = (index, field, value) => {
+    const newAddresses = [...pickupAddresses];
+    newAddresses[index] = { ...newAddresses[index], [field]: value };
+    setPickupAddresses(newAddresses);
+  };
+  
   const handleCompletion = async () => {
     setIsSubmitting(true);
     
     try {
       // In a real app, this would save the seller data to a database
       console.log("Seller data:", {
-        businessName, bio, phoneNumber,
-        offerPickup, offerDelivery, 
-        pickupAddress, deliveryZipCodes
+        businessName, 
+        bio, 
+        phoneNumber,
+        offerPickup, 
+        offerDelivery, 
+        pickupAddresses, 
+        deliveryZipCodes
       });
+      
+      // Save pickup addresses to localStorage for settings page
+      localStorage.setItem("pickupAddresses", JSON.stringify(pickupAddresses));
       
       // Mark onboarding as complete
       completeOnboarding();
@@ -87,19 +131,19 @@ const SellerOnboarding = () => {
           {/* Progress steps */}
           <div className="flex justify-between mb-8">
             <div className={`flex-1 text-center ${step >= 1 ? "text-nextplate-orange" : "text-gray-500"}`}>
-              <div className={`h-8 w-8 rounded-full ${step >= 1 ? "bg-nextplate-orange" : "bg-gray-700"} mx-auto mb-2 flex-center`}>
+              <div className={`h-8 w-8 rounded-full ${step >= 1 ? "bg-nextplate-orange" : "bg-gray-700"} mx-auto mb-2 flex items-center justify-center`}>
                 <span className="text-white">1</span>
               </div>
               <span className="text-sm">Basic Info</span>
             </div>
             <div className={`flex-1 text-center ${step >= 2 ? "text-nextplate-orange" : "text-gray-500"}`}>
-              <div className={`h-8 w-8 rounded-full ${step >= 2 ? "bg-nextplate-orange" : "bg-gray-700"} mx-auto mb-2 flex-center`}>
+              <div className={`h-8 w-8 rounded-full ${step >= 2 ? "bg-nextplate-orange" : "bg-gray-700"} mx-auto mb-2 flex items-center justify-center`}>
                 <span className="text-white">2</span>
               </div>
               <span className="text-sm">Delivery Options</span>
             </div>
             <div className={`flex-1 text-center ${step >= 3 ? "text-nextplate-orange" : "text-gray-500"}`}>
-              <div className={`h-8 w-8 rounded-full ${step >= 3 ? "bg-nextplate-orange" : "bg-gray-700"} mx-auto mb-2 flex-center`}>
+              <div className={`h-8 w-8 rounded-full ${step >= 3 ? "bg-nextplate-orange" : "bg-gray-700"} mx-auto mb-2 flex items-center justify-center`}>
                 <span className="text-white">3</span>
               </div>
               <span className="text-sm">Complete</span>
@@ -195,14 +239,62 @@ const SellerOnboarding = () => {
                   </div>
                   
                   {offerPickup && (
-                    <div className="animate-fade-in">
-                      <label className="block text-sm font-medium mb-1">Pickup Address</label>
-                      <Textarea
-                        value={pickupAddress}
-                        onChange={(e) => setPickupAddress(e.target.value)}
-                        placeholder="Where will customers pick up their food?"
-                        className="bg-black border-nextplate-lightgray text-white"
-                      />
+                    <div className="animate-fade-in space-y-4">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-sm font-medium">Pickup Locations (up to 5)</label>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleAddPickupAddress}
+                          disabled={pickupAddresses.length >= 5}
+                          className="border-nextplate-orange text-nextplate-orange hover:bg-nextplate-orange hover:text-white"
+                        >
+                          <Plus size={16} className="mr-1" /> Add Location
+                        </Button>
+                      </div>
+                      
+                      {pickupAddresses.map((address, index) => (
+                        <div key={index} className="space-y-2 bg-black bg-opacity-30 p-3 rounded-md">
+                          <div className="flex justify-between items-center">
+                            <h4 className="text-sm font-medium">Pickup Location {index + 1}</h4>
+                            {pickupAddresses.length > 1 && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleRemovePickupAddress(index)}
+                                className="h-8 text-red-400 hover:text-red-300 hover:bg-transparent p-0"
+                              >
+                                <Trash2 size={16} />
+                              </Button>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Location Name</label>
+                            <Input
+                              value={address.label}
+                              onChange={(e) => handlePickupAddressChange(index, 'label', e.target.value)}
+                              placeholder="E.g., Main Kitchen, Downtown Location"
+                              className="bg-black border-nextplate-lightgray text-white"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Full Address</label>
+                            <Textarea
+                              value={address.address}
+                              onChange={(e) => handlePickupAddressChange(index, 'address', e.target.value)}
+                              placeholder="Enter the full address for pickup"
+                              className="bg-black border-nextplate-lightgray text-white"
+                              rows={2}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <p className="text-xs text-gray-400 mt-1">
+                        You'll be able to select which locations are available for each pickup time slot.
+                      </p>
                     </div>
                   )}
                   
@@ -246,7 +338,7 @@ const SellerOnboarding = () => {
                 </h2>
                 
                 <div className="text-center">
-                  <div className="w-20 h-20 mx-auto bg-nextplate-orange rounded-full flex-center mb-6">
+                  <div className="w-20 h-20 mx-auto bg-nextplate-orange rounded-full flex items-center justify-center mb-6">
                     <Package size={40} className="text-white" />
                   </div>
                   

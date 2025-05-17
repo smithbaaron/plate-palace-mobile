@@ -16,6 +16,7 @@ import CustomerOnboarding from "./pages/customer/CustomerOnboarding";
 import PlateDetails from "./pages/plate/PlateDetails";
 import MealPrepDetails from "./pages/mealprep/MealPrepDetails";
 import Profile from "./pages/profile/Profile";
+import DeliverySettings from "./pages/seller/DeliverySettings";
 
 // Context
 import { AuthProvider } from "./context/AuthContext";
@@ -39,6 +40,7 @@ const App = () => (
               {/* Seller Routes */}
               <Route path="/seller/onboarding" element={<SellerOnboarding />} />
               <Route path="/seller/dashboard" element={<SellerDashboard />} />
+              <Route path="/seller/delivery-settings" element={<DeliverySettings />} />
               
               {/* Customer Routes */}
               <Route path="/customer/onboarding" element={<CustomerOnboarding />} />
