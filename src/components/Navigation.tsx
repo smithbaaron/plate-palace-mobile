@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -29,8 +28,11 @@ const Navigation = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
-              <span className="text-2xl font-bold text-white mr-1">Next</span>
-              <span className="text-2xl font-bold text-nextplate-orange">Plate</span>
+              <img 
+                src="/lovable-uploads/b6811eb7-aad2-470d-87d0-ef8e2cc34abe.png" 
+                alt="NextPlate Logo" 
+                className="h-9"
+              />
             </Link>
           </div>
           
