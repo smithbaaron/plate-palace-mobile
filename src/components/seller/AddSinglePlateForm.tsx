@@ -49,18 +49,30 @@ const formSchema = z.object({
   imageUrl: z.string().optional(),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+export type Plate = {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  nutritionalInfo?: string;
+  availableDate: Date;
+  imageUrl?: string;
+  soldCount: number;
+};
+
+export type PlateFormValues = z.infer<typeof formSchema>;
 
 interface AddSinglePlateFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSubmit?: (data: Omit<Plate, "id" | "soldCount">) => void;
 }
 
-const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({ open, onOpenChange }) => {
+const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({ open, onOpenChange, onSubmit }) => {
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   
-  const form = useForm<FormValues>({
+  const form = useForm<PlateFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
@@ -92,7 +104,7 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({ open, onOpenCha
     }
   };
 
-  const onSubmit = (data: FormValues) => {
+  const handleSubmit = (data: PlateFormValues) => {
     // Add image preview to the form data if available
     if (imagePreview) {
       data.imageUrl = imagePreview;
@@ -100,7 +112,19 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({ open, onOpenCha
 
     console.log("Form submitted:", data);
     
-    // Here you would typically send this data to your backend
+    // Call the onSubmit callback if it exists
+    if (onSubmit) {
+      onSubmit({
+        name: data.name,
+        quantity: data.quantity,
+        price: data.price,
+        nutritionalInfo: data.nutritionalInfo,
+        availableDate: data.availableDate,
+        imageUrl: data.imageUrl,
+      });
+    }
+    
+    // Show success toast
     toast({
       title: "Plate added successfully!",
       description: `${data.name} has been added to your menu.`,
@@ -123,7 +147,7 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({ open, onOpenCha
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             {/* Image Upload Field */}
             <div className="space-y-2">
               <FormLabel className="text-gray-300">Plate Image</FormLabel>
