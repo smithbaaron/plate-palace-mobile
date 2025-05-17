@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useUserType } from "@/context/UserTypeContext";
+import { Package, Calendar, Bell } from "lucide-react";
 
 const LandingPage = () => {
   const { isAuthenticated } = useAuth();

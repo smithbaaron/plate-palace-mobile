@@ -1,7 +1,8 @@
-
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Search, Package, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
