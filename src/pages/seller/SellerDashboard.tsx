@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -7,11 +6,13 @@ import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Calendar, PackageCheck, Bell, Users } from "lucide-react";
+import AddSinglePlateForm from "@/components/seller/AddSinglePlateForm";
 
 const SellerDashboard = () => {
   const { currentUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isAddPlateOpen, setIsAddPlateOpen] = useState(false);
   
   useEffect(() => {
     if (!isAuthenticated) {
@@ -19,13 +20,6 @@ const SellerDashboard = () => {
       return;
     }
   }, [isAuthenticated, navigate]);
-  
-  const handleCreatePlate = () => {
-    toast({
-      title: "Coming soon!",
-      description: "This feature will be available in the next update.",
-    });
-  };
   
   const handleCreateMealPrep = () => {
     toast({
@@ -49,7 +43,7 @@ const SellerDashboard = () => {
             
             <div className="flex space-x-3 mt-4 md:mt-0">
               <Button
-                onClick={handleCreatePlate}
+                onClick={() => setIsAddPlateOpen(true)}
                 className="bg-nextplate-orange hover:bg-orange-600 flex items-center"
               >
                 <Plus size={16} className="mr-1" />
@@ -83,7 +77,7 @@ const SellerDashboard = () => {
                   </p>
                   <div className="flex flex-col sm:flex-row justify-center gap-4">
                     <Button
-                      onClick={handleCreatePlate}
+                      onClick={() => setIsAddPlateOpen(true)}
                       className="bg-nextplate-orange hover:bg-orange-600"
                     >
                       <Plus size={16} className="mr-1" />
@@ -174,6 +168,12 @@ const SellerDashboard = () => {
           </div>
         </div>
       </div>
+      
+      {/* Add Single Plate Form Modal */}
+      <AddSinglePlateForm 
+        open={isAddPlateOpen} 
+        onOpenChange={setIsAddPlateOpen}
+      />
     </div>
   );
 };
