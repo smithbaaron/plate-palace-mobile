@@ -3,6 +3,8 @@ import React, { createContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { UserType } from "@/lib/userTypeUtils";
 import { fetchUserTypeData, updateUserTypeWithRetry, completeOnboardingWithRetry } from "@/services/userTypeService";
+// Re-export the hook from here to maintain backward compatibility
+export { useUserType } from "@/hooks/useUserTypeContext";
 
 interface UserTypeContextType {
   userType: UserType;
