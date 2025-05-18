@@ -4,9 +4,16 @@ import { Plate } from '@/components/seller/AddSinglePlateForm';
 import { useAuth } from '@/context/AuthContext';
 
 // Type definition for database plates
-export type DBPlate = Omit<Plate, 'availableDate'> & {
+export type DBPlate = {
+  id?: string;
   seller_id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  nutritional_info: string | null;
   available_date: string;
+  image_url: string | null;
+  sold_count: number;
 };
 
 // Convert a DB plate to a frontend plate
