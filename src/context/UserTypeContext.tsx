@@ -44,6 +44,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       const userData = await fetchUserTypeData(currentUser.id);
       
       if (userData) {
+        console.log("Synced user type data:", userData);
         setUserTypeState(userData.userType);
         setIsOnboarded(userData.isOnboarded);
       }
@@ -93,6 +94,9 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       // Set the state first for immediate UI update
       setUserTypeState(type);
       
+      // Add a delay before updating to ensure auth state is stable
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const success = await updateUserTypeWithRetry(currentUser.id, type);
       
       if (!success) {
@@ -104,6 +108,8 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       
       // After successful update, refresh user data to ensure consistency
       await resyncUserTypeData();
+      
+      return; // Explicitly return to indicate success
     } catch (error) {
       console.error("Error setting user type:", error);
       throw error;

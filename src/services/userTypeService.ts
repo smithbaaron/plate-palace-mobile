@@ -26,9 +26,9 @@ export const fetchUserTypeData = async (userId: string | undefined) => {
         break;
       } catch (error) {
         retryCount++;
-        console.warn(`Failed to get user data, retry ${retryCount}/${maxRetries}`);
+        console.warn(`Failed to get user data, retry ${retryCount}/${maxRetries}`, error);
         if (retryCount >= maxRetries) throw error;
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 500 * retryCount)); // Increasing backoff
       }
     }
     
@@ -53,19 +53,21 @@ export const updateUserTypeWithRetry = async (userId: string | undefined, type: 
   
   // Update the user in database with retry mechanism
   let success = false;
-  const maxRetries = 3;
+  const maxRetries = 5; // Increased from 3
   let retryCount = 0;
   
   while (retryCount < maxRetries && !success) {
     try {
+      console.log(`Attempt ${retryCount + 1}/${maxRetries} to update user type for ${userId} to ${type}`);
       success = await updateUserType(userId, type);
       if (!success) throw new Error("Failed to update user type");
+      console.log(`Successfully updated user type for ${userId} to ${type}`);
       break;
     } catch (error) {
       retryCount++;
-      console.warn(`Failed to update user type, retry ${retryCount}/${maxRetries}`);
+      console.warn(`Failed to update user type, retry ${retryCount}/${maxRetries}`, error);
       if (retryCount >= maxRetries) throw error;
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 700 * retryCount)); // Increasing backoff
     }
   }
   
@@ -85,19 +87,21 @@ export const completeOnboardingWithRetry = async (userId: string | undefined) =>
   
   // Update onboarding status with retry mechanism
   let success = false;
-  const maxRetries = 3;
+  const maxRetries = 5; // Increased from 3
   let retryCount = 0;
   
   while (retryCount < maxRetries && !success) {
     try {
+      console.log(`Attempt ${retryCount + 1}/${maxRetries} to complete onboarding for ${userId}`);
       success = await completeUserOnboarding(userId);
       if (!success) throw new Error("Failed to complete onboarding");
+      console.log(`Successfully completed onboarding for ${userId}`);
       break;
     } catch (error) {
       retryCount++;
-      console.warn(`Failed to update onboarding status, retry ${retryCount}/${maxRetries}`);
+      console.warn(`Failed to update onboarding status, retry ${retryCount}/${maxRetries}`, error);
       if (retryCount >= maxRetries) throw error;
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 700 * retryCount)); // Increasing backoff
     }
   }
   
