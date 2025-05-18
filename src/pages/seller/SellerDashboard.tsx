@@ -292,8 +292,8 @@ const SellerDashboard = () => {
                   <p className="text-2xl font-bold">0</p>
                 </div>
                 <div className="p-3 bg-black bg-opacity-50 rounded-lg">
-                  <p className="text-sm text-gray-400">Menu Items</p>
-                  <p className="text-2xl font-bold">{plates.length}</p>
+                  <p className="text-sm text-gray-400">Current Menu</p>
+                  <p className="text-2xl font-bold">{todayPlates.length}</p>
                 </div>
                 <div className="p-3 bg-black bg-opacity-50 rounded-lg">
                   <p className="text-sm text-gray-400">Followers</p>
