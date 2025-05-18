@@ -16,45 +16,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredUserType, 
   requireOnboarded = true 
 }) => {
-  const { isAuthenticated, loading, currentUser, checkAndResyncAuth } = useAuth();
-  const { userType, isOnboarded, resyncUserTypeData } = useUserType();
-  const [isChecking, setIsChecking] = useState(true);
-  const [checkCount, setCheckCount] = useState(0);
+  const { isAuthenticated, loading, currentUser } = useAuth();
+  const { userType, isOnboarded } = useUserType();
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
   const location = useLocation();
 
-  // Sync auth state on mount or when route changes, with safety check to prevent infinite loops
+  // Perform initial check only once when component mounts
   useEffect(() => {
-    let isMounted = true;
-    
-    const syncAuthState = async () => {
-      if (!isMounted) return;
-      
-      if (checkCount > 5) {
-        // Safety check to prevent infinite checking
-        console.warn("Auth check count exceeded limit, stopping checks");
-        setIsChecking(false);
-        return;
-      }
-      
-      setIsChecking(true);
-      await checkAndResyncAuth();
-      await resyncUserTypeData();
-      
-      if (isMounted) {
-        setIsChecking(false);
-        setCheckCount(prev => prev + 1);
-      }
-    };
-    
-    syncAuthState();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [location.pathname]);
+    if (!loading) {
+      setInitialCheckDone(true);
+    }
+  }, [loading]);
 
-  // Show loading state only if initial auth check is happening
-  if (loading && checkCount === 0) {
+  // Show loading state only during initial auth check
+  if (loading && !initialCheckDone) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <div className="animate-pulse">Loading...</div>
@@ -62,19 +37,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Don't show loading for subsequent checks to prevent freezing
-  if (isChecking && checkCount > 0) {
-    console.log("Checking auth state...");
-  }
+  // Only proceed with checks after the initial auth check is complete
+  if (!initialCheckDone) return null;
 
-  // If not authenticated after checks complete, redirect to login
-  if (!isAuthenticated && !loading && !isChecking) {
+  // If not authenticated, redirect to login
+  if (!isAuthenticated) {
     console.log("Not authenticated, redirecting to auth");
     return <Navigate to={`/auth${requiredUserType ? `?type=${requiredUserType}` : ''}`} state={{ from: location }} replace />;
   }
 
   // If user type is required but doesn't match
-  if (requiredUserType && userType !== requiredUserType && !loading && !isChecking) {
+  if (requiredUserType && userType !== requiredUserType) {
     console.log("User type mismatch", { required: requiredUserType, current: userType });
     
     // If they have a different user type, send them to their correct dashboard
@@ -89,7 +62,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // If onboarding is required but not completed
-  if (requireOnboarded && !isOnboarded && userType && !loading && !isChecking) {
+  if (requireOnboarded && !isOnboarded && userType) {
     console.log("Onboarding required but not completed", { userType, isOnboarded });
     return <Navigate to={`/${userType}/onboarding`} replace />;
   }

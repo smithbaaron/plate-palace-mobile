@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -20,48 +21,63 @@ const AuthPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { login, signup, isAuthenticated, currentUser, loading } = useAuth();
-  const { userType, setUserType, isOnboarded, navigateToAuth } = useUserType();
+  const { userType, setUserType, isOnboarded } = useUserType();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const location = useLocation();
   
-  // More reliable navigation logic after authentication
+  // Simplified and more reliable navigation logic
   useEffect(() => {
-    if (loading) return; // Don't do anything while still loading auth state
+    if (loading) return; // Skip while loading
     
-    if (isAuthenticated && currentUser) {
-      console.log("Auth state:", { isAuthenticated, userType, isOnboarded });
-      
-      if (userType) {
-        if (!isOnboarded) {
-          navigate(`/${userType}/onboarding`, { replace: true });
-        } else if (userType === "seller") {
-          navigate('/seller/dashboard', { replace: true });
-        } else if (userType === "customer") {
-          navigate('/customer/dashboard', { replace: true });
-        }
+    if (!isAuthenticated) return; // Skip if not authenticated
+    
+    console.log("Auth state in AuthPage:", { isAuthenticated, userType, isOnboarded });
+    
+    // If we have user type information, redirect accordingly
+    if (userType) {
+      if (!isOnboarded) {
+        console.log(`Redirecting to /${userType}/onboarding`);
+        navigate(`/${userType}/onboarding`, { replace: true });
       } else {
-        // If authenticated but no user type, go to the default type's onboarding
-        const selectedType = defaultType as UserType;
-        setUserType(selectedType).then(() => {
-          navigate(`/${selectedType}/onboarding`, { replace: true });
-        });
+        const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
+        console.log(`Redirecting to ${dashboardUrl}`);
+        navigate(dashboardUrl, { replace: true });
       }
+    } 
+    // If authenticated but no user type yet, set the default type and redirect to onboarding
+    else if (currentUser) {
+      console.log(`Setting user type to ${defaultType} and redirecting to onboarding`);
+      setUserType(defaultType as UserType)
+        .then(() => {
+          navigate(`/${defaultType}/onboarding`, { replace: true });
+        })
+        .catch(error => {
+          console.error("Error setting user type:", error);
+          toast({
+            title: "Error",
+            description: "Failed to set user type. Please try again.",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+        });
     }
-  }, [isAuthenticated, userType, isOnboarded, loading, navigate, defaultType]);
+  }, [isAuthenticated, userType, isOnboarded, loading, currentUser]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     try {
+      // Attempt login
+      console.log("Attempting login with:", email);
       await login(email, password);
       
-      // We'll let the useEffect handle the redirection once auth state is updated
       toast({
         title: "Login successful!",
         description: `Welcome back to NextPlate!`,
       });
+      
+      // The useEffect hook will handle redirection once auth state updates
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -87,14 +103,17 @@ const AuthPage = () => {
     }
     
     try {
+      console.log("Attempting signup with:", email, username);
       await signup(email, password, username);
-      const selectedType = defaultType as "seller" | "customer";
+      const selectedType = defaultType as UserType;
       await setUserType(selectedType);
       
       toast({
         title: "Account created!",
         description: `Welcome to NextPlate as a ${defaultType}!`,
       });
+      
+      // The useEffect hook will handle redirection once auth state updates
     } catch (error: any) {
       toast({
         title: "Signup failed",
