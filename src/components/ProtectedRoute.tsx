@@ -16,7 +16,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireOnboarded = true 
 }) => {
   const { isAuthenticated, loading, checkAndResyncAuth } = useAuth();
-  const { userType, isOnboarded, resyncUserTypeData } = useUserType();
+  const { userType, isOnboarded, resyncUserTypeData, navigateToAuth } = useUserType();
   const [isChecking, setIsChecking] = useState(true);
   const location = useLocation();
 

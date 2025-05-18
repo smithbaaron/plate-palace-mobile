@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/lib/supabase";
-import { useNavigate } from "react-router-dom";
 
 type UserType = "seller" | "customer" | null;
 
@@ -12,6 +11,7 @@ interface UserTypeContextType {
   isOnboarded: boolean;
   completeOnboarding: () => void;
   resyncUserTypeData: () => Promise<void>;
+  navigateToAuth: () => void;
 }
 
 const UserTypeContext = createContext<UserTypeContextType | undefined>(undefined);
@@ -24,18 +24,25 @@ export const useUserType = () => {
   return context;
 };
 
-export const UserTypeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface UserTypeProviderProps {
+  children: React.ReactNode;
+  navigateToAuth?: () => void;
+}
+
+export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({ 
+  children, 
+  navigateToAuth = () => window.location.href = '/auth'
+}) => {
   const { currentUser, checkAndResyncAuth } = useAuth();
   const [userType, setUserTypeState] = useState<UserType>(currentUser?.userType || null);
   const [isOnboarded, setIsOnboarded] = useState<boolean>(currentUser?.isOnboarded || false);
-  const navigate = useNavigate();
 
   // Resync user type data from backend
   const resyncUserTypeData = async () => {
     const isAuthenticated = await checkAndResyncAuth();
     
     if (!isAuthenticated) {
-      navigate('/auth');
+      navigateToAuth();
       return;
     }
 
@@ -109,7 +116,14 @@ export const UserTypeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   return (
-    <UserTypeContext.Provider value={{ userType, setUserType, isOnboarded, completeOnboarding, resyncUserTypeData }}>
+    <UserTypeContext.Provider value={{ 
+      userType, 
+      setUserType, 
+      isOnboarded, 
+      completeOnboarding, 
+      resyncUserTypeData,
+      navigateToAuth 
+    }}>
       {children}
     </UserTypeContext.Provider>
   );
