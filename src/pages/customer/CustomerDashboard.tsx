@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus } from "lucide-react";
+import { useNotifications } from "@/hooks/use-notifications";
 
 // Mock data for plates
 const MOCK_PLATES = [
@@ -65,6 +66,7 @@ const MOCK_MEAL_PREPS = [
 const CustomerDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
+  const { notifyInfo, notifySuccess } = useNotifications();
   
   // Filter items based on search
   const filteredPlates = searchQuery
@@ -82,6 +84,16 @@ const CustomerDashboard = () => {
         prep.description.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : MOCK_MEAL_PREPS;
+  
+  const handleOrderPlate = (plateId: string, plateName: string) => {
+    notifyInfo("Order Placed", `Your order for ${plateName} has been placed! 🍽️`);
+    // In the future, this would actually place the order
+  };
+
+  const handleViewMenu = (sellerName: string) => {
+    notifySuccess("Menu Loaded", `Viewing ${sellerName}'s menu`);
+    // In future this would navigate to the seller's menu
+  };
   
   return (
     <div className="min-h-screen bg-black text-white pb-16">
@@ -140,7 +152,14 @@ const CustomerDashboard = () => {
                         </p>
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-lg">${plate.price}</span>
-                          <Button size="sm" className="bg-nextplate-red hover:bg-red-600">
+                          <Button 
+                            size="sm" 
+                            className="bg-nextplate-red hover:bg-red-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOrderPlate(plate.id, plate.name);
+                            }}
+                          >
                             Order
                           </Button>
                         </div>
@@ -223,7 +242,10 @@ const CustomerDashboard = () => {
                   <p className="text-sm text-center text-gray-300 mb-4">
                     Homestyle comfort food with a modern twist
                   </p>
-                  <Button className="w-full bg-nextplate-red hover:bg-red-600">
+                  <Button 
+                    className="w-full bg-nextplate-red hover:bg-red-600"
+                    onClick={() => handleViewMenu("Taste of Home")}
+                  >
                     View Menu
                   </Button>
                 </div>

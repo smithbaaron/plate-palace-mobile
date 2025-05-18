@@ -1,7 +1,5 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,10 +16,11 @@ import AddSinglePlateForm, { Plate } from "@/components/seller/AddSinglePlateFor
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePlates } from "@/lib/plates-service";
+import { useNotifications } from "@/hooks/use-notifications";
 
 const SellerDashboard = () => {
   const { currentUser } = useAuth();
-  const { toast } = useToast();
+  const { notifySuccess, notifyError, notifyPlateAdded } = useNotifications();
   const { fetchPlates, addPlate } = usePlates();
   const [isAddPlateOpen, setIsAddPlateOpen] = useState(false);
   const [plates, setPlates] = useState<Plate[]>([]);
@@ -39,11 +38,7 @@ const SellerDashboard = () => {
       } catch (err) {
         console.error("Error loading plates:", err);
         setError("Failed to load your menu. Please try again.");
-        toast({
-          title: "Error loading plates",
-          description: "Could not load your menu. Please try again.",
-          variant: "destructive",
-        });
+        notifyError("Error loading plates", "Could not load your menu. Please try again.");
       } finally {
         setIsLoading(false);
       }
@@ -53,10 +48,7 @@ const SellerDashboard = () => {
   }, []);
   
   const handleCreateMealPrep = () => {
-    toast({
-      title: "Coming soon!",
-      description: "This feature will be available in the next update.",
-    });
+    notifyInfo("Coming soon!", "This feature will be available in the next update.");
   };
 
   const handleAddPlate = async (newPlateData: Omit<Plate, "id" | "soldCount">) => {
@@ -67,17 +59,11 @@ const SellerDashboard = () => {
       // Update local state with the new plate
       setPlates(prevPlates => [...prevPlates, savedPlate]);
       
-      toast({
-        title: "Plate added successfully!",
-        description: `${newPlateData.name} has been added to your menu.`,
-      });
+      // Notify user of success
+      notifyPlateAdded(newPlateData.name);
     } catch (err) {
       console.error("Error adding plate:", err);
-      toast({
-        title: "Error adding plate",
-        description: "Could not save your plate. Please try again.",
-        variant: "destructive",
-      });
+      notifyError("Error adding plate", "Could not save your plate. Please try again.");
     }
   };
 
@@ -163,7 +149,13 @@ const SellerDashboard = () => {
             <div className="mb-6 p-4 bg-red-900 bg-opacity-30 border border-red-500 rounded-lg">
               <p className="text-red-300">{error}</p>
               <Button 
-                onClick={() => fetchPlates().then(setPlates).catch(err => setError("Failed to reload plates."))} 
+                onClick={() => fetchPlates()
+                  .then(setPlates)
+                  .then(() => notifySuccess("Plates loaded", "Successfully reloaded your menu."))
+                  .catch(err => {
+                    setError("Failed to reload plates.");
+                    notifyError("Error reloading", "Failed to reload your menu.");
+                  })} 
                 variant="outline" 
                 className="mt-2 text-white border-red-500 hover:bg-red-900"
               >

@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { NotificationProvider } from "@/context/NotificationContext";
 
 // Pages
 import LandingPage from "./pages/LandingPage";
@@ -31,66 +32,68 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <UserTypeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/auth" element={<AuthPage />} />
-              
-              {/* Seller Routes */}
-              <Route path="/seller/onboarding" element={
-                <ProtectedRoute requiredUserType="seller" requireOnboarded={false}>
-                  <SellerOnboarding />
-                </ProtectedRoute>
-              } />
-              <Route path="/seller/dashboard" element={
-                <ProtectedRoute requiredUserType="seller" requireOnboarded={true}>
-                  <SellerDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/seller/delivery-settings" element={
-                <ProtectedRoute requiredUserType="seller" requireOnboarded={true}>
-                  <DeliverySettings />
-                </ProtectedRoute>
-              } />
-              
-              {/* Customer Routes */}
-              <Route path="/customer/onboarding" element={
-                <ProtectedRoute requiredUserType="customer" requireOnboarded={false}>
-                  <CustomerOnboarding />
-                </ProtectedRoute>
-              } />
-              <Route path="/customer/dashboard" element={
-                <ProtectedRoute requiredUserType="customer" requireOnboarded={true}>
-                  <CustomerDashboard />
-                </ProtectedRoute>
-              } />
-              
-              {/* Shared Routes */}
-              <Route path="/plate/:id" element={
-                <ProtectedRoute>
-                  <PlateDetails />
-                </ProtectedRoute>
-              } />
-              <Route path="/mealprep/:id" element={
-                <ProtectedRoute>
-                  <MealPrepDetails />
-                </ProtectedRoute>
-              } />
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              } />
-              
-              {/* 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        <NotificationProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/auth" element={<AuthPage />} />
+                
+                {/* Seller Routes */}
+                <Route path="/seller/onboarding" element={
+                  <ProtectedRoute requiredUserType="seller" requireOnboarded={false}>
+                    <SellerOnboarding />
+                  </ProtectedRoute>
+                } />
+                <Route path="/seller/dashboard" element={
+                  <ProtectedRoute requiredUserType="seller" requireOnboarded={true}>
+                    <SellerDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/seller/delivery-settings" element={
+                  <ProtectedRoute requiredUserType="seller" requireOnboarded={true}>
+                    <DeliverySettings />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Customer Routes */}
+                <Route path="/customer/onboarding" element={
+                  <ProtectedRoute requiredUserType="customer" requireOnboarded={false}>
+                    <CustomerOnboarding />
+                  </ProtectedRoute>
+                } />
+                <Route path="/customer/dashboard" element={
+                  <ProtectedRoute requiredUserType="customer" requireOnboarded={true}>
+                    <CustomerDashboard />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Shared Routes */}
+                <Route path="/plate/:id" element={
+                  <ProtectedRoute>
+                    <PlateDetails />
+                  </ProtectedRoute>
+                } />
+                <Route path="/mealprep/:id" element={
+                  <ProtectedRoute>
+                    <MealPrepDetails />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } />
+                
+                {/* 404 */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </NotificationProvider>
       </UserTypeProvider>
     </AuthProvider>
   </QueryClientProvider>

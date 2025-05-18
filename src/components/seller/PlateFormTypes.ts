@@ -32,3 +32,30 @@ export type Plate = {
 };
 
 export type PlateFormValues = z.infer<typeof formSchema>;
+
+// Order Status Types for Notification System
+export type OrderStatus = "pending" | "preparing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
+
+export const OrderStatusDisplay: Record<OrderStatus, string> = {
+  pending: "Pending",
+  preparing: "Preparing",
+  ready: "Ready for Pickup/Delivery",
+  out_for_delivery: "Out for Delivery",
+  delivered: "Delivered",
+  cancelled: "Cancelled"
+};
+
+// Notification Event Types
+export type NotificationEvent = 
+  | "plate_added" 
+  | "order_status_changed"
+  | "new_follower"
+  | "promotion_launched"
+  | "review_received";
+
+export interface NotificationPayload {
+  event: NotificationEvent;
+  data: Record<string, any>; // Specific data related to the event
+  timestamp: number;
+  targetUserIds?: string[];
+}
