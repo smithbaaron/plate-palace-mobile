@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.plates (
     available_date timestamptz NOT NULL,
     image_url text,
     sold_count integer DEFAULT 0,
+    size text DEFAULT 'M', -- Added size field
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
 );
@@ -41,7 +42,7 @@ ON public.plates
 FOR DELETE
 USING (auth.uid() = seller_id);
 
--- Create policy for customers to view available plates
+-- Create policy for customers to view plates
 CREATE POLICY "Customers can view plates" 
 ON public.plates
 FOR SELECT

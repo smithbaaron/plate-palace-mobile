@@ -34,6 +34,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
+// Define plate sizes
+export type PlateSize = "S" | "M" | "L";
 
 // Define the form schema with validation rules
 const formSchema = z.object({
@@ -47,6 +51,7 @@ const formSchema = z.object({
     message: "Date cannot be in the past",
   }),
   imageUrl: z.string().optional(),
+  size: z.enum(["S", "M", "L"]).default("M"),
 });
 
 export type Plate = {
@@ -58,6 +63,7 @@ export type Plate = {
   availableDate: Date;
   imageUrl?: string;
   soldCount: number;
+  size: PlateSize;
 };
 
 export type PlateFormValues = z.infer<typeof formSchema>;
@@ -81,6 +87,7 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({ open, onOpenCha
       nutritionalInfo: "",
       availableDate: new Date(new Date().setHours(0, 0, 0, 0)),
       imageUrl: "",
+      size: "M",
     },
   });
 
@@ -121,6 +128,7 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({ open, onOpenCha
         nutritionalInfo: data.nutritionalInfo,
         availableDate: data.availableDate,
         imageUrl: data.imageUrl,
+        size: data.size,
       });
     }
     
@@ -206,6 +214,53 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({ open, onOpenCha
                       {...field}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Plate Size Selection */}
+            <FormField
+              control={form.control}
+              name="size"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel className="text-gray-300">Plate Size *</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="flex flex-row space-x-4"
+                    >
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="S" className="border-nextplate-orange text-nextplate-orange" />
+                        </FormControl>
+                        <FormLabel className="font-normal text-gray-300 cursor-pointer">
+                          Small
+                        </FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="M" className="border-nextplate-orange text-nextplate-orange" />
+                        </FormControl>
+                        <FormLabel className="font-normal text-gray-300 cursor-pointer">
+                          Medium
+                        </FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="L" className="border-nextplate-orange text-nextplate-orange" />
+                        </FormControl>
+                        <FormLabel className="font-normal text-gray-300 cursor-pointer">
+                          Large
+                        </FormLabel>
+                      </FormItem>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormDescription className="text-gray-500">
+                    Select the size of your plate offering
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
