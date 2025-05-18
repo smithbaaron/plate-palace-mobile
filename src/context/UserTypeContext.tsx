@@ -1,7 +1,8 @@
 
-import React, { createContext, useState, useEffect, useContext } from "react";
+import React, { createContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
-import { UserType, getUserTypeData, updateUserType, completeUserOnboarding } from "@/lib/userTypeUtils";
+import { UserType } from "@/lib/userTypeUtils";
+import { fetchUserTypeData, updateUserTypeWithRetry, completeOnboardingWithRetry } from "@/services/userTypeService";
 
 interface UserTypeContextType {
   userType: UserType;
@@ -12,15 +13,7 @@ interface UserTypeContextType {
   navigateToAuth: () => void;
 }
 
-const UserTypeContext = createContext<UserTypeContextType | undefined>(undefined);
-
-export const useUserType = () => {
-  const context = useContext(UserTypeContext);
-  if (!context) {
-    throw new Error("useUserType must be used within a UserTypeProvider");
-  }
-  return context;
-};
+export const UserTypeContext = createContext<UserTypeContextType | undefined>(undefined);
 
 interface UserTypeProviderProps {
   children: React.ReactNode;
@@ -46,23 +39,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
         return;
       }
 
-      // Get fresh data from the database with retry mechanism
-      const maxRetries = 3;
-      let retryCount = 0;
-      let userData;
-      
-      while (retryCount < maxRetries) {
-        try {
-          userData = await getUserTypeData(currentUser.id);
-          console.log("Resynced user type data:", userData);
-          break;
-        } catch (error) {
-          retryCount++;
-          console.warn(`Failed to get user data, retry ${retryCount}/${maxRetries}`);
-          if (retryCount >= maxRetries) throw error;
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
+      const userData = await fetchUserTypeData(currentUser.id);
       
       if (userData) {
         setUserTypeState(userData.userType);
@@ -114,23 +91,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       // Set the state first for immediate UI update
       setUserTypeState(type);
       
-      // Update the user in Supabase with retry mechanism
-      let success = false;
-      const maxRetries = 3;
-      let retryCount = 0;
-      
-      while (retryCount < maxRetries && !success) {
-        try {
-          success = await updateUserType(currentUser.id, type);
-          if (!success) throw new Error("Failed to update user type");
-          break;
-        } catch (error) {
-          retryCount++;
-          console.warn(`Failed to update user type, retry ${retryCount}/${maxRetries}`);
-          if (retryCount >= maxRetries) throw error;
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
+      const success = await updateUserTypeWithRetry(currentUser.id, type);
       
       if (!success) {
         // Revert state if update fails
@@ -160,23 +121,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       // Set the state first for immediate UI update
       setIsOnboarded(true);
       
-      // Update the user in Supabase with retry mechanism
-      let success = false;
-      const maxRetries = 3;
-      let retryCount = 0;
-      
-      while (retryCount < maxRetries && !success) {
-        try {
-          success = await completeUserOnboarding(currentUser.id);
-          if (!success) throw new Error("Failed to complete onboarding");
-          break;
-        } catch (error) {
-          retryCount++;
-          console.warn(`Failed to update onboarding status, retry ${retryCount}/${maxRetries}`);
-          if (retryCount >= maxRetries) throw error;
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
+      const success = await completeOnboardingWithRetry(currentUser.id);
       
       if (!success) {
         // Revert state if update fails
