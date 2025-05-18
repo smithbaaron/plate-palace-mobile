@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -9,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
-import { Package, MapPin, CalendarCheck, Plus, Trash2 } from "lucide-react";
+import { Package, MapPin, CalendarCheck, Plus, Trash2, AlertCircle } from "lucide-react";
 import { 
   Select,
   SelectContent,
@@ -32,6 +31,13 @@ const SellerOnboarding = () => {
   const [bio, setBio] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   
+  // Form validation
+  const [formErrors, setFormErrors] = useState({
+    businessName: false,
+    bio: false,
+    phoneNumber: false
+  });
+  
   // Delivery options
   const [offerPickup, setOfferPickup] = useState(true);
   const [offerDelivery, setOfferDelivery] = useState(false);
@@ -44,7 +50,27 @@ const SellerOnboarding = () => {
     }
   }, [isAuthenticated, navigate]);
   
+  const validateBasicInfo = () => {
+    const errors = {
+      businessName: !businessName.trim(),
+      bio: !bio.trim(),
+      phoneNumber: !phoneNumber.trim()
+    };
+    
+    setFormErrors(errors);
+    return !Object.values(errors).some(Boolean);
+  };
+  
   const handleNextStep = () => {
+    if (step === 1 && !validateBasicInfo()) {
+      toast({
+        title: "Required Fields",
+        description: "Please fill in all required fields before proceeding.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setStep(step + 1);
     window.scrollTo(0, 0);
   };
@@ -122,6 +148,9 @@ const SellerOnboarding = () => {
     }
   };
   
+  // Check if all required fields are filled
+  const isBasicInfoComplete = businessName.trim() && bio.trim() && phoneNumber.trim();
+  
   return (
     <div className="min-h-screen bg-black text-white">
       <Navigation />
@@ -160,34 +189,67 @@ const SellerOnboarding = () => {
                 
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Store Name</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Store Name <span className="text-red-500">*</span>
+                    </label>
                     <Input
                       value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
+                      onChange={(e) => {
+                        setBusinessName(e.target.value);
+                        setFormErrors({...formErrors, businessName: false});
+                      }}
                       placeholder="Your kitchen or business name"
-                      className="bg-black border-nextplate-lightgray text-white"
+                      className={`bg-black border-nextplate-lightgray text-white ${formErrors.businessName ? 'border-red-500' : ''}`}
+                      required
                     />
+                    {formErrors.businessName && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center">
+                        <AlertCircle size={12} className="mr-1" /> Store name is required
+                      </p>
+                    )}
                     <p className="text-xs text-gray-400 mt-1">This is how customers will find your store</p>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium mb-1">Description</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Description <span className="text-red-500">*</span>
+                    </label>
                     <Textarea
                       value={bio}
-                      onChange={(e) => setBio(e.target.value)}
+                      onChange={(e) => {
+                        setBio(e.target.value);
+                        setFormErrors({...formErrors, bio: false});
+                      }}
                       placeholder="Tell customers about your food style, specialties, etc."
-                      className="bg-black border-nextplate-lightgray text-white min-h-[100px]"
+                      className={`bg-black border-nextplate-lightgray text-white min-h-[100px] ${formErrors.bio ? 'border-red-500' : ''}`}
+                      required
                     />
+                    {formErrors.bio && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center">
+                        <AlertCircle size={12} className="mr-1" /> Description is required
+                      </p>
+                    )}
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium mb-1">Contact Phone</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Contact Phone <span className="text-red-500">*</span>
+                    </label>
                     <Input
                       value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      onChange={(e) => {
+                        setPhoneNumber(e.target.value);
+                        setFormErrors({...formErrors, phoneNumber: false});
+                      }}
                       placeholder="Phone number for customers to contact you"
-                      className="bg-black border-nextplate-lightgray text-white"
+                      className={`bg-black border-nextplate-lightgray text-white ${formErrors.phoneNumber ? 'border-red-500' : ''}`}
+                      required
                     />
+                    {formErrors.phoneNumber && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center">
+                        <AlertCircle size={12} className="mr-1" /> Contact phone is required
+                      </p>
+                    )}
                   </div>
                 </div>
                 
@@ -195,6 +257,7 @@ const SellerOnboarding = () => {
                   <Button
                     onClick={handleNextStep}
                     className="bg-nextplate-orange hover:bg-orange-600"
+                    disabled={!isBasicInfoComplete}
                   >
                     Next: Delivery Options
                   </Button>
