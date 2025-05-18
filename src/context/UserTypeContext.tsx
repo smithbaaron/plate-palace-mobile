@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/lib/supabase";
+import { useNavigate } from "react-router-dom";
 
 type UserType = "seller" | "customer" | null;
 
@@ -10,6 +11,7 @@ interface UserTypeContextType {
   setUserType: (type: UserType) => void;
   isOnboarded: boolean;
   completeOnboarding: () => void;
+  resyncUserTypeData: () => Promise<void>;
 }
 
 const UserTypeContext = createContext<UserTypeContextType | undefined>(undefined);
@@ -23,11 +25,21 @@ export const useUserType = () => {
 };
 
 export const UserTypeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, checkAndResyncAuth } = useAuth();
   const [userType, setUserTypeState] = useState<UserType>(currentUser?.userType || null);
   const [isOnboarded, setIsOnboarded] = useState<boolean>(currentUser?.isOnboarded || false);
+  const navigate = useNavigate();
 
-  useEffect(() => {
+  // Resync user type data from backend
+  const resyncUserTypeData = async () => {
+    const isAuthenticated = await checkAndResyncAuth();
+    
+    if (!isAuthenticated) {
+      navigate('/auth');
+      return;
+    }
+
+    // currentUser will be updated by checkAndResyncAuth
     if (currentUser) {
       setUserTypeState(currentUser.userType);
       setIsOnboarded(currentUser.isOnboarded);
@@ -35,7 +47,34 @@ export const UserTypeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setUserTypeState(null);
       setIsOnboarded(false);
     }
+  };
+
+  useEffect(() => {
+    // Update state when currentUser changes
+    if (currentUser) {
+      setUserTypeState(currentUser.userType);
+      setIsOnboarded(currentUser.isOnboarded);
+    } else {
+      setUserTypeState(null);
+      setIsOnboarded(false);
+    }
+
+    // Resync on mount to handle LocalStorage changes outside app flow
+    resyncUserTypeData();
   }, [currentUser]);
+
+  // Listen for storage events (for multi-tab/window sync)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      resyncUserTypeData();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const setUserType = async (type: UserType) => {
     setUserTypeState(type);
@@ -70,7 +109,7 @@ export const UserTypeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   return (
-    <UserTypeContext.Provider value={{ userType, setUserType, isOnboarded, completeOnboarding }}>
+    <UserTypeContext.Provider value={{ userType, setUserType, isOnboarded, completeOnboarding, resyncUserTypeData }}>
       {children}
     </UserTypeContext.Provider>
   );

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useUserType } from '@/context/UserTypeContext';
@@ -15,12 +15,25 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredUserType, 
   requireOnboarded = true 
 }) => {
-  const { isAuthenticated, loading } = useAuth();
-  const { userType, isOnboarded } = useUserType();
+  const { isAuthenticated, loading, checkAndResyncAuth } = useAuth();
+  const { userType, isOnboarded, resyncUserTypeData } = useUserType();
+  const [isChecking, setIsChecking] = useState(true);
   const location = useLocation();
 
+  // Sync auth state on mount or when route changes
+  useEffect(() => {
+    const syncAuthState = async () => {
+      setIsChecking(true);
+      await checkAndResyncAuth();
+      await resyncUserTypeData();
+      setIsChecking(false);
+    };
+    
+    syncAuthState();
+  }, [location.pathname]);
+
   // Show loading state while auth is being checked
-  if (loading) {
+  if (loading || isChecking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <div className="animate-pulse">Loading...</div>

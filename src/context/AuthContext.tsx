@@ -2,6 +2,7 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { useNavigate } from "react-router-dom";
 
 interface User {
   id: string;
@@ -18,6 +19,7 @@ interface AuthContextType {
   signup: (email: string, password: string, username: string) => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
+  checkAndResyncAuth: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -66,24 +68,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   };
 
-  // Set up the auth state listener
-  useEffect(() => {
-    setLoading(true);
-    
-    // Get the initial session
-    const initializeAuth = async () => {
+  // Function to check and resync auth state
+  const checkAndResyncAuth = async (): Promise<boolean> => {
+    try {
+      setLoading(true);
       const { data: { session: currentSession } } = await supabase.auth.getSession();
-      setSession(currentSession);
       
-      if (currentSession?.user) {
-        const formattedUser = await formatUser(currentSession.user);
-        setCurrentUser(formattedUser);
+      if (!currentSession) {
+        setCurrentUser(null);
+        setSession(null);
+        return false;
       }
       
+      const formattedUser = await formatUser(currentSession.user);
+      setCurrentUser(formattedUser);
+      setSession(currentSession);
+      return !!formattedUser;
+    } catch (error) {
+      console.error("Error checking auth state:", error);
+      return false;
+    } finally {
       setLoading(false);
-    };
-    
-    initializeAuth();
+    }
+  };
+
+  // Set up the auth state listener
+  useEffect(() => {
+    // Initial auth check on mount
+    checkAndResyncAuth();
     
     // Set up the subscription for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
@@ -100,8 +112,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
     
+    // Add event listener for storage changes (if user clears localStorage in another tab)
+    const handleStorageChange = () => {
+      checkAndResyncAuth();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
@@ -184,6 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signup,
     logout,
     loading,
+    checkAndResyncAuth,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
