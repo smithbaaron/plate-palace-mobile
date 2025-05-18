@@ -51,10 +51,10 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       
       setUserTypeState(userData.userType);
       setIsOnboarded(userData.isOnboarded);
-      return userData;
+      // Don't return the userData object since the function is supposed to return void
     } catch (error) {
       console.error("Error syncing user type data:", error);
-      return { userType: null, isOnboarded: false };
+      // Don't return anything here either
     } finally {
       setIsInitialized(true);
     }
