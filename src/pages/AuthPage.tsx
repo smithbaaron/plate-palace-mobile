@@ -2,7 +2,7 @@
 import React, { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { useUserType } from "@/context/UserTypeContext";
+import { useUserType } from "@/hooks/useUserTypeContext";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
 import { UserType } from "@/lib/userTypeUtils";
@@ -89,13 +89,35 @@ const AuthPage = () => {
   const handleSignup = async (email: string, password: string, username: string) => {
     try {
       console.log("Attempting signup with:", email, username);
-      await signup(email, password, username);
+      const signupResult = await signup(email, password, username);
+      
+      if (!signupResult?.user) {
+        console.error("Signup returned no user");
+        toast({
+          title: "Signup Error",
+          description: "Account creation failed. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log("Signup successful, waiting for auth state to update");
       
       // Give more time for Supabase to complete the signup process
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Force refresh auth state to make sure we have the latest user data
-      const authSuccess = await checkAndResyncAuth();
+      let authSuccess = false;
+      let retryCount = 0;
+      
+      while (!authSuccess && retryCount < 3) {
+        console.log(`Attempt ${retryCount + 1} to refresh auth state`);
+        authSuccess = await checkAndResyncAuth();
+        if (!authSuccess) {
+          retryCount++;
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
       
       if (!authSuccess) {
         console.error("Signup was successful but could not retrieve user data");
@@ -107,7 +129,7 @@ const AuthPage = () => {
         return;
       }
       
-      console.log("Auth refreshed after signup:", { currentUser: authSuccess });
+      console.log("Auth refreshed after signup");
       
       // Also sync user type data before setting new user type
       await resyncUserTypeData();
@@ -115,19 +137,19 @@ const AuthPage = () => {
       // Set user type with improved retry mechanism
       const selectedType = defaultType as UserType;
       let typeSetSuccess = false;
-      let retryCount = 0;
+      let typeRetryCount = 0;
       
-      while (!typeSetSuccess && retryCount < 5) {
+      while (!typeSetSuccess && typeRetryCount < 5) {
         try {
-          console.log(`Attempt ${retryCount + 1} to set user type to ${selectedType}`);
+          console.log(`Attempt ${typeRetryCount + 1} to set user type to ${selectedType}`);
           await setUserType(selectedType);
           typeSetSuccess = true;
           console.log("User type set successfully");
         } catch (error) {
-          retryCount++;
-          console.error(`Error setting user type (attempt ${retryCount})`, error);
-          if (retryCount >= 5) throw error;
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          typeRetryCount++;
+          console.error(`Error setting user type (attempt ${typeRetryCount})`, error);
+          if (typeRetryCount >= 5) throw error;
+          await new Promise(resolve => setTimeout(resolve, 1000 * typeRetryCount));
         }
       }
       

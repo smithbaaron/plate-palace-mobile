@@ -110,8 +110,8 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       // Set the state first for immediate UI update
       setUserTypeState(type);
       
-      // Add a delay before updating to ensure auth state is stable
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Add a longer delay before updating to ensure auth state is stable
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Use the retry mechanism to update the user type
       const success = await updateUserTypeWithRetry(currentUser.id, type);

@@ -27,12 +27,18 @@ export const formatUser = async (supabaseUser: SupabaseUser | null): Promise<Use
     const username = supabaseUser.user_metadata?.username || supabaseUser.email?.split('@')[0] || '';
     
     try {
-      await supabase.from('profiles').upsert({
+      // Attempt to create the profile if it doesn't exist
+      const { error: insertError } = await supabase.from('profiles').upsert({
         id: supabaseUser.id,
         username: username,
         user_type: null,
         is_onboarded: false
       });
+      
+      if (insertError) {
+        console.error('Error creating profile during format:', insertError);
+        throw insertError;
+      }
       
       return {
         id: supabaseUser.id,
@@ -75,6 +81,8 @@ export const loginWithEmail = async (email: string, password: string) => {
 
 export const signupWithEmail = async (email: string, password: string, username: string) => {
   try {
+    console.log("Starting signup process for:", email, username);
+    
     // Create the user in Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -86,42 +94,61 @@ export const signupWithEmail = async (email: string, password: string, username:
       },
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Signup error:", error);
+      throw error;
+    }
+    
+    if (!data.user) {
+      console.error("No user returned after signup");
+      throw new Error("Failed to create user: undefined");
+    }
+    
+    console.log("User created successfully:", data.user.id);
     
     // Wait a moment to ensure the auth session is established
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Get the current user to ensure we have the most up-to-date session
+    // Make sure we have a current session
+    const { data: sessionData } = await supabase.auth.getSession();
+    
+    if (!sessionData.session) {
+      console.warn("No session established after signup, trying to get user");
+    }
+    
+    // Get the current user to ensure we have the most up-to-date data
     const { data: currentUserData } = await supabase.auth.getUser();
     const user = currentUserData?.user || data.user;
     
     if (!user) {
-      throw new Error("Could not retrieve user data after signup");
+      console.error("Could not retrieve user data after signup");
+      throw new Error("Failed to create user: No user data");
     }
     
-    console.log("Creating profile for new user:", user.id);
+    console.log("Creating profile for user:", user.id);
     
-    // Create a profile entry in the profiles table
+    // Create profile entry
     const { error: profileError } = await supabase
       .from('profiles')
       .upsert({
         id: user.id,
-        username: username,
-        user_type: null,
+        username,
+        user_type: null, // Will be set separately
         is_onboarded: false,
       }, { 
         onConflict: 'id',
         ignoreDuplicates: false
       });
-      
+    
     if (profileError) {
-      console.error("Error creating profile", profileError);
-      throw new Error(`Failed to create user profile: ${profileError.message}`);
+      console.error("Error creating profile during signup:", profileError);
+      // We'll continue since the user auth was created, profile might be created by trigger
+    } else {
+      console.log("Profile created successfully for user:", user.id);
     }
     
-    console.log("Profile created successfully for user:", user.id);
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error during signup process:", error);
     throw error;
   }
