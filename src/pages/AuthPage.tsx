@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUserType } from "@/context/UserTypeContext";
 import { Button } from "@/components/ui/button";
@@ -20,22 +19,36 @@ const AuthPage = () => {
   const [username, setUsername] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { login, signup, isAuthenticated, loading } = useAuth();
-  const { setUserType, userType } = useUserType();
+  const { login, signup, isAuthenticated, currentUser, loading } = useAuth();
+  const { userType, setUserType, isOnboarded, navigateToAuth } = useUserType();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   
+  // More reliable navigation logic after authentication
   useEffect(() => {
-    if (isAuthenticated && userType) {
-      if (userType === "seller") {
-        navigate(`/seller/dashboard`);
-      } else if (userType === "customer") {
-        navigate(`/customer/dashboard`);
+    if (loading) return; // Don't do anything while still loading auth state
+    
+    if (isAuthenticated && currentUser) {
+      console.log("Auth state:", { isAuthenticated, userType, isOnboarded });
+      
+      if (userType) {
+        if (!isOnboarded) {
+          navigate(`/${userType}/onboarding`, { replace: true });
+        } else if (userType === "seller") {
+          navigate('/seller/dashboard', { replace: true });
+        } else if (userType === "customer") {
+          navigate('/customer/dashboard', { replace: true });
+        }
       } else {
-        navigate(`/${defaultType}/onboarding`);
+        // If authenticated but no user type, go to the default type's onboarding
+        const selectedType = defaultType as UserType;
+        setUserType(selectedType).then(() => {
+          navigate(`/${selectedType}/onboarding`, { replace: true });
+        });
       }
     }
-  }, [isAuthenticated, userType, navigate, defaultType]);
+  }, [isAuthenticated, userType, isOnboarded, loading, navigate, defaultType]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,13 +56,11 @@ const AuthPage = () => {
     
     try {
       await login(email, password);
-      // We'll let the useEffect handle the redirection once auth state is updated
-      const selectedType = defaultType as "seller" | "customer";
-      await setUserType(selectedType);
       
+      // We'll let the useEffect handle the redirection once auth state is updated
       toast({
         title: "Login successful!",
-        description: `Welcome back to NextPlate as a ${defaultType}!`,
+        description: `Welcome back to NextPlate!`,
       });
     } catch (error: any) {
       toast({
@@ -57,7 +68,6 @@ const AuthPage = () => {
         description: error.message || "Please check your credentials and try again.",
         variant: "destructive",
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -91,7 +101,6 @@ const AuthPage = () => {
         description: error.message || "Please check your information and try again.",
         variant: "destructive",
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -145,9 +154,9 @@ const AuthPage = () => {
                   className={`w-full ${
                     defaultType === "seller" ? "bg-nextplate-orange hover:bg-orange-600" : "bg-nextplate-red hover:bg-red-600"
                   }`}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || loading}
                 >
-                  {isSubmitting ? "Logging in..." : "Log In"}
+                  {isSubmitting || loading ? "Processing..." : "Log In"}
                 </Button>
               </form>
             </TabsContent>
@@ -195,9 +204,9 @@ const AuthPage = () => {
                   className={`w-full ${
                     defaultType === "seller" ? "bg-nextplate-orange hover:bg-orange-600" : "bg-nextplate-red hover:bg-red-600"
                   }`}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || loading}
                 >
-                  {isSubmitting ? "Creating account..." : "Create Account"}
+                  {isSubmitting || loading ? "Creating account..." : "Create Account"}
                 </Button>
               </form>
             </TabsContent>
