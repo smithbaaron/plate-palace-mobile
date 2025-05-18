@@ -1,16 +1,8 @@
 
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, { createContext, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { useNavigate } from "react-router-dom";
-
-interface User {
-  id: string;
-  email: string;
-  username: string;
-  userType: "seller" | "customer" | null;
-  isOnboarded: boolean;
-}
+import { Session } from '@supabase/supabase-js';
+import { User, formatUser, loginWithEmail, signupWithEmail, logoutUser } from "@/lib/authUtils";
 
 interface AuthContextType {
   currentUser: User | null;
@@ -25,7 +17,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context = React.useContext(AuthContext);
   if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
@@ -36,37 +28,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
-
-  // Function to convert Supabase user to our app user
-  const formatUser = async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
-    if (!supabaseUser) return null;
-    
-    // Get user metadata from the profiles table
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('username, user_type, is_onboarded')
-      .eq('id', supabaseUser.id)
-      .single();
-      
-    if (error || !data) {
-      console.error('Error fetching user profile:', error);
-      return {
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        username: supabaseUser.email?.split('@')[0] || '',
-        userType: null,
-        isOnboarded: false,
-      };
-    }
-    
-    return {
-      id: supabaseUser.id,
-      email: supabaseUser.email || '',
-      username: data.username || supabaseUser.email?.split('@')[0] || '',
-      userType: data.user_type as "seller" | "customer" | null,
-      isOnboarded: data.is_onboarded || false,
-    };
-  };
 
   // Function to check and resync auth state
   const checkAndResyncAuth = async (): Promise<boolean> => {
@@ -129,13 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) throw error;
-      
+      await loginWithEmail(email, password);
       // User data will be set by the auth state listener
     } catch (error) {
       console.error("Login error", error);
@@ -149,35 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (email: string, password: string, username: string) => {
     setLoading(true);
     try {
-      // Create the user in Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username,
-          },
-        },
-      });
-      
-      if (error) throw error;
-      
-      // Create a profile entry in the profiles table
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            username: username,
-            user_type: null,
-            is_onboarded: false,
-          });
-          
-        if (profileError) {
-          console.error("Error creating profile", profileError);
-        }
-      }
-      
+      await signupWithEmail(email, password, username);
       // User data will be set by the auth state listener
     } catch (error) {
       console.error("Signup error", error);
@@ -190,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Logout function
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      await logoutUser();
       // User data will be cleared by the auth state listener
     } catch (error) {
       console.error("Logout error", error);
