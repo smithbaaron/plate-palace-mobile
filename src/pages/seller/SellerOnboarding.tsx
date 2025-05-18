@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -44,6 +45,13 @@ const SellerOnboarding = () => {
   const [pickupAddresses, setPickupAddresses] = useState([{ address: "", label: "" }]);
   const [deliveryZipCodes, setDeliveryZipCodes] = useState("");
   
+  // Delivery options validation
+  const [deliveryOptionsErrors, setDeliveryOptionsErrors] = useState({
+    noOptionSelected: false,
+    pickupAddressesEmpty: false,
+    deliveryZipCodesEmpty: false
+  });
+  
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/auth?type=seller");
@@ -61,11 +69,31 @@ const SellerOnboarding = () => {
     return !Object.values(errors).some(Boolean);
   };
   
+  const validateDeliveryOptions = () => {
+    const errors = {
+      noOptionSelected: !offerPickup && !offerDelivery,
+      pickupAddressesEmpty: offerPickup && pickupAddresses.some(addr => !addr.address.trim()),
+      deliveryZipCodesEmpty: offerDelivery && !deliveryZipCodes.trim()
+    };
+    
+    setDeliveryOptionsErrors(errors);
+    return !Object.values(errors).some(Boolean);
+  };
+  
   const handleNextStep = () => {
     if (step === 1 && !validateBasicInfo()) {
       toast({
         title: "Required Fields",
         description: "Please fill in all required fields before proceeding.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (step === 2 && !validateDeliveryOptions()) {
+      toast({
+        title: "Delivery Options Required",
+        description: "Please select at least one delivery option and provide the required information.",
         variant: "destructive",
       });
       return;
@@ -108,6 +136,47 @@ const SellerOnboarding = () => {
     const newAddresses = [...pickupAddresses];
     newAddresses[index] = { ...newAddresses[index], [field]: value };
     setPickupAddresses(newAddresses);
+    
+    // Clear error when user starts typing
+    if (deliveryOptionsErrors.pickupAddressesEmpty) {
+      setDeliveryOptionsErrors({
+        ...deliveryOptionsErrors,
+        pickupAddressesEmpty: false
+      });
+    }
+  };
+  
+  const handleDeliveryZipCodesChange = (e) => {
+    setDeliveryZipCodes(e.target.value);
+    
+    // Clear error when user starts typing
+    if (deliveryOptionsErrors.deliveryZipCodesEmpty) {
+      setDeliveryOptionsErrors({
+        ...deliveryOptionsErrors,
+        deliveryZipCodesEmpty: false
+      });
+    }
+  };
+  
+  const handleDeliveryOptionChange = (option, value) => {
+    if (option === 'pickup') {
+      setOfferPickup(value);
+    } else {
+      setOfferDelivery(value);
+    }
+    
+    // Clear the no option selected error if at least one option is selected
+    if (deliveryOptionsErrors.noOptionSelected && (
+      (option === 'pickup' && value) || 
+      (option === 'delivery' && value) || 
+      (option === 'pickup' && !value && offerDelivery) || 
+      (option === 'delivery' && !value && offerPickup)
+    )) {
+      setDeliveryOptionsErrors({
+        ...deliveryOptionsErrors,
+        noOptionSelected: false
+      });
+    }
   };
   
   const handleCompletion = async () => {
@@ -150,6 +219,11 @@ const SellerOnboarding = () => {
   
   // Check if all required fields are filled
   const isBasicInfoComplete = businessName.trim() && bio.trim() && phoneNumber.trim();
+  
+  // Check if delivery options are valid
+  const isDeliveryOptionsValid = (offerPickup || offerDelivery) && 
+    (!offerPickup || (offerPickup && !pickupAddresses.some(addr => !addr.address.trim()))) &&
+    (!offerDelivery || (offerDelivery && deliveryZipCodes.trim() !== ""));
   
   return (
     <div className="min-h-screen bg-black text-white">
@@ -280,7 +354,7 @@ const SellerOnboarding = () => {
                       <Checkbox 
                         id="pickup"
                         checked={offerPickup} 
-                        onCheckedChange={(checked) => setOfferPickup(!!checked)}
+                        onCheckedChange={(checked) => handleDeliveryOptionChange('pickup', !!checked)}
                         className="border-nextplate-orange text-nextplate-orange"
                       />
                       <label htmlFor="pickup" className="ml-2 text-sm">
@@ -292,13 +366,19 @@ const SellerOnboarding = () => {
                       <Checkbox 
                         id="delivery"
                         checked={offerDelivery} 
-                        onCheckedChange={(checked) => setOfferDelivery(!!checked)} 
+                        onCheckedChange={(checked) => handleDeliveryOptionChange('delivery', !!checked)} 
                         className="border-nextplate-orange text-nextplate-orange"
                       />
                       <label htmlFor="delivery" className="ml-2 text-sm">
                         Offer delivery
                       </label>
                     </div>
+                    
+                    {deliveryOptionsErrors.noOptionSelected && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center">
+                        <AlertCircle size={12} className="mr-1" /> Please select at least one delivery option
+                      </p>
+                    )}
                   </div>
                   
                   {offerPickup && (
@@ -343,14 +423,21 @@ const SellerOnboarding = () => {
                           </div>
                           
                           <div>
-                            <label className="block text-xs text-gray-400 mb-1">Full Address</label>
+                            <label className="block text-xs text-gray-400 mb-1">Full Address <span className="text-red-500">*</span></label>
                             <Textarea
                               value={address.address}
                               onChange={(e) => handlePickupAddressChange(index, 'address', e.target.value)}
                               placeholder="Enter the full address for pickup"
-                              className="bg-black border-nextplate-lightgray text-white"
+                              className={`bg-black border-nextplate-lightgray text-white ${
+                                deliveryOptionsErrors.pickupAddressesEmpty && !address.address.trim() ? 'border-red-500' : ''
+                              }`}
                               rows={2}
                             />
+                            {deliveryOptionsErrors.pickupAddressesEmpty && !address.address.trim() && (
+                              <p className="text-xs text-red-500 mt-1 flex items-center">
+                                <AlertCircle size={12} className="mr-1" /> Address is required
+                              </p>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -363,13 +450,20 @@ const SellerOnboarding = () => {
                   
                   {offerDelivery && (
                     <div className="animate-fade-in">
-                      <label className="block text-sm font-medium mb-1">Delivery Area</label>
+                      <label className="block text-sm font-medium mb-1">Delivery Area <span className="text-red-500">*</span></label>
                       <Textarea
                         value={deliveryZipCodes}
-                        onChange={(e) => setDeliveryZipCodes(e.target.value)}
+                        onChange={handleDeliveryZipCodesChange}
                         placeholder="List ZIP codes or neighborhoods where you deliver"
-                        className="bg-black border-nextplate-lightgray text-white"
+                        className={`bg-black border-nextplate-lightgray text-white ${
+                          deliveryOptionsErrors.deliveryZipCodesEmpty ? 'border-red-500' : ''
+                        }`}
                       />
+                      {deliveryOptionsErrors.deliveryZipCodesEmpty && (
+                        <p className="text-xs text-red-500 mt-1 flex items-center">
+                          <AlertCircle size={12} className="mr-1" /> Delivery area is required
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -385,7 +479,7 @@ const SellerOnboarding = () => {
                   <Button
                     onClick={handleNextStep}
                     className="bg-nextplate-orange hover:bg-orange-600"
-                    disabled={!offerPickup && !offerDelivery}
+                    disabled={!isDeliveryOptionsValid}
                   >
                     Next: Complete Setup
                   </Button>
