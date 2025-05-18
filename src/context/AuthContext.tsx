@@ -8,7 +8,7 @@ interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, username: string) => Promise<void>;
+  signup: (email: string, password: string, username: string) => Promise<any>; // Updated return type
   logout: () => Promise<void>;
   loading: boolean;
   checkAndResyncAuth: () => Promise<boolean>;
@@ -100,12 +100,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Signup function
+  // Signup function - now explicitly returns the signup result
   const signup = async (email: string, password: string, username: string) => {
     setLoading(true);
     try {
-      await signupWithEmail(email, password, username);
-      // User data will be set by the auth state listener
+      const result = await signupWithEmail(email, password, username);
+      return result; // Return the result to the caller
     } catch (error) {
       console.error("Signup error", error);
       throw error;

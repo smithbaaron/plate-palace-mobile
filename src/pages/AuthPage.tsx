@@ -91,7 +91,8 @@ const AuthPage = () => {
       console.log("Attempting signup with:", email, username);
       const signupResult = await signup(email, password, username);
       
-      if (!signupResult?.user) {
+      // Fix: Check if signupResult exists and has user property before accessing it
+      if (!signupResult || !signupResult.user) {
         console.error("Signup returned no user");
         toast({
           title: "Signup Error",
