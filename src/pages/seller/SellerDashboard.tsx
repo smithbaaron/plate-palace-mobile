@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -296,8 +295,8 @@ const SellerDashboard = () => {
                   <p className="text-2xl font-bold">{todayPlates.length}</p>
                 </div>
                 <div className="p-3 bg-black bg-opacity-50 rounded-lg">
-                  <p className="text-sm text-gray-400">Followers</p>
-                  <p className="text-2xl font-bold">0</p>
+                  <p className="text-sm text-gray-400">Future Menu</p>
+                  <p className="text-2xl font-bold">{futurePlates.length}</p>
                 </div>
               </div>
             </div>
