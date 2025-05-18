@@ -17,25 +17,53 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireOnboarded = true 
 }) => {
   const { isAuthenticated, loading, currentUser, checkAndResyncAuth } = useAuth();
-  const { userType, isOnboarded } = useUserType();
+  const { userType, isOnboarded, resyncUserTypeData } = useUserType();
   const [initialCheckDone, setInitialCheckDone] = useState(false);
+  const [checkAttempted, setCheckAttempted] = useState(false);
   const location = useLocation();
 
   // Perform initial check only once when component mounts
   useEffect(() => {
     const performInitialCheck = async () => {
-      if (!loading) {
-        // If we're not sure about authentication state, double-check it
-        if (!isAuthenticated && currentUser === null) {
-          console.log("Resyncing auth state in ProtectedRoute");
-          await checkAndResyncAuth();
+      if (!loading && !checkAttempted) {
+        setCheckAttempted(true);
+        try {
+          // If we're not sure about authentication state, double-check it
+          if (!isAuthenticated && currentUser === null) {
+            console.log("Resyncing auth state in ProtectedRoute");
+            await checkAndResyncAuth();
+            
+            // Also resync user type data if we're authenticated but don't have user type
+            if (isAuthenticated && userType === null) {
+              console.log("Resyncing user type data in ProtectedRoute");
+              await resyncUserTypeData();
+            }
+          }
+        } catch (error) {
+          console.error("Error checking auth state:", error);
+        } finally {
+          setInitialCheckDone(true);
         }
+      } else if (!loading) {
+        // If loading is done but we haven't set initialCheckDone yet
         setInitialCheckDone(true);
       }
     };
     
     performInitialCheck();
-  }, [loading, isAuthenticated, currentUser]);
+  }, [loading, isAuthenticated, currentUser, checkAttempted]);
+
+  // Add a safety check to prevent infinite loading
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (!initialCheckDone) {
+        console.log("Auth check timeout - forcing completion");
+        setInitialCheckDone(true);
+      }
+    }, 3000); // Set a 3-second timeout
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   // Show loading state only during initial auth check
   if (loading && !initialCheckDone) {

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -20,7 +21,7 @@ const AuthPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { login, signup, isAuthenticated, currentUser, loading, checkAndResyncAuth } = useAuth();
-  const { userType, setUserType, isOnboarded } = useUserType();
+  const { userType, setUserType, isOnboarded, resyncUserTypeData } = useUserType();
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -72,19 +73,25 @@ const AuthPage = () => {
       console.log("Attempting login with:", email);
       await login(email, password);
       
-      // Force refresh auth state to make sure we have the latest user data
-      const authSuccess = await checkAndResyncAuth();
-      
-      if (authSuccess) {
-        toast({
-          title: "Login successful!",
-          description: `Welcome back to NextPlate!`,
-        });
+      // Wait briefly to ensure auth state is updated
+      setTimeout(async () => {
+        // Force refresh auth state to make sure we have the latest user data
+        const authSuccess = await checkAndResyncAuth();
         
-        // The useEffect hook will handle redirection once auth state updates
-      } else {
-        throw new Error("Login failed. Could not retrieve user data.");
-      }
+        if (authSuccess) {
+          // Also sync user type data
+          await resyncUserTypeData();
+          
+          toast({
+            title: "Login successful!",
+            description: `Welcome back to NextPlate!`,
+          });
+          
+          // The useEffect hook will handle redirection once auth state updates
+        } else {
+          throw new Error("Login failed. Could not retrieve user data.");
+        }
+      }, 500);
     } catch (error: any) {
       console.error("Login error:", error);
       toast({
@@ -114,24 +121,30 @@ const AuthPage = () => {
       console.log("Attempting signup with:", email, username);
       await signup(email, password, username);
       
-      // Force refresh auth state to make sure we have the latest user data
-      const authSuccess = await checkAndResyncAuth();
-      
-      if (!authSuccess) {
-        throw new Error("Signup was successful but could not retrieve user data.");
-      }
-      
-      console.log("Auth refreshed after signup:", { currentUser: authSuccess });
-      
-      const selectedType = defaultType as UserType;
-      await setUserType(selectedType);
-      
-      toast({
-        title: "Account created!",
-        description: `Welcome to NextPlate as a ${defaultType}!`,
-      });
-      
-      // The useEffect hook will handle redirection once auth state updates
+      // Give a moment for Supabase to complete the signup process
+      setTimeout(async () => {
+        // Force refresh auth state to make sure we have the latest user data
+        const authSuccess = await checkAndResyncAuth();
+        
+        if (!authSuccess) {
+          throw new Error("Signup was successful but could not retrieve user data.");
+        }
+        
+        console.log("Auth refreshed after signup:", { currentUser: authSuccess });
+        
+        // Also sync user type data before setting new user type
+        await resyncUserTypeData();
+        
+        const selectedType = defaultType as UserType;
+        await setUserType(selectedType);
+        
+        toast({
+          title: "Account created!",
+          description: `Welcome to NextPlate as a ${defaultType}!`,
+        });
+        
+        // The useEffect hook will handle redirection once auth state updates
+      }, 1000);
     } catch (error: any) {
       console.error("Signup error:", error);
       toast({
