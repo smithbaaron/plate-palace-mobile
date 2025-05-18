@@ -1,14 +1,11 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
-import { Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Search, Package, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus } from "lucide-react";
 
 // Mock data for plates
 const MOCK_PLATES = [
@@ -66,16 +63,7 @@ const MOCK_MEAL_PREPS = [
 ];
 
 const CustomerDashboard = () => {
-  const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/auth?type=customer");
-      return;
-    }
-  }, [isAuthenticated, navigate]);
   
   // Filter items based on search
   const filteredPlates = searchQuery

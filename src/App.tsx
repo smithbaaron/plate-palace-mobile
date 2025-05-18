@@ -18,6 +18,9 @@ import MealPrepDetails from "./pages/mealprep/MealPrepDetails";
 import Profile from "./pages/profile/Profile";
 import DeliverySettings from "./pages/seller/DeliverySettings";
 
+// Components
+import ProtectedRoute from "./components/ProtectedRoute";
+
 // Context
 import { AuthProvider } from "./context/AuthContext";
 import { UserTypeProvider } from "./context/UserTypeContext";
@@ -38,18 +41,50 @@ const App = () => (
               <Route path="/auth" element={<AuthPage />} />
               
               {/* Seller Routes */}
-              <Route path="/seller/onboarding" element={<SellerOnboarding />} />
-              <Route path="/seller/dashboard" element={<SellerDashboard />} />
-              <Route path="/seller/delivery-settings" element={<DeliverySettings />} />
+              <Route path="/seller/onboarding" element={
+                <ProtectedRoute requiredUserType="seller" requireOnboarded={false}>
+                  <SellerOnboarding />
+                </ProtectedRoute>
+              } />
+              <Route path="/seller/dashboard" element={
+                <ProtectedRoute requiredUserType="seller" requireOnboarded={true}>
+                  <SellerDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/seller/delivery-settings" element={
+                <ProtectedRoute requiredUserType="seller" requireOnboarded={true}>
+                  <DeliverySettings />
+                </ProtectedRoute>
+              } />
               
               {/* Customer Routes */}
-              <Route path="/customer/onboarding" element={<CustomerOnboarding />} />
-              <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+              <Route path="/customer/onboarding" element={
+                <ProtectedRoute requiredUserType="customer" requireOnboarded={false}>
+                  <CustomerOnboarding />
+                </ProtectedRoute>
+              } />
+              <Route path="/customer/dashboard" element={
+                <ProtectedRoute requiredUserType="customer" requireOnboarded={true}>
+                  <CustomerDashboard />
+                </ProtectedRoute>
+              } />
               
               {/* Shared Routes */}
-              <Route path="/plate/:id" element={<PlateDetails />} />
-              <Route path="/mealprep/:id" element={<MealPrepDetails />} />
-              <Route path="/profile" element={<Profile />} />
+              <Route path="/plate/:id" element={
+                <ProtectedRoute>
+                  <PlateDetails />
+                </ProtectedRoute>
+              } />
+              <Route path="/mealprep/:id" element={
+                <ProtectedRoute>
+                  <MealPrepDetails />
+                </ProtectedRoute>
+              } />
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              } />
               
               {/* 404 */}
               <Route path="*" element={<NotFound />} />

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
@@ -18,8 +17,7 @@ import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 
 const SellerDashboard = () => {
-  const { currentUser, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const { toast } = useToast();
   const [isAddPlateOpen, setIsAddPlateOpen] = useState(false);
   const [plates, setPlates] = useState<Plate[]>(() => {
@@ -28,13 +26,6 @@ const SellerDashboard = () => {
     return savedPlates ? JSON.parse(savedPlates) : [];
   });
   
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/auth?type=seller");
-      return;
-    }
-  }, [isAuthenticated, navigate]);
-
   // Save plates to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem("sellerPlates", JSON.stringify(plates));
