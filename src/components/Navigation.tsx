@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -44,6 +45,13 @@ const Navigation = () => {
                     Dashboard
                   </Button>
                 </Link>
+                {userType === "customer" && (
+                  <Link to="/customer/orders">
+                    <Button variant="ghost" className="text-white hover:text-nextplate-orange">
+                      My Orders
+                    </Button>
+                  </Link>
+                )}
                 <Link to="/profile">
                   <Button variant="ghost" className="text-white hover:text-nextplate-orange">
                     Profile
@@ -82,6 +90,11 @@ const Navigation = () => {
                 <Link to={dashboardUrl} className="block px-3 py-2 text-white hover:text-nextplate-orange">
                   Dashboard
                 </Link>
+                {userType === "customer" && (
+                  <Link to="/customer/orders" className="block px-3 py-2 text-white hover:text-nextplate-orange">
+                    My Orders
+                  </Link>
+                )}
                 <Link to="/profile" className="block px-3 py-2 text-white hover:text-nextplate-orange">
                   Profile
                 </Link>
@@ -110,7 +123,7 @@ const Navigation = () => {
               <span className="mt-1">Home</span>
             </Link>
             {userType === "seller" ? (
-              <Link to="/seller/orders" className="flex-center flex-col text-xs text-white hover:text-nextplate-orange">
+              <Link to="/seller/dashboard?tab=orders" className="flex-center flex-col text-xs text-white hover:text-nextplate-orange">
                 <Package size={20} />
                 <span className="mt-1">Orders</span>
               </Link>

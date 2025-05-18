@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
 import SellerDashboard from "./pages/seller/SellerDashboard";
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
+import CustomerOrders from "./pages/customer/CustomerOrders";
 import SellerOnboarding from "./pages/seller/SellerOnboarding";
 import CustomerOnboarding from "./pages/customer/CustomerOnboarding";
 import PlateDetails from "./pages/plate/PlateDetails";
@@ -68,6 +69,11 @@ const App = () => (
                 <Route path="/customer/dashboard" element={
                   <ProtectedRoute requiredUserType="customer" requireOnboarded={true}>
                     <CustomerDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/customer/orders" element={
+                  <ProtectedRoute requiredUserType="customer" requireOnboarded={true}>
+                    <CustomerOrders />
                   </ProtectedRoute>
                 } />
                 
