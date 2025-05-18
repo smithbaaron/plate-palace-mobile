@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
+import { supabase } from "@/lib/supabase";
 
 type UserType = "seller" | "customer" | null;
 
@@ -36,29 +37,35 @@ export const UserTypeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [currentUser]);
 
-  const setUserType = (type: UserType) => {
+  const setUserType = async (type: UserType) => {
     setUserTypeState(type);
     
-    // Update the user in localStorage
+    // Update the user in Supabase
     if (currentUser) {
-      const updatedUser = {
-        ...currentUser,
-        userType: type
-      };
-      localStorage.setItem("nextplateUser", JSON.stringify(updatedUser));
+      const { error } = await supabase
+        .from('profiles')
+        .update({ user_type: type })
+        .eq('id', currentUser.id);
+        
+      if (error) {
+        console.error("Error updating user type:", error);
+      }
     }
   };
 
-  const completeOnboarding = () => {
+  const completeOnboarding = async () => {
     setIsOnboarded(true);
     
-    // Update the user in localStorage
+    // Update the user in Supabase
     if (currentUser) {
-      const updatedUser = {
-        ...currentUser,
-        isOnboarded: true
-      };
-      localStorage.setItem("nextplateUser", JSON.stringify(updatedUser));
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_onboarded: true })
+        .eq('id', currentUser.id);
+        
+      if (error) {
+        console.error("Error completing onboarding:", error);
+      }
     }
   };
 

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
+import { supabase } from "@/lib/supabase";
 
 const AuthPage = () => {
   const [searchParams] = useSearchParams();
@@ -43,10 +44,10 @@ const AuthPage = () => {
         description: `Welcome back to NextPlate as a ${defaultType}!`,
       });
       navigate(`/${defaultType}/onboarding`);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Login failed",
-        description: "Please check your credentials and try again.",
+        description: error.message || "Please check your credentials and try again.",
         variant: "destructive",
       });
     } finally {
@@ -76,10 +77,10 @@ const AuthPage = () => {
         description: `Welcome to NextPlate as a ${defaultType}!`,
       });
       navigate(`/${defaultType}/onboarding`);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Signup failed",
-        description: "Please check your information and try again.",
+        description: error.message || "Please check your information and try again.",
         variant: "destructive",
       });
     } finally {
@@ -178,6 +179,7 @@ const AuthPage = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     className="bg-black border-nextplate-lightgray text-white"
+                    minLength={6}
                   />
                 </div>
                 <Button
