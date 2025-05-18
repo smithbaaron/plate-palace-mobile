@@ -3,10 +3,11 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useUserType } from '@/context/UserTypeContext';
+import { UserType } from '@/lib/userTypeUtils';
 
 type ProtectedRouteProps = {
   children: React.ReactNode;
-  requiredUserType?: 'seller' | 'customer';
+  requiredUserType?: UserType;
   requireOnboarded?: boolean;
 };
 

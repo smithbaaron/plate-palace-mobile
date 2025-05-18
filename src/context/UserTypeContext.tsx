@@ -1,9 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
-import { supabase } from "@/lib/supabase";
-
-type UserType = "seller" | "customer" | null;
+import { UserType, getUserTypeData, updateUserType, completeUserOnboarding } from "@/lib/userTypeUtils";
 
 interface UserTypeContextType {
   userType: UserType;
@@ -46,7 +44,6 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       return;
     }
 
-    // currentUser will be updated by checkAndResyncAuth
     if (currentUser) {
       setUserTypeState(currentUser.userType);
       setIsOnboarded(currentUser.isOnboarded);
@@ -66,7 +63,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       setIsOnboarded(false);
     }
 
-    // Resync on mount to handle LocalStorage changes outside app flow
+    // Resync on mount to handle LocalStorage changes
     resyncUserTypeData();
   }, [currentUser]);
 
@@ -88,14 +85,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
     
     // Update the user in Supabase
     if (currentUser) {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ user_type: type })
-        .eq('id', currentUser.id);
-        
-      if (error) {
-        console.error("Error updating user type:", error);
-      }
+      await updateUserType(currentUser.id, type);
     }
   };
 
@@ -104,14 +94,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
     
     // Update the user in Supabase
     if (currentUser) {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_onboarded: true })
-        .eq('id', currentUser.id);
-        
-      if (error) {
-        console.error("Error completing onboarding:", error);
-      }
+      await completeUserOnboarding(currentUser.id);
     }
   };
 
