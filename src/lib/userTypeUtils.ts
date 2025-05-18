@@ -13,8 +13,13 @@ export const getUserTypeData = async (userId: string | undefined) => {
     .eq('id', userId)
     .single();
     
-  if (error || !data) {
+  if (error) {
     console.error("Error fetching user type data:", error);
+    return { userType: null, isOnboarded: false };
+  }
+  
+  if (!data) {
+    console.warn("No profile found for user:", userId);
     return { userType: null, isOnboarded: false };
   }
   
@@ -27,6 +32,33 @@ export const getUserTypeData = async (userId: string | undefined) => {
 export const updateUserType = async (userId: string | undefined, type: UserType) => {
   if (!userId) return false;
   
+  // First make sure the profile exists
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', userId)
+    .single();
+    
+  if (!existingProfile) {
+    console.log(`No profile found for user ${userId}, creating one`);
+    // Create the profile if it doesn't exist
+    const { error: createError } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        user_type: type,
+        is_onboarded: false
+      });
+      
+    if (createError) {
+      console.error("Error creating profile:", createError);
+      return false;
+    }
+    
+    return true;
+  }
+  
+  // Update existing profile
   const { error } = await supabase
     .from('profiles')
     .update({ user_type: type })

@@ -68,17 +68,39 @@ export const signupWithEmail = async (email: string, password: string, username:
   
   // Create a profile entry in the profiles table
   if (data.user) {
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: data.user.id,
-        username: username,
-        user_type: null,
-        is_onboarded: false,
-      });
+    try {
+      // Get the current user to ensure we have the most up-to-date session
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user || data.user;
       
-    if (profileError) {
-      console.error("Error creating profile", profileError);
+      if (!user) {
+        throw new Error("Could not retrieve user data after signup");
+      }
+      
+      console.log("Creating profile for new user:", user.id);
+      
+      // Explicitly create profile entry
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          username: username,
+          user_type: null,
+          is_onboarded: false,
+        }, { 
+          onConflict: 'id',
+          ignoreDuplicates: false
+        });
+        
+      if (profileError) {
+        console.error("Error creating profile", profileError);
+        throw new Error(`Failed to create user profile: ${profileError.message}`);
+      }
+      
+      console.log("Profile created successfully for user:", user.id);
+    } catch (profileCreateError) {
+      console.error("Error during profile creation:", profileCreateError);
+      // We don't throw here to allow signup to complete, but we log the error
     }
   }
   

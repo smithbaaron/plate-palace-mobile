@@ -40,9 +40,20 @@ const SignupForm: React.FC<SignupFormProps> = ({
       // Parent component handles success redirection
     } catch (error: any) {
       console.error("Signup error:", error);
+      let errorMessage = "Please check your information and try again.";
+      
+      // Extract more specific error message if available
+      if (error.message) {
+        errorMessage = error.message;
+        // Clean up common Supabase error messages
+        if (errorMessage.includes("User already registered")) {
+          errorMessage = "This email is already registered. Please try logging in instead.";
+        }
+      }
+      
       toast({
         title: "Signup failed",
-        description: error.message || "Please check your information and try again.",
+        description: errorMessage,
         variant: "destructive",
       });
       setIsSubmitting(false);

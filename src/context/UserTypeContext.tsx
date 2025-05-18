@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { UserType } from "@/lib/userTypeUtils";
 import { fetchUserTypeData, updateUserTypeWithRetry, completeOnboardingWithRetry } from "@/services/userTypeService";
+
 // Re-export the hook from here to maintain backward compatibility
 export { useUserType } from "@/hooks/useUserTypeContext";
 
@@ -41,12 +42,15 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
         return;
       }
 
+      console.log("Resyncing user type data for user:", currentUser.id);
       const userData = await fetchUserTypeData(currentUser.id);
       
       if (userData) {
         console.log("Synced user type data:", userData);
         setUserTypeState(userData.userType);
         setIsOnboarded(userData.isOnboarded);
+      } else {
+        console.log("No user type data found during resync");
       }
     } catch (error) {
       console.error("Error syncing user type data:", error);
@@ -97,6 +101,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       // Add a delay before updating to ensure auth state is stable
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      // Use the retry mechanism to update the user type
       const success = await updateUserTypeWithRetry(currentUser.id, type);
       
       if (!success) {
@@ -105,6 +110,8 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
         setUserTypeState(null);
         throw new Error("Failed to update user type");
       }
+      
+      console.log(`Successfully set user type to ${type}`);
       
       // After successful update, refresh user data to ensure consistency
       await resyncUserTypeData();
@@ -136,6 +143,8 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
         setIsOnboarded(false);
         throw new Error("Failed to complete onboarding");
       }
+      
+      console.log("Onboarding completed successfully");
     } catch (error) {
       console.error("Error completing onboarding:", error);
       throw error;

@@ -106,8 +106,24 @@ const AuthPage = () => {
       // Also sync user type data before setting new user type
       await resyncUserTypeData();
       
+      // Set user type with improved retry mechanism
       const selectedType = defaultType as UserType;
-      await setUserType(selectedType);
+      let typeSetSuccess = false;
+      let retryCount = 0;
+      
+      while (!typeSetSuccess && retryCount < 3) {
+        try {
+          console.log(`Attempt ${retryCount + 1} to set user type to ${selectedType}`);
+          await setUserType(selectedType);
+          typeSetSuccess = true;
+          console.log("User type set successfully");
+        } catch (error) {
+          retryCount++;
+          console.error(`Error setting user type (attempt ${retryCount})`, error);
+          if (retryCount >= 3) throw error;
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
       
       toast({
         title: "Account created!",
