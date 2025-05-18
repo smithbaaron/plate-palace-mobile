@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -10,26 +11,46 @@ import {
   PackageCheck, 
   Bell, 
   Users, 
-  DollarSign 
+  DollarSign,
+  Loader2
 } from "lucide-react";
 import AddSinglePlateForm, { Plate } from "@/components/seller/AddSinglePlateForm";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
+import { usePlates } from "@/lib/plates-service";
 
 const SellerDashboard = () => {
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  const { fetchPlates, addPlate } = usePlates();
   const [isAddPlateOpen, setIsAddPlateOpen] = useState(false);
-  const [plates, setPlates] = useState<Plate[]>(() => {
-    // Load plates from localStorage if available
-    const savedPlates = localStorage.getItem("sellerPlates");
-    return savedPlates ? JSON.parse(savedPlates) : [];
-  });
+  const [plates, setPlates] = useState<Plate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  // Save plates to localStorage whenever they change
+  // Fetch plates from Supabase on component mount
   useEffect(() => {
-    localStorage.setItem("sellerPlates", JSON.stringify(plates));
-  }, [plates]);
+    const loadPlates = async () => {
+      try {
+        setIsLoading(true);
+        const fetchedPlates = await fetchPlates();
+        setPlates(fetchedPlates);
+        setError(null);
+      } catch (err) {
+        console.error("Error loading plates:", err);
+        setError("Failed to load your menu. Please try again.");
+        toast({
+          title: "Error loading plates",
+          description: "Could not load your menu. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadPlates();
+  }, []);
   
   const handleCreateMealPrep = () => {
     toast({
@@ -38,16 +59,26 @@ const SellerDashboard = () => {
     });
   };
 
-  const handleAddPlate = (newPlateData: Omit<Plate, "id" | "soldCount">) => {
-    const newPlate: Plate = {
-      ...newPlateData,
-      id: `plate-${Date.now()}`,
-      soldCount: 0,
-      // Convert date string back to Date object if it's a string
-      availableDate: new Date(newPlateData.availableDate)
-    };
-    
-    setPlates(prevPlates => [...prevPlates, newPlate]);
+  const handleAddPlate = async (newPlateData: Omit<Plate, "id" | "soldCount">) => {
+    try {
+      // Save the plate to Supabase
+      const savedPlate = await addPlate(newPlateData);
+      
+      // Update local state with the new plate
+      setPlates(prevPlates => [...prevPlates, savedPlate]);
+      
+      toast({
+        title: "Plate added successfully!",
+        description: `${newPlateData.name} has been added to your menu.`,
+      });
+    } catch (err) {
+      console.error("Error adding plate:", err);
+      toast({
+        title: "Error adding plate",
+        description: "Could not save your plate. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Filter plates based on available date
@@ -80,6 +111,21 @@ const SellerDashboard = () => {
 
   // Sort dates
   const sortedDates = Object.keys(platesByDate).sort();
+  
+  // Render loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <Navigation />
+        <div className="pt-20 px-4 flex items-center justify-center h-[80vh]">
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-8 w-8 animate-spin text-nextplate-orange mb-4" />
+            <p>Loading your menu...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white pb-16">
@@ -111,6 +157,20 @@ const SellerDashboard = () => {
               </Button>
             </div>
           </div>
+          
+          {/* Error message if plates failed to load */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-900 bg-opacity-30 border border-red-500 rounded-lg">
+              <p className="text-red-300">{error}</p>
+              <Button 
+                onClick={() => fetchPlates().then(setPlates).catch(err => setError("Failed to reload plates."))} 
+                variant="outline" 
+                className="mt-2 text-white border-red-500 hover:bg-red-900"
+              >
+                Try Again
+              </Button>
+            </div>
+          )}
           
           {/* Dashboard Tabs */}
           <Tabs defaultValue="menu">
