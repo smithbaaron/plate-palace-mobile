@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUserType } from "@/context/UserTypeContext";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Home, User, Package, Calendar, Bell, Menu, X } from "lucide-react";
 
 const Navigation = () => {
@@ -11,7 +12,7 @@ const Navigation = () => {
   const { userType } = useUserType();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(3); // Mock notification count
+  const [unreadNotifications, setUnreadNotifications] = useState(3); // Mock unread notification count
   
   const toggleMenu = () => setIsOpen(!isOpen);
   
@@ -19,6 +20,13 @@ const Navigation = () => {
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);
+
+  // Simulate fetching notifications
+  useEffect(() => {
+    // In a real app, this would fetch from an API
+    // For now we're just using the mock data
+    // This would be replaced with an actual data fetch
+  }, []);
   
   // Determine dashboard URL based on user type
   const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
@@ -57,6 +65,19 @@ const Navigation = () => {
                     Profile
                   </Button>
                 </Link>
+                <div className="relative">
+                  <Button variant="ghost" className="text-white hover:text-nextplate-orange">
+                    <Bell size={20} />
+                    {unreadNotifications > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="absolute -top-2 -right-2 h-5 min-w-5 p-0 flex items-center justify-center rounded-full"
+                      >
+                        {unreadNotifications}
+                      </Badge>
+                    )}
+                  </Button>
+                </div>
                 <Button variant="ghost" onClick={logout} className="text-white hover:text-nextplate-orange">
                   Logout
                 </Button>
@@ -139,10 +160,13 @@ const Navigation = () => {
             </Link>
             <div className="flex-center flex-col text-xs text-white hover:text-nextplate-orange relative">
               <Bell size={20} />
-              {notifications > 0 && (
-                <span className="absolute top-0 right-4 bg-nextplate-red text-white rounded-full w-4 h-4 text-[10px] flex-center">
-                  {notifications}
-                </span>
+              {unreadNotifications > 0 && (
+                <Badge
+                  variant="destructive" 
+                  className="absolute -top-1 right-3 h-5 min-w-5 p-0 flex items-center justify-center rounded-full"
+                >
+                  {unreadNotifications}
+                </Badge>
               )}
               <span className="mt-1">Alerts</span>
             </div>
