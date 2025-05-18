@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { UserType } from "@/lib/userTypeUtils";
 import { fetchUserTypeData, updateUserTypeWithRetry, completeOnboardingWithRetry } from "@/services/userTypeService";
+import { useToast } from "@/hooks/use-toast";
 
 // Re-export the hook from here to maintain backward compatibility
 export { useUserType } from "@/hooks/useUserTypeContext";
@@ -31,6 +32,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
   const [userType, setUserTypeState] = useState<UserType>(currentUser?.userType || null);
   const [isOnboarded, setIsOnboarded] = useState<boolean>(currentUser?.isOnboarded || false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const { toast } = useToast();
 
   // Resync user type data from backend
   const resyncUserTypeData = async () => {
@@ -54,6 +56,11 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       }
     } catch (error) {
       console.error("Error syncing user type data:", error);
+      toast({
+        title: "Sync Error",
+        description: "Could not sync your profile data. Please try refreshing the page.",
+        variant: "destructive",
+      });
     } finally {
       setIsInitialized(true);
     }
@@ -92,6 +99,11 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       // First check if we have a current user
       if (!currentUser) {
         console.error("No current user found when setting user type");
+        toast({
+          title: "Error",
+          description: "Not logged in. Please log in and try again.",
+          variant: "destructive",
+        });
         throw new Error("No current user");
       }
       
@@ -99,7 +111,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       setUserTypeState(type);
       
       // Add a delay before updating to ensure auth state is stable
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Use the retry mechanism to update the user type
       const success = await updateUserTypeWithRetry(currentUser.id, type);
@@ -108,6 +120,11 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
         // Revert state if update fails
         console.error("Failed to update user type in database after retries");
         setUserTypeState(null);
+        toast({
+          title: "Error",
+          description: "Failed to set user type. Please try again.",
+          variant: "destructive",
+        });
         throw new Error("Failed to update user type");
       }
       
@@ -130,6 +147,11 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       // Check if we have a current user
       if (!currentUser) {
         console.error("No current user found when completing onboarding");
+        toast({
+          title: "Error",
+          description: "Not logged in. Please log in and try again.",
+          variant: "destructive",
+        });
         throw new Error("No current user");
       }
       
@@ -141,6 +163,11 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       if (!success) {
         // Revert state if update fails
         setIsOnboarded(false);
+        toast({
+          title: "Error",
+          description: "Failed to complete onboarding. Please try again.",
+          variant: "destructive",
+        });
         throw new Error("Failed to complete onboarding");
       }
       

@@ -15,6 +15,29 @@ export const getUserTypeData = async (userId: string | undefined) => {
     
   if (error) {
     console.error("Error fetching user type data:", error);
+    
+    // Check if the profile doesn't exist, which would cause a 406 error
+    if (error.code === "PGRST116") {
+      console.log("Profile doesn't exist, creating one...");
+      
+      // Create a basic profile since it doesn't exist
+      const { error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          username: 'user_' + userId.substring(0, 8),
+          user_type: null,
+          is_onboarded: false
+        });
+        
+      if (createError) {
+        console.error("Failed to create profile:", createError);
+      } else {
+        console.log("Created missing profile for user", userId);
+        return { userType: null, isOnboarded: false };
+      }
+    }
+    
     return { userType: null, isOnboarded: false };
   }
   
@@ -32,20 +55,30 @@ export const getUserTypeData = async (userId: string | undefined) => {
 export const updateUserType = async (userId: string | undefined, type: UserType) => {
   if (!userId) return false;
   
+  console.log(`Updating user type for ${userId} to ${type}`);
+  
   // First make sure the profile exists
   const { data: existingProfile } = await supabase
     .from('profiles')
-    .select('id')
+    .select('id, username')
     .eq('id', userId)
     .single();
     
   if (!existingProfile) {
     console.log(`No profile found for user ${userId}, creating one`);
+    
+    // Try to fetch the username from auth.users
+    const { data: userData } = await supabase.auth.getUser();
+    const username = userData?.user?.user_metadata?.username || 
+                     userData?.user?.email?.split('@')[0] || 
+                     'user_' + userId.substring(0, 8);
+    
     // Create the profile if it doesn't exist
     const { error: createError } = await supabase
       .from('profiles')
       .insert({
         id: userId,
+        username: username,
         user_type: type,
         is_onboarded: false
       });

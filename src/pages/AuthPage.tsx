@@ -62,7 +62,7 @@ const AuthPage = () => {
       await login(email, password);
       
       // Give more time for auth state to update
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Force refresh auth state to make sure we have the latest user data
       const authSuccess = await checkAndResyncAuth();
@@ -92,13 +92,19 @@ const AuthPage = () => {
       await signup(email, password, username);
       
       // Give more time for Supabase to complete the signup process
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Force refresh auth state to make sure we have the latest user data
       const authSuccess = await checkAndResyncAuth();
       
       if (!authSuccess) {
-        throw new Error("Signup was successful but could not retrieve user data.");
+        console.error("Signup was successful but could not retrieve user data");
+        toast({
+          title: "Partial Success",
+          description: "Account created, but we had trouble setting up your profile. Please try logging in.",
+          variant: "destructive",
+        });
+        return;
       }
       
       console.log("Auth refreshed after signup:", { currentUser: authSuccess });
@@ -111,7 +117,7 @@ const AuthPage = () => {
       let typeSetSuccess = false;
       let retryCount = 0;
       
-      while (!typeSetSuccess && retryCount < 3) {
+      while (!typeSetSuccess && retryCount < 5) {
         try {
           console.log(`Attempt ${retryCount + 1} to set user type to ${selectedType}`);
           await setUserType(selectedType);
@@ -120,15 +126,23 @@ const AuthPage = () => {
         } catch (error) {
           retryCount++;
           console.error(`Error setting user type (attempt ${retryCount})`, error);
-          if (retryCount >= 3) throw error;
+          if (retryCount >= 5) throw error;
           await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
         }
       }
       
-      toast({
-        title: "Account created!",
-        description: `Welcome to NextPlate as a ${defaultType}!`,
-      });
+      if (typeSetSuccess) {
+        toast({
+          title: "Account created!",
+          description: `Welcome to NextPlate as a ${defaultType}!`,
+        });
+      } else {
+        // Even if setting user type fails, the account was created
+        toast({
+          title: "Account created!",
+          description: `Welcome to NextPlate! We had trouble setting your user type, but you can try again.`,
+        });
+      }
       
       // The useEffect hook will handle redirection once auth state updates
     } catch (error: any) {

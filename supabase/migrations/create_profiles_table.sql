@@ -27,6 +27,12 @@ CREATE POLICY "Users can insert their own profile" ON public.profiles
   FOR INSERT
   WITH CHECK (auth.uid() = id);
 
+-- Add a policy for all users to be able to insert their own profile (important for signups)
+CREATE POLICY "Allow user to manage their own profile" ON public.profiles
+  FOR ALL
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
+
 -- Function to set updated_at on profile updates
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
 RETURNS TRIGGER AS $$
