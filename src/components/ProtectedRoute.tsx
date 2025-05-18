@@ -23,14 +23,25 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Sync auth state on mount or when route changes
   useEffect(() => {
+    let isMounted = true;
+    
     const syncAuthState = async () => {
+      if (!isMounted) return;
+      
       setIsChecking(true);
       await checkAndResyncAuth();
       await resyncUserTypeData();
-      setIsChecking(false);
+      
+      if (isMounted) {
+        setIsChecking(false);
+      }
     };
     
     syncAuthState();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [location.pathname]);
 
   // Show loading state while auth is being checked

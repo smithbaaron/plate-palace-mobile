@@ -1,13 +1,13 @@
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { UserType, getUserTypeData, updateUserType, completeUserOnboarding } from "@/lib/userTypeUtils";
 
 interface UserTypeContextType {
   userType: UserType;
-  setUserType: (type: UserType) => void;
+  setUserType: (type: UserType) => Promise<void>;
   isOnboarded: boolean;
-  completeOnboarding: () => void;
+  completeOnboarding: () => Promise<void>;
   resyncUserTypeData: () => Promise<void>;
   navigateToAuth: () => void;
 }
@@ -37,19 +37,19 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
 
   // Resync user type data from backend
   const resyncUserTypeData = async () => {
-    const isAuthenticated = await checkAndResyncAuth();
-    
-    if (!isAuthenticated) {
-      navigateToAuth();
-      return;
-    }
+    try {
+      const isAuthenticated = await checkAndResyncAuth();
+      
+      if (!isAuthenticated || !currentUser) {
+        setUserTypeState(null);
+        setIsOnboarded(false);
+        return;
+      }
 
-    if (currentUser) {
       setUserTypeState(currentUser.userType);
-      setIsOnboarded(currentUser.isOnboarded);
-    } else {
-      setUserTypeState(null);
-      setIsOnboarded(false);
+      setIsOnboarded(currentUser.isOnboarded || false);
+    } catch (error) {
+      console.error("Error syncing user type data:", error);
     }
   };
 
@@ -57,14 +57,11 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
     // Update state when currentUser changes
     if (currentUser) {
       setUserTypeState(currentUser.userType);
-      setIsOnboarded(currentUser.isOnboarded);
+      setIsOnboarded(currentUser.isOnboarded || false);
     } else {
       setUserTypeState(null);
       setIsOnboarded(false);
     }
-
-    // Resync on mount to handle LocalStorage changes
-    resyncUserTypeData();
   }, [currentUser]);
 
   // Listen for storage events (for multi-tab/window sync)
@@ -74,6 +71,9 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
     };
     
     window.addEventListener('storage', handleStorageChange);
+    
+    // Initial sync on mount
+    resyncUserTypeData();
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
-import { supabase } from "@/lib/supabase";
+import { UserType } from "@/lib/userTypeUtils";
 
 const AuthPage = () => {
   const [searchParams] = useSearchParams();
@@ -20,17 +20,22 @@ const AuthPage = () => {
   const [username, setUsername] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { login, signup, isAuthenticated } = useAuth();
-  const { setUserType } = useUserType();
+  const { login, signup, isAuthenticated, loading } = useAuth();
+  const { setUserType, userType } = useUserType();
   const { toast } = useToast();
   const navigate = useNavigate();
   
   useEffect(() => {
-    if (isAuthenticated) {
-      // User is already logged in, redirect based on userType
-      navigate(`/${defaultType}/onboarding`);
+    if (isAuthenticated && userType) {
+      if (userType === "seller") {
+        navigate(`/seller/dashboard`);
+      } else if (userType === "customer") {
+        navigate(`/customer/dashboard`);
+      } else {
+        navigate(`/${defaultType}/onboarding`);
+      }
     }
-  }, [isAuthenticated, navigate, defaultType]);
+  }, [isAuthenticated, userType, navigate, defaultType]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,12 +43,14 @@ const AuthPage = () => {
     
     try {
       await login(email, password);
-      setUserType(defaultType as "seller" | "customer");
+      // We'll let the useEffect handle the redirection once auth state is updated
+      const selectedType = defaultType as "seller" | "customer";
+      await setUserType(selectedType);
+      
       toast({
         title: "Login successful!",
         description: `Welcome back to NextPlate as a ${defaultType}!`,
       });
-      navigate(`/${defaultType}/onboarding`);
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -71,12 +78,13 @@ const AuthPage = () => {
     
     try {
       await signup(email, password, username);
-      setUserType(defaultType as "seller" | "customer");
+      const selectedType = defaultType as "seller" | "customer";
+      await setUserType(selectedType);
+      
       toast({
         title: "Account created!",
         description: `Welcome to NextPlate as a ${defaultType}!`,
       });
-      navigate(`/${defaultType}/onboarding`);
     } catch (error: any) {
       toast({
         title: "Signup failed",
