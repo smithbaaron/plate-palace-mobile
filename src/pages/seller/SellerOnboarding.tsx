@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUserType } from "@/context/UserTypeContext";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,6 +51,46 @@ const SellerOnboarding = () => {
     pickupAddressesEmpty: false,
     deliveryZipCodesEmpty: false
   });
+
+  // Load existing profile data if available
+  useEffect(() => {
+    const loadSellerProfile = async () => {
+      if (currentUser?.id) {
+        try {
+          const { data, error } = await supabase
+            .from('seller_profiles')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .single();
+            
+          if (data && !error) {
+            // Populate form with existing data
+            setBusinessName(data.business_name || currentUser?.username || "");
+            setBio(data.bio || "");
+            setPhoneNumber(data.phone_number || "");
+            
+            // Set delivery options
+            setOfferPickup(data.offer_pickup ?? true);
+            setOfferDelivery(data.offer_delivery ?? false);
+            
+            if (data.pickup_addresses && data.pickup_addresses.length > 0) {
+              setPickupAddresses(data.pickup_addresses);
+            }
+            
+            if (data.delivery_zip_codes) {
+              setDeliveryZipCodes(data.delivery_zip_codes);
+            }
+          }
+        } catch (err) {
+          console.error("Error loading seller profile:", err);
+        }
+      }
+    };
+    
+    if (isAuthenticated) {
+      loadSellerProfile();
+    }
+  }, [currentUser, isAuthenticated]);
   
   useEffect(() => {
     if (!isAuthenticated) {
@@ -180,25 +220,76 @@ const SellerOnboarding = () => {
   };
   
   const handleCompletion = async () => {
+    if (!currentUser?.id) {
+      toast({
+        title: "Authentication error",
+        description: "You must be logged in to complete setup.",
+        variant: "destructive",
+      });
+      navigate('/auth?type=seller');
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
-      // In a real app, this would save the seller data to a database
-      console.log("Seller data:", {
-        businessName, 
-        bio, 
-        phoneNumber,
-        offerPickup, 
-        offerDelivery, 
-        pickupAddresses, 
-        deliveryZipCodes
-      });
+      // Save seller profile data to Supabase
+      const sellerData = {
+        user_id: currentUser.id,
+        business_name: businessName,
+        bio: bio,
+        phone_number: phoneNumber,
+        offer_pickup: offerPickup,
+        offer_delivery: offerDelivery,
+        pickup_addresses: pickupAddresses,
+        delivery_zip_codes: deliveryZipCodes,
+        created_at: new Date().toISOString()
+      };
       
-      // Save pickup addresses to localStorage for settings page
+      // Check if profile exists first
+      const { data: existingProfile } = await supabase
+        .from('seller_profiles')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .single();
+      
+      let error;
+      
+      if (existingProfile) {
+        // Update existing profile
+        const { error: updateError } = await supabase
+          .from('seller_profiles')
+          .update({
+            business_name: businessName,
+            bio: bio,
+            phone_number: phoneNumber,
+            offer_pickup: offerPickup,
+            offer_delivery: offerDelivery,
+            pickup_addresses: pickupAddresses,
+            delivery_zip_codes: deliveryZipCodes,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', currentUser.id);
+          
+        error = updateError;
+      } else {
+        // Insert new profile
+        const { error: insertError } = await supabase
+          .from('seller_profiles')
+          .insert([sellerData]);
+          
+        error = insertError;
+      }
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      // Also save pickup addresses to localStorage as backup
       localStorage.setItem("pickupAddresses", JSON.stringify(pickupAddresses));
       
       // Mark onboarding as complete
-      completeOnboarding();
+      await completeOnboarding();
       
       toast({
         title: "Setup complete!",
@@ -207,9 +298,10 @@ const SellerOnboarding = () => {
       
       navigate("/seller/dashboard");
     } catch (error) {
+      console.error("Error saving seller profile:", error);
       toast({
         title: "Error",
-        description: "There was a problem completing your setup.",
+        description: error instanceof Error ? error.message : "There was a problem completing your setup.",
         variant: "destructive",
       });
     } finally {
@@ -519,7 +611,7 @@ const SellerOnboarding = () => {
                     className="bg-nextplate-orange hover:bg-orange-600"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? "Completing..." : "Go to Dashboard"}
+                    {isSubmitting ? "Saving..." : "Go to Dashboard"}
                   </Button>
                 </div>
               </div>
