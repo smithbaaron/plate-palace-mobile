@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Search, Package, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -64,6 +64,7 @@ const MOCK_MEAL_PREPS = [
 
 const CustomerDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
   
   // Filter items based on search
   const filteredPlates = searchQuery
