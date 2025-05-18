@@ -40,6 +40,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
   const resyncUserTypeData = async () => {
     try {
       if (!isAuthenticated || !currentUser) {
+        console.log("Cannot sync user type data - not authenticated or no current user");
         setUserTypeState(null);
         setIsOnboarded(false);
         return;
@@ -79,23 +80,33 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
     console.log("Auth state in UserTypeContext:", { isAuthenticated });
     if (isAuthenticated) {
       resyncUserTypeData();
+    } else {
+      // Ensure we reset state when not authenticated
+      setUserTypeState(null);
+      setIsOnboarded(false);
     }
   }, [isAuthenticated]);
 
   const setUserType = async (type: UserType) => {
     try {
       console.log("Setting user type to:", type);
+      
+      // First check if we have a current user
+      if (!currentUser) {
+        console.error("No current user found when setting user type");
+        throw new Error("No current user");
+      }
+      
+      // Set the state first for immediate UI update
       setUserTypeState(type);
       
       // Update the user in Supabase
-      if (currentUser) {
-        const success = await updateUserType(currentUser.id, type);
-        if (!success) {
-          throw new Error("Failed to update user type");
-        }
-        return;
-      } else {
-        throw new Error("No current user");
+      const success = await updateUserType(currentUser.id, type);
+      if (!success) {
+        // Revert state if update fails
+        console.error("Failed to update user type in database");
+        setUserTypeState(null);
+        throw new Error("Failed to update user type");
       }
     } catch (error) {
       console.error("Error setting user type:", error);
@@ -106,16 +117,22 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
   const completeOnboarding = async () => {
     try {
       console.log("Completing onboarding");
+      
+      // Check if we have a current user
+      if (!currentUser) {
+        console.error("No current user found when completing onboarding");
+        throw new Error("No current user");
+      }
+      
+      // Set the state first for immediate UI update
       setIsOnboarded(true);
       
       // Update the user in Supabase
-      if (currentUser) {
-        const success = await completeUserOnboarding(currentUser.id);
-        if (!success) {
-          throw new Error("Failed to complete onboarding");
-        }
-      } else {
-        throw new Error("No current user");
+      const success = await completeUserOnboarding(currentUser.id);
+      if (!success) {
+        // Revert state if update fails
+        setIsOnboarded(false);
+        throw new Error("Failed to complete onboarding");
       }
     } catch (error) {
       console.error("Error completing onboarding:", error);

@@ -16,17 +16,26 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredUserType, 
   requireOnboarded = true 
 }) => {
-  const { isAuthenticated, loading, currentUser } = useAuth();
+  const { isAuthenticated, loading, currentUser, checkAndResyncAuth } = useAuth();
   const { userType, isOnboarded } = useUserType();
   const [initialCheckDone, setInitialCheckDone] = useState(false);
   const location = useLocation();
 
   // Perform initial check only once when component mounts
   useEffect(() => {
-    if (!loading) {
-      setInitialCheckDone(true);
-    }
-  }, [loading]);
+    const performInitialCheck = async () => {
+      if (!loading) {
+        // If we're not sure about authentication state, double-check it
+        if (!isAuthenticated && currentUser === null) {
+          console.log("Resyncing auth state in ProtectedRoute");
+          await checkAndResyncAuth();
+        }
+        setInitialCheckDone(true);
+      }
+    };
+    
+    performInitialCheck();
+  }, [loading, isAuthenticated, currentUser]);
 
   // Show loading state only during initial auth check
   if (loading && !initialCheckDone) {
