@@ -17,6 +17,33 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+// Define the form schemas for better validation
+const basicInfoSchema = z.object({
+  businessName: z.string().min(1, "Business name is required"),
+  bio: z.string().min(10, "Please provide a more detailed description (min 10 characters)"),
+  phoneNumber: z.string().min(10, "Phone number must be at least 10 digits")
+});
+
+const deliveryZipCodeSchema = z.object({
+  deliveryZipCodes: z.string().min(5, "Please specify at least one ZIP code")
+    .refine(value => {
+      // Check if each ZIP code is valid (simple check for 5 digits)
+      const zipCodes = value.split(/[,\s]+/).filter(Boolean);
+      return zipCodes.every(zip => /^\d{5}(-\d{4})?$/.test(zip));
+    }, "Contains invalid ZIP code(s). Use 5-digit format.")
+});
 
 const SellerOnboarding = () => {
   const { currentUser, isAuthenticated } = useAuth();
@@ -42,16 +69,22 @@ const SellerOnboarding = () => {
   // Delivery options
   const [offerPickup, setOfferPickup] = useState(true);
   const [offerDelivery, setOfferDelivery] = useState(false);
-  const [pickupAddresses, setPickupAddresses] = useState([{ address: "", label: "" }]);
-  const [deliveryZipCodes, setDeliveryZipCodes] = useState("");
+  const [pickupAddresses, setPickupAddresses] = useState([{ address: "", label: "", street: "", city: "", state: "", zipCode: "" }]);
+  
+  // Form for delivery ZIP codes
+  const zipCodeForm = useForm({
+    resolver: zodResolver(deliveryZipCodeSchema),
+    defaultValues: {
+      deliveryZipCodes: ""
+    }
+  });
   
   // Delivery options validation
   const [deliveryOptionsErrors, setDeliveryOptionsErrors] = useState({
     noOptionSelected: false,
-    pickupAddressesEmpty: false,
-    deliveryZipCodesEmpty: false
+    pickupAddressesEmpty: false
   });
-
+  
   // Load existing profile data if available
   useEffect(() => {
     const loadSellerProfile = async () => {
@@ -78,7 +111,7 @@ const SellerOnboarding = () => {
             }
             
             if (data.delivery_zip_codes) {
-              setDeliveryZipCodes(data.delivery_zip_codes);
+              zipCodeForm.setValue("deliveryZipCodes", data.delivery_zip_codes);
             }
           }
         } catch (err) {
@@ -101,8 +134,8 @@ const SellerOnboarding = () => {
   const validateBasicInfo = () => {
     const errors = {
       businessName: !businessName.trim(),
-      bio: !bio.trim(),
-      phoneNumber: !phoneNumber.trim()
+      bio: !bio.trim() || bio.trim().length < 10,
+      phoneNumber: !phoneNumber.trim() || phoneNumber.trim().length < 10
     };
     
     setFormErrors(errors);
@@ -113,11 +146,21 @@ const SellerOnboarding = () => {
     const errors = {
       noOptionSelected: !offerPickup && !offerDelivery,
       pickupAddressesEmpty: offerPickup && pickupAddresses.some(addr => !addr.address.trim()),
-      deliveryZipCodesEmpty: offerDelivery && !deliveryZipCodes.trim()
     };
     
     setDeliveryOptionsErrors(errors);
-    return !Object.values(errors).some(Boolean);
+    
+    // If user offers delivery, validate ZIP codes
+    let zipCodesValid = true;
+    if (offerDelivery) {
+      zipCodesValid = zipCodeForm.formState.isValid;
+      if (!zipCodesValid) {
+        // Trigger validation to show errors
+        zipCodeForm.trigger();
+      }
+    }
+    
+    return !Object.values(errors).some(Boolean) && (!offerDelivery || zipCodesValid);
   };
   
   const handleNextStep = () => {
@@ -150,7 +193,7 @@ const SellerOnboarding = () => {
   
   const handleAddPickupAddress = () => {
     if (pickupAddresses.length < 5) {
-      setPickupAddresses([...pickupAddresses, { address: "", label: "" }]);
+      setPickupAddresses([...pickupAddresses, { address: "", label: "", street: "", city: "", state: "", zipCode: "" }]);
     } else {
       toast({
         title: "Maximum reached",
@@ -174,7 +217,25 @@ const SellerOnboarding = () => {
 
   const handlePickupAddressChange = (index, field, value) => {
     const newAddresses = [...pickupAddresses];
-    newAddresses[index] = { ...newAddresses[index], [field]: value };
+    
+    if (field === 'address') {
+      newAddresses[index] = { ...newAddresses[index], [field]: value };
+    } else if (field === 'components') {
+      // Update structured components and regenerate full address
+      const { street, city, state, zipCode } = value;
+      const fullAddress = `${street}, ${city}, ${state} ${zipCode}`;
+      newAddresses[index] = { 
+        ...newAddresses[index], 
+        address: fullAddress,
+        street,
+        city,
+        state,
+        zipCode
+      };
+    } else {
+      newAddresses[index] = { ...newAddresses[index], [field]: value };
+    }
+    
     setPickupAddresses(newAddresses);
     
     // Clear error when user starts typing
@@ -182,18 +243,6 @@ const SellerOnboarding = () => {
       setDeliveryOptionsErrors({
         ...deliveryOptionsErrors,
         pickupAddressesEmpty: false
-      });
-    }
-  };
-  
-  const handleDeliveryZipCodesChange = (e) => {
-    setDeliveryZipCodes(e.target.value);
-    
-    // Clear error when user starts typing
-    if (deliveryOptionsErrors.deliveryZipCodesEmpty) {
-      setDeliveryOptionsErrors({
-        ...deliveryOptionsErrors,
-        deliveryZipCodesEmpty: false
       });
     }
   };
@@ -233,6 +282,9 @@ const SellerOnboarding = () => {
     setIsSubmitting(true);
     
     try {
+      // Get delivery zip codes from form
+      const deliveryZipCodes = zipCodeForm.getValues().deliveryZipCodes;
+      
       // Save seller profile data to Supabase
       const sellerData = {
         user_id: currentUser.id,
@@ -309,13 +361,129 @@ const SellerOnboarding = () => {
     }
   };
   
+  // Render the pickup address form with structured fields
+  const renderPickupAddressForm = (address, index) => {
+    return (
+      <div key={index} className="space-y-2 bg-black bg-opacity-30 p-3 rounded-md">
+        <div className="flex justify-between items-center">
+          <h4 className="text-sm font-medium">Pickup Location {index + 1}</h4>
+          {pickupAddresses.length > 1 && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => handleRemovePickupAddress(index)}
+              className="h-8 text-red-400 hover:text-red-300 hover:bg-transparent p-0"
+            >
+              <Trash2 size={16} />
+            </Button>
+          )}
+        </div>
+        
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Location Name</label>
+          <Input
+            value={address.label}
+            onChange={(e) => handlePickupAddressChange(index, 'label', e.target.value)}
+            placeholder="E.g., Main Kitchen, Downtown Location"
+            className="bg-black border-nextplate-lightgray text-white"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Street Address <span className="text-red-500">*</span></label>
+          <Input
+            value={address.street || ""}
+            onChange={(e) => {
+              const street = e.target.value;
+              handlePickupAddressChange(index, 'components', {
+                street,
+                city: address.city || "",
+                state: address.state || "",
+                zipCode: address.zipCode || ""
+              });
+            }}
+            placeholder="123 Main St"
+            className="bg-black border-nextplate-lightgray text-white mb-2"
+          />
+        </div>
+        
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">City <span className="text-red-500">*</span></label>
+            <Input
+              value={address.city || ""}
+              onChange={(e) => {
+                const city = e.target.value;
+                handlePickupAddressChange(index, 'components', {
+                  street: address.street || "",
+                  city,
+                  state: address.state || "",
+                  zipCode: address.zipCode || ""
+                });
+              }}
+              placeholder="City"
+              className="bg-black border-nextplate-lightgray text-white"
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-1">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">State <span className="text-red-500">*</span></label>
+              <Input
+                value={address.state || ""}
+                onChange={(e) => {
+                  const state = e.target.value;
+                  handlePickupAddressChange(index, 'components', {
+                    street: address.street || "",
+                    city: address.city || "",
+                    state,
+                    zipCode: address.zipCode || ""
+                  });
+                }}
+                placeholder="ST"
+                maxLength={2}
+                className="bg-black border-nextplate-lightgray text-white"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">ZIP <span className="text-red-500">*</span></label>
+              <Input
+                value={address.zipCode || ""}
+                onChange={(e) => {
+                  // Only allow digits and hyphen
+                  const zipCode = e.target.value.replace(/[^\d-]/g, '');
+                  handlePickupAddressChange(index, 'components', {
+                    street: address.street || "",
+                    city: address.city || "",
+                    state: address.state || "",
+                    zipCode
+                  });
+                }}
+                placeholder="12345"
+                maxLength={10}
+                className="bg-black border-nextplate-lightgray text-white"
+              />
+            </div>
+          </div>
+        </div>
+        
+        {deliveryOptionsErrors.pickupAddressesEmpty && !address.address.trim() && (
+          <p className="text-xs text-red-500 mt-1 flex items-center">
+            <AlertCircle size={12} className="mr-1" /> Complete address is required
+          </p>
+        )}
+      </div>
+    );
+  };
+  
   // Check if all required fields are filled
   const isBasicInfoComplete = businessName.trim() && bio.trim() && phoneNumber.trim();
   
   // Check if delivery options are valid
   const isDeliveryOptionsValid = (offerPickup || offerDelivery) && 
     (!offerPickup || (offerPickup && !pickupAddresses.some(addr => !addr.address.trim()))) &&
-    (!offerDelivery || (offerDelivery && deliveryZipCodes.trim() !== ""));
+    (!offerDelivery || zipCodeForm.formState.isValid);
   
   return (
     <div className="min-h-screen bg-black text-white">
@@ -392,7 +560,7 @@ const SellerOnboarding = () => {
                     />
                     {formErrors.bio && (
                       <p className="text-xs text-red-500 mt-1 flex items-center">
-                        <AlertCircle size={12} className="mr-1" /> Description is required
+                        <AlertCircle size={12} className="mr-1" /> Description is required (minimum 10 characters)
                       </p>
                     )}
                   </div>
@@ -404,7 +572,9 @@ const SellerOnboarding = () => {
                     <Input
                       value={phoneNumber}
                       onChange={(e) => {
-                        setPhoneNumber(e.target.value);
+                        // Filter non-digit characters for phone input
+                        const value = e.target.value.replace(/[^\d-+() ]/g, '');
+                        setPhoneNumber(value);
                         setFormErrors({...formErrors, phoneNumber: false});
                       }}
                       placeholder="Phone number for customers to contact you"
@@ -413,7 +583,7 @@ const SellerOnboarding = () => {
                     />
                     {formErrors.phoneNumber && (
                       <p className="text-xs text-red-500 mt-1 flex items-center">
-                        <AlertCircle size={12} className="mr-1" /> Contact phone is required
+                        <AlertCircle size={12} className="mr-1" /> Valid phone number is required (min 10 digits)
                       </p>
                     )}
                   </div>
@@ -488,51 +658,7 @@ const SellerOnboarding = () => {
                         </Button>
                       </div>
                       
-                      {pickupAddresses.map((address, index) => (
-                        <div key={index} className="space-y-2 bg-black bg-opacity-30 p-3 rounded-md">
-                          <div className="flex justify-between items-center">
-                            <h4 className="text-sm font-medium">Pickup Location {index + 1}</h4>
-                            {pickupAddresses.length > 1 && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleRemovePickupAddress(index)}
-                                className="h-8 text-red-400 hover:text-red-300 hover:bg-transparent p-0"
-                              >
-                                <Trash2 size={16} />
-                              </Button>
-                            )}
-                          </div>
-                          
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-1">Location Name</label>
-                            <Input
-                              value={address.label}
-                              onChange={(e) => handlePickupAddressChange(index, 'label', e.target.value)}
-                              placeholder="E.g., Main Kitchen, Downtown Location"
-                              className="bg-black border-nextplate-lightgray text-white"
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-1">Full Address <span className="text-red-500">*</span></label>
-                            <Textarea
-                              value={address.address}
-                              onChange={(e) => handlePickupAddressChange(index, 'address', e.target.value)}
-                              placeholder="Enter the full address for pickup"
-                              className={`bg-black border-nextplate-lightgray text-white ${
-                                deliveryOptionsErrors.pickupAddressesEmpty && !address.address.trim() ? 'border-red-500' : ''
-                              }`}
-                              rows={2}
-                            />
-                            {deliveryOptionsErrors.pickupAddressesEmpty && !address.address.trim() && (
-                              <p className="text-xs text-red-500 mt-1 flex items-center">
-                                <AlertCircle size={12} className="mr-1" /> Address is required
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                      {pickupAddresses.map((address, index) => renderPickupAddressForm(address, index))}
                       
                       <p className="text-xs text-gray-400 mt-1">
                         You'll be able to select which locations are available for each pickup time slot.
@@ -542,20 +668,35 @@ const SellerOnboarding = () => {
                   
                   {offerDelivery && (
                     <div className="animate-fade-in">
-                      <label className="block text-sm font-medium mb-1">Delivery Area <span className="text-red-500">*</span></label>
-                      <Textarea
-                        value={deliveryZipCodes}
-                        onChange={handleDeliveryZipCodesChange}
-                        placeholder="List ZIP codes or neighborhoods where you deliver"
-                        className={`bg-black border-nextplate-lightgray text-white ${
-                          deliveryOptionsErrors.deliveryZipCodesEmpty ? 'border-red-500' : ''
-                        }`}
-                      />
-                      {deliveryOptionsErrors.deliveryZipCodesEmpty && (
-                        <p className="text-xs text-red-500 mt-1 flex items-center">
-                          <AlertCircle size={12} className="mr-1" /> Delivery area is required
-                        </p>
-                      )}
+                      <Form {...zipCodeForm}>
+                        <form>
+                          <FormField
+                            control={zipCodeForm.control}
+                            name="deliveryZipCodes"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Delivery ZIP Codes <span className="text-red-500">*</span></FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    {...field}
+                                    placeholder="Enter ZIP codes separated by commas (e.g., 90210, 90211)"
+                                    className="bg-black border-nextplate-lightgray text-white"
+                                    onChange={(e) => {
+                                      // Allow only digits, commas, spaces, hyphens
+                                      const value = e.target.value.replace(/[^\d,\s-]/g, '');
+                                      field.onChange(value);
+                                    }}
+                                  />
+                                </FormControl>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  List all ZIP codes where you offer delivery, separated by commas
+                                </p>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </form>
+                      </Form>
                     </div>
                   )}
                 </div>
