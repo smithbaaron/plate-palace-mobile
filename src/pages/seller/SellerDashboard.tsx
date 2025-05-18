@@ -20,7 +20,7 @@ import { useNotifications } from "@/hooks/use-notifications";
 
 const SellerDashboard = () => {
   const { currentUser } = useAuth();
-  const { notifySuccess, notifyError, notifyPlateAdded } = useNotifications();
+  const { notifySuccess, notifyError, notifyPlateAdded, notifyInfo } = useNotifications();
   const { fetchPlates, addPlate } = usePlates();
   const [isAddPlateOpen, setIsAddPlateOpen] = useState(false);
   const [plates, setPlates] = useState<Plate[]>([]);

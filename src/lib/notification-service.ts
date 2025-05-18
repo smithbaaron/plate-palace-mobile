@@ -1,5 +1,6 @@
-
-import { Notification } from "@/context/NotificationContext";
+import { supabase } from './supabase';
+import type { Notification } from '@/context/NotificationContext';
+import { NotificationEvent, NotificationPayload } from '@/components/seller/PlateFormTypes';
 
 // This will be replaced with actual implementation when integrating Firebase Cloud Messaging or OneSignal
 export class NotificationService {

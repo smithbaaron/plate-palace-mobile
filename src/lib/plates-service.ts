@@ -1,5 +1,6 @@
+
 import { supabase } from './supabase';
-import { Plate } from '@/components/seller/AddSinglePlateForm';
+import { Plate } from '@/components/seller/PlateFormTypes';
 import { useAuth } from '@/context/AuthContext';
 
 // Type definition for database plates
@@ -13,7 +14,7 @@ export type DBPlate = {
   available_date: string;
   image_url: string | null;
   sold_count: number;
-  size: string; // Added size field
+  size: string;
 };
 
 // Convert a DB plate to a frontend plate
@@ -31,13 +32,13 @@ export const dbPlateToPlate = (dbPlate: any): Plate => ({
 
 // Convert a frontend plate to a DB plate
 export const plateToDbPlate = (plate: Omit<Plate, 'id' | 'soldCount'>, sellerId: string): Omit<DBPlate, 'id'> => ({
+  seller_id: sellerId,
   name: plate.name,
   quantity: plate.quantity,
   price: plate.price,
   nutritional_info: plate.nutritionalInfo || null,
   available_date: plate.availableDate.toISOString(),
   image_url: plate.imageUrl || null,
-  seller_id: sellerId,
   sold_count: 0,
   size: plate.size,
 });
