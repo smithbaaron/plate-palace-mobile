@@ -53,14 +53,14 @@ export const updateUserTypeWithRetry = async (userId: string | undefined, type: 
   
   // Update the user in database with retry mechanism
   let success = false;
-  const maxRetries = 5; // Increased from 3
+  const maxRetries = 5;
   let retryCount = 0;
   
   while (retryCount < maxRetries && !success) {
     try {
       console.log(`Attempt ${retryCount + 1}/${maxRetries} to update user type for ${userId} to ${type}`);
       success = await updateUserType(userId, type);
-      if (!success) throw new Error("Failed to update user type");
+      if (success === false) throw new Error("Failed to update user type");
       console.log(`Successfully updated user type for ${userId} to ${type}`);
       break;
     } catch (error) {
@@ -87,14 +87,14 @@ export const completeOnboardingWithRetry = async (userId: string | undefined) =>
   
   // Update onboarding status with retry mechanism
   let success = false;
-  const maxRetries = 5; // Increased from 3
+  const maxRetries = 5;
   let retryCount = 0;
   
   while (retryCount < maxRetries && !success) {
     try {
       console.log(`Attempt ${retryCount + 1}/${maxRetries} to complete onboarding for ${userId}`);
       success = await completeUserOnboarding(userId);
-      if (!success) throw new Error("Failed to complete onboarding");
+      if (success === false) throw new Error("Failed to complete onboarding");
       console.log(`Successfully completed onboarding for ${userId}`);
       break;
     } catch (error) {

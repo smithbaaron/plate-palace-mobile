@@ -30,7 +30,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
 }) => {
   const { currentUser, isAuthenticated } = useAuth();
   const [userType, setUserTypeState] = useState<UserType>(currentUser?.userType || null);
-  const [isOnboarded, setIsOnboarded] = useState<boolean>(currentUser?.isOnboarded || false);
+  const [isOnboarded, setIsOnboarded] = useState<boolean>(currentUser?.isOnboarded === true); // Ensure boolean
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const { toast } = useToast();
 
@@ -50,7 +50,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       if (userData) {
         console.log("Synced user type data:", userData);
         setUserTypeState(userData.userType);
-        setIsOnboarded(userData.isOnboarded);
+        setIsOnboarded(userData.isOnboarded === true); // Ensure boolean conversion
       } else {
         console.log("No user type data found during resync");
       }
@@ -71,7 +71,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
     if (currentUser) {
       console.log("Current user updated in UserTypeContext:", currentUser);
       setUserTypeState(currentUser.userType);
-      setIsOnboarded(currentUser.isOnboarded || false);
+      setIsOnboarded(currentUser.isOnboarded === true); // Ensure boolean
       setIsInitialized(true);
     } else if (isInitialized) {
       console.log("Current user is null in UserTypeContext");
@@ -116,7 +116,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       // Use the retry mechanism to update the user type
       const success = await updateUserTypeWithRetry(currentUser.id, type);
       
-      if (!success) {
+      if (success === false) {
         // Revert state if update fails
         console.error("Failed to update user type in database after retries");
         setUserTypeState(null);
@@ -133,7 +133,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       // After successful update, refresh user data to ensure consistency
       await resyncUserTypeData();
       
-      return; // Explicitly return to indicate success
+      return;
     } catch (error) {
       console.error("Error setting user type:", error);
       throw error;
@@ -160,7 +160,7 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       
       const success = await completeOnboardingWithRetry(currentUser.id);
       
-      if (!success) {
+      if (success === false) {
         // Revert state if update fails
         setIsOnboarded(false);
         toast({

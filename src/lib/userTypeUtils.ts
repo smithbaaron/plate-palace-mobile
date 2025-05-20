@@ -57,7 +57,7 @@ export const getUserTypeData = async (userId: string | undefined) => {
     
     return { 
       userType: data.user_type as UserType, 
-      isOnboarded: data.is_onboarded || false 
+      isOnboarded: data.is_onboarded === true // Ensure boolean type
     };
   } catch (err) {
     console.error("Unexpected error in getUserTypeData:", err);
