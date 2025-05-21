@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -247,7 +246,7 @@ export const useOnboardingHandlers = ({
               .from('profiles')
               .update({
                 user_type: 'seller',
-                is_onboarded: true,
+                is_onboarded: true, // Ensure this is a boolean true, not a string "true"
                 updated_at: new Date().toISOString()
               })
               .eq('id', currentUser.id);
@@ -261,7 +260,7 @@ export const useOnboardingHandlers = ({
                 id: currentUser.id,
                 username: currentUser.username || businessName,
                 user_type: 'seller',
-                is_onboarded: true,
+                is_onboarded: true, // Ensure this is a boolean true, not a string "true"
                 created_at: new Date().toISOString()
               }]);
               
@@ -348,7 +347,7 @@ export const useOnboardingHandlers = ({
           // Direct update as fallback
           const { error: directUpdateError } = await supabase
             .from('profiles')
-            .update({ is_onboarded: true })
+            .update({ is_onboarded: true }) // Ensure this is a boolean true, not a string "true"
             .eq('id', currentUser.id);
           
           if (directUpdateError) throw directUpdateError;
