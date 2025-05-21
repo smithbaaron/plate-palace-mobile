@@ -14,6 +14,7 @@ import ScheduleTabContent from "@/components/seller/dashboard/ScheduleTabContent
 import CustomersTabContent from "@/components/seller/dashboard/CustomersTabContent";
 import DashboardStats from "@/components/seller/dashboard/DashboardStats";
 import LoadingState from "@/components/seller/dashboard/LoadingState";
+import DatabaseSetupRequired from "@/components/seller/dashboard/DatabaseSetupRequired";
 
 // Import custom hooks
 import { useSellerPlates } from "@/hooks/seller/use-seller-plates";
@@ -29,6 +30,7 @@ const SellerDashboard = () => {
     sortedDates,
     isLoading,
     error,
+    tableExists,
     loadPlates,
     handleAddPlate,
   } = useSellerPlates();
@@ -60,7 +62,7 @@ const SellerDashboard = () => {
           />
           
           {/* Error message if plates failed to load */}
-          {error && (
+          {error && tableExists !== false && (
             <div className="mb-6 p-4 bg-red-900 bg-opacity-30 border border-red-500 rounded-lg">
               <p className="text-red-300">{error}</p>
               <button 
@@ -82,11 +84,15 @@ const SellerDashboard = () => {
             </TabsList>
             
             <TabsContent value="menu" className="animate-fade-in">
-              <MenuTabContent 
-                todayPlates={todayPlates}
-                onAddPlateClick={() => setIsAddPlateOpen(true)}
-                onCreateMealPrepClick={handleCreateMealPrep}
-              />
+              {tableExists === false ? (
+                <DatabaseSetupRequired onRetryClick={loadPlates} />
+              ) : (
+                <MenuTabContent 
+                  todayPlates={todayPlates}
+                  onAddPlateClick={() => setIsAddPlateOpen(true)}
+                  onCreateMealPrepClick={handleCreateMealPrep}
+                />
+              )}
             </TabsContent>
             
             <TabsContent value="orders" className="animate-fade-in">
