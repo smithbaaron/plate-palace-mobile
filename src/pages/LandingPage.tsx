@@ -1,10 +1,10 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useUserType } from "@/context/UserTypeContext";
+import { Package, Calendar, Bell } from "lucide-react";
 
 const LandingPage = () => {
   const { isAuthenticated } = useAuth();
@@ -20,9 +20,13 @@ const LandingPage = () => {
       <main className="pt-24 pb-16 px-4 md:px-0">
         {/* Hero Section */}
         <section className="max-w-7xl mx-auto text-center mb-20">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 text-glow">
-            Next<span className="text-nextplate-orange">Plate</span>
-          </h1>
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/lovable-uploads/b6811eb7-aad2-470d-87d0-ef8e2cc34abe.png" 
+              alt="NextPlate Logo" 
+              className="h-32 md:h-40"
+            />
+          </div>
           <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-gray-300">
             The platform for independent food sellers to connect with hungry customers
           </p>
@@ -157,10 +161,13 @@ const LandingPage = () => {
       
       <footer className="bg-nextplate-darkgray py-10 text-center text-gray-400">
         <div className="max-w-7xl mx-auto px-4">
-          <p className="mb-2">
-            <span className="font-bold text-white">Next</span>
-            <span className="font-bold text-nextplate-orange">Plate</span> © {new Date().getFullYear()}
-          </p>
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/lovable-uploads/b6811eb7-aad2-470d-87d0-ef8e2cc34abe.png" 
+              alt="NextPlate Logo" 
+              className="h-8"
+            />
+          </div>
           <p className="text-sm">Connecting independent food sellers with hungry customers</p>
         </div>
       </footer>
