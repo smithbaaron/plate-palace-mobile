@@ -1,12 +1,12 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import Navigation from "@/components/Navigation";
 import { Search, Package, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus } from "lucide-react";
-import { useNotifications } from "@/hooks/use-notifications";
 
 // Mock data for plates
 const MOCK_PLATES = [
@@ -64,9 +64,16 @@ const MOCK_MEAL_PREPS = [
 ];
 
 const CustomerDashboard = () => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { notifyInfo, notifySuccess } = useNotifications();
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/auth?type=customer");
+      return;
+    }
+  }, [isAuthenticated, navigate]);
   
   // Filter items based on search
   const filteredPlates = searchQuery
@@ -84,16 +91,6 @@ const CustomerDashboard = () => {
         prep.description.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : MOCK_MEAL_PREPS;
-  
-  const handleOrderPlate = (plateId: string, plateName: string) => {
-    notifyInfo("Order Placed", `Your order for ${plateName} has been placed! 🍽️`);
-    // In the future, this would actually place the order
-  };
-
-  const handleViewMenu = (sellerName: string) => {
-    notifySuccess("Menu Loaded", `Viewing ${sellerName}'s menu`);
-    // In future this would navigate to the seller's menu
-  };
   
   return (
     <div className="min-h-screen bg-black text-white pb-16">
@@ -152,14 +149,7 @@ const CustomerDashboard = () => {
                         </p>
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-lg">${plate.price}</span>
-                          <Button 
-                            size="sm" 
-                            className="bg-nextplate-red hover:bg-red-600"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOrderPlate(plate.id, plate.name);
-                            }}
-                          >
+                          <Button size="sm" className="bg-nextplate-red hover:bg-red-600">
                             Order
                           </Button>
                         </div>
@@ -242,10 +232,7 @@ const CustomerDashboard = () => {
                   <p className="text-sm text-center text-gray-300 mb-4">
                     Homestyle comfort food with a modern twist
                   </p>
-                  <Button 
-                    className="w-full bg-nextplate-red hover:bg-red-600"
-                    onClick={() => handleViewMenu("Taste of Home")}
-                  >
+                  <Button className="w-full bg-nextplate-red hover:bg-red-600">
                     View Menu
                   </Button>
                 </div>

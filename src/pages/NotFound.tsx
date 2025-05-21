@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
-import { AlertTriangle } from "lucide-react";
 
 const NotFound = () => {
   const location = useLocation();
@@ -22,9 +21,6 @@ const NotFound = () => {
       
       <div className="flex items-center justify-center min-h-screen px-4">
         <div className="text-center">
-          <div className="flex justify-center mb-6">
-            <AlertTriangle size={64} className="text-nextplate-orange" />
-          </div>
           <h1 className="text-6xl font-bold mb-4 text-nextplate-orange">404</h1>
           <p className="text-2xl text-white mb-6">Oops! This page isn't on the menu.</p>
           <p className="text-gray-400 mb-8">We couldn't find the page you were looking for.</p>

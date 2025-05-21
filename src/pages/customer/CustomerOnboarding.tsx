@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUserType } from "@/context/UserTypeContext";
-import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +18,7 @@ const MOCK_SELLERS = [
 ];
 
 const CustomerOnboarding = () => {
-  const { currentUser, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { completeOnboarding } = useUserType();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -28,34 +27,6 @@ const CustomerOnboarding = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sellerSearch, setSellerSearch] = useState("");
   const [selectedSellers, setSelectedSellers] = useState<string[]>([]);
-  
-  // Load existing customer preferences if available
-  useEffect(() => {
-    const loadCustomerProfile = async () => {
-      if (currentUser?.id) {
-        try {
-          const { data, error } = await supabase
-            .from('customer_profiles')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .single();
-            
-          if (data && !error) {
-            // Populate form with existing data
-            if (data.followed_sellers) {
-              setSelectedSellers(data.followed_sellers);
-            }
-          }
-        } catch (err) {
-          console.error("Error loading customer profile:", err);
-        }
-      }
-    };
-    
-    if (isAuthenticated) {
-      loadCustomerProfile();
-    }
-  }, [currentUser, isAuthenticated]);
   
   useEffect(() => {
     if (!isAuthenticated) {
@@ -82,61 +53,16 @@ const CustomerOnboarding = () => {
   };
   
   const handleCompletion = async () => {
-    if (!currentUser?.id) {
-      toast({
-        title: "Authentication error",
-        description: "You must be logged in to complete setup.",
-        variant: "destructive",
-      });
-      navigate('/auth?type=customer');
-      return;
-    }
-    
     setIsSubmitting(true);
     
     try {
-      // Save customer profile data to Supabase
-      const customerData = {
-        user_id: currentUser.id,
-        followed_sellers: selectedSellers,
-        created_at: new Date().toISOString()
-      };
-      
-      // Check if profile exists first
-      const { data: existingProfile } = await supabase
-        .from('customer_profiles')
-        .select('id')
-        .eq('user_id', currentUser.id)
-        .single();
-      
-      let error;
-      
-      if (existingProfile) {
-        // Update existing profile
-        const { error: updateError } = await supabase
-          .from('customer_profiles')
-          .update({
-            followed_sellers: selectedSellers,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', currentUser.id);
-          
-        error = updateError;
-      } else {
-        // Insert new profile
-        const { error: insertError } = await supabase
-          .from('customer_profiles')
-          .insert([customerData]);
-          
-        error = insertError;
-      }
-      
-      if (error) {
-        throw new Error(error.message);
-      }
+      // In a real app, this would save the customer preferences to a database
+      console.log("Customer preferences:", {
+        followedSellers: selectedSellers
+      });
       
       // Mark onboarding as complete
-      await completeOnboarding();
+      completeOnboarding();
       
       toast({
         title: "Setup complete!",
@@ -145,10 +71,9 @@ const CustomerOnboarding = () => {
       
       navigate("/customer/dashboard");
     } catch (error) {
-      console.error("Error saving customer profile:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "There was a problem completing your setup.",
+        description: "There was a problem completing your setup.",
         variant: "destructive",
       });
     } finally {
@@ -301,7 +226,7 @@ const CustomerOnboarding = () => {
                     className="bg-nextplate-red hover:bg-red-600"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? "Saving..." : "Go to Dashboard"}
+                    {isSubmitting ? "Completing..." : "Go to Dashboard"}
                   </Button>
                 </div>
               </div>

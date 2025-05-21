@@ -4,7 +4,6 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUserType } from "@/context/UserTypeContext";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Home, User, Package, Calendar, Bell, Menu, X } from "lucide-react";
 
 const Navigation = () => {
@@ -12,7 +11,7 @@ const Navigation = () => {
   const { userType } = useUserType();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(3); // Mock unread notification count
+  const [notifications, setNotifications] = useState(3); // Mock notification count
   
   const toggleMenu = () => setIsOpen(!isOpen);
   
@@ -20,13 +19,6 @@ const Navigation = () => {
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);
-
-  // Simulate fetching notifications
-  useEffect(() => {
-    // In a real app, this would fetch from an API
-    // For now we're just using the mock data
-    // This would be replaced with an actual data fetch
-  }, []);
   
   // Determine dashboard URL based on user type
   const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
@@ -37,11 +29,8 @@ const Navigation = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
-              <img 
-                src="/lovable-uploads/b6811eb7-aad2-470d-87d0-ef8e2cc34abe.png" 
-                alt="NextPlate Logo" 
-                className="h-9"
-              />
+              <span className="text-2xl font-bold text-white mr-1">Next</span>
+              <span className="text-2xl font-bold text-nextplate-orange">Plate</span>
             </Link>
           </div>
           
@@ -53,31 +42,11 @@ const Navigation = () => {
                     Dashboard
                   </Button>
                 </Link>
-                {userType === "customer" && (
-                  <Link to="/customer/orders">
-                    <Button variant="ghost" className="text-white hover:text-nextplate-orange">
-                      My Orders
-                    </Button>
-                  </Link>
-                )}
                 <Link to="/profile">
                   <Button variant="ghost" className="text-white hover:text-nextplate-orange">
                     Profile
                   </Button>
                 </Link>
-                <div className="relative">
-                  <Button variant="ghost" className="text-white hover:text-nextplate-orange">
-                    <Bell size={20} />
-                    {unreadNotifications > 0 && (
-                      <Badge
-                        variant="destructive"
-                        className="absolute -top-2 -right-2 h-5 min-w-5 p-0 flex items-center justify-center rounded-full"
-                      >
-                        {unreadNotifications}
-                      </Badge>
-                    )}
-                  </Button>
-                </div>
                 <Button variant="ghost" onClick={logout} className="text-white hover:text-nextplate-orange">
                   Logout
                 </Button>
@@ -111,11 +80,6 @@ const Navigation = () => {
                 <Link to={dashboardUrl} className="block px-3 py-2 text-white hover:text-nextplate-orange">
                   Dashboard
                 </Link>
-                {userType === "customer" && (
-                  <Link to="/customer/orders" className="block px-3 py-2 text-white hover:text-nextplate-orange">
-                    My Orders
-                  </Link>
-                )}
                 <Link to="/profile" className="block px-3 py-2 text-white hover:text-nextplate-orange">
                   Profile
                 </Link>
@@ -144,7 +108,7 @@ const Navigation = () => {
               <span className="mt-1">Home</span>
             </Link>
             {userType === "seller" ? (
-              <Link to="/seller/dashboard?tab=orders" className="flex-center flex-col text-xs text-white hover:text-nextplate-orange">
+              <Link to="/seller/orders" className="flex-center flex-col text-xs text-white hover:text-nextplate-orange">
                 <Package size={20} />
                 <span className="mt-1">Orders</span>
               </Link>
@@ -160,13 +124,10 @@ const Navigation = () => {
             </Link>
             <div className="flex-center flex-col text-xs text-white hover:text-nextplate-orange relative">
               <Bell size={20} />
-              {unreadNotifications > 0 && (
-                <Badge
-                  variant="destructive" 
-                  className="absolute -top-1 right-3 h-5 min-w-5 p-0 flex items-center justify-center rounded-full"
-                >
-                  {unreadNotifications}
-                </Badge>
+              {notifications > 0 && (
+                <span className="absolute top-0 right-4 bg-nextplate-red text-white rounded-full w-4 h-4 text-[10px] flex-center">
+                  {notifications}
+                </span>
               )}
               <span className="mt-1">Alerts</span>
             </div>
