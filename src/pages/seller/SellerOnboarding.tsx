@@ -69,12 +69,14 @@ const SellerOnboarding = () => {
   }, [isAuthenticated, navigate]);
   
   // Check if all required fields are filled
-  const isBasicInfoComplete = businessName.trim() && bio.trim() && phoneNumber.trim();
+  const isBasicInfoComplete = Boolean(businessName.trim() && bio.trim() && phoneNumber.trim());
   
   // Check if delivery options are valid
-  const isDeliveryOptionsValid = (offerPickup || offerDelivery) && 
+  const isDeliveryOptionsValid = Boolean(
+    (offerPickup || offerDelivery) && 
     (!offerPickup || (offerPickup && !pickupAddresses.some(addr => !addr.address.trim()))) &&
-    (!offerDelivery || zipCodeForm.formState.isValid);
+    (!offerDelivery || zipCodeForm.formState.isValid)
+  );
   
   return (
     <div className="min-h-screen bg-black text-white">
