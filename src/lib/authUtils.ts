@@ -14,13 +14,13 @@ export interface User {
 export const formatUser = async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
   if (!supabaseUser) return null;
   
-  // First, try to get user metadata from the profiles table
+  // Get username from user metadata or email
   let username = supabaseUser.user_metadata?.username || supabaseUser.email?.split('@')[0] || '';
   let userType: "seller" | "customer" | null = null;
   let isOnboarded = false;
   
   try {
-    // Try to get the profile, but only select columns that exist
+    // Try to get the profile
     const { data, error } = await supabase
       .from('profiles')
       .select('username')
@@ -30,45 +30,29 @@ export const formatUser = async (supabaseUser: SupabaseUser | null): Promise<Use
     if (data && !error) {
       username = data.username || username;
     } else if (error && error.code === "PGRST116") {
-      // Profile doesn't exist, create a basic one
-      console.log("Profile doesn't exist, creating basic profile for user:", supabaseUser.id);
-      
-      try {
-        const { error: createError } = await supabase
-          .from('profiles')
-          .insert({
-            id: supabaseUser.id,
-            username: username,
-          });
-          
-        if (createError) {
-          console.error("Failed to create basic profile:", createError);
-        } else {
-          console.log("Created basic profile for user", supabaseUser.id);
-        }
-      } catch (createErr) {
-        console.error("Error creating basic profile:", createErr);
-      }
+      // Profile doesn't exist - this is normal for new users
+      console.log("Profile doesn't exist yet for user:", supabaseUser.id);
     }
   } catch (err) {
-    console.error("Error in formatUser:", err);
+    console.error("Error checking profile:", err);
   }
   
-  // For now, we'll determine user type and onboarding status from other sources
-  // Check if they have a seller profile
+  // Check for seller profile to determine user type
   try {
-    const { data: sellerProfile } = await supabase
+    const { data: sellerProfile, error } = await supabase
       .from('seller_profiles')
       .select('id')
       .eq('user_id', supabaseUser.id)
       .single();
       
-    if (sellerProfile) {
+    if (sellerProfile && !error) {
       userType = 'seller';
-      isOnboarded = true; // If they have a seller profile, they're onboarded
+      isOnboarded = true;
     }
-  } catch (err) {
-    // Seller profile doesn't exist, that's fine
+  } catch (err: any) {
+    if (err.code !== "42P01") { // Ignore table not existing error
+      console.error("Error checking seller profile:", err);
+    }
   }
   
   return {
@@ -95,7 +79,7 @@ export const signupWithEmail = async (email: string, password: string, username:
   try {
     console.log("Starting signup process for:", email, username);
     
-    // Create the user in Supabase Auth - let the trigger handle profile creation
+    // Create the user in Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -113,45 +97,13 @@ export const signupWithEmail = async (email: string, password: string, username:
     
     if (!data.user) {
       console.error("No user returned after signup");
-      throw new Error("Failed to create user: undefined");
+      throw new Error("Failed to create user");
     }
     
     console.log("User created successfully:", data.user.id);
     
-    // The database trigger should have created the profile automatically
-    // Let's verify it exists and create it manually if needed
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for trigger
-      
-      const { data: profileCheck, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', data.user.id)
-        .single();
-      
-      if (profileError && profileError.code === "PGRST116") {
-        // Profile wasn't created by trigger, create it manually
-        console.log("Creating profile manually for user:", data.user.id);
-        
-        const { error: manualCreateError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            username,
-          });
-        
-        if (manualCreateError) {
-          console.error("Manual profile creation also failed:", manualCreateError);
-          // Don't throw error - user account was created successfully
-        } else {
-          console.log("Manual profile creation successful");
-        }
-      } else if (!profileError) {
-        console.log("Profile exists, signup complete");
-      }
-    } catch (profileErr) {
-      console.error("Profile verification/creation failed but continuing:", profileErr);
-    }
+    // Don't try to create profile manually here - let the database trigger handle it
+    // or handle it gracefully during the auth flow
     
     return data;
   } catch (error: any) {
