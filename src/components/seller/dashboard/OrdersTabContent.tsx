@@ -151,6 +151,7 @@ const OrdersTabContent: React.FC = () => {
       case "confirmed": return "bg-blue-500";
       case "ready": return "bg-amber-500";
       case "delivered": return "bg-green-500";
+      case "refunded": return "bg-red-500";
       default: return "bg-gray-500";
     }
   };
@@ -184,6 +185,7 @@ const OrdersTabContent: React.FC = () => {
                 { value: "confirmed", label: "Confirmed" },
                 { value: "ready", label: "Ready" },
                 { value: "delivered", label: "Delivered" },
+                { value: "refunded", label: "Refunded" },
               ]}
               selectedValues={statusFilter}
               onSelectionChange={setStatusFilter}
@@ -270,6 +272,7 @@ const OrdersTabContent: React.FC = () => {
                 { value: "confirmed", label: "Confirmed" },
                 { value: "ready", label: "Ready" },
                 { value: "delivered", label: "Delivered" },
+                { value: "refunded", label: "Refunded" },
               ]}
               selectedValues={statusFilter}
               onSelectionChange={setStatusFilter}
@@ -528,20 +531,25 @@ const StatusDropdown: React.FC<StatusDropdownProps> = ({ orderId, currentStatus,
     { value: "pending", label: "Pending" },
     { value: "confirmed", label: "Confirmed" },
     { value: "ready", label: "Ready" },
-    { value: "delivered", label: "Delivered" }
+    { value: "delivered", label: "Delivered" },
+    { value: "refunded", label: "Refunded" }
   ];
   
   // Determine which statuses should be available next
   const getAvailableStatuses = (current: OrderStatus) => {
+    if (current === "refunded") {
+      return [];
+    }
+    
     switch(current) {
       case "pending":
-        return ["confirmed", "ready"];
+        return ["confirmed", "ready", "refunded"];
       case "confirmed":
-        return ["ready"];
+        return ["ready", "refunded"];
       case "ready":
-        return ["delivered"];
+        return ["delivered", "refunded"];
       case "delivered":
-        return [];
+        return ["refunded"];
       default:
         return [];
     }
