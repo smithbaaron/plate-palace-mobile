@@ -1,6 +1,5 @@
 
 import { supabase } from "./supabase";
-import { User } from "./authUtils";
 
 export type UserType = "seller" | "customer" | null;
 
@@ -10,54 +9,33 @@ export const getUserTypeData = async (userId: string | undefined) => {
   try {
     console.log("Fetching user type data for:", userId);
     
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('user_type, is_onboarded')
-      .eq('id', userId)
-      .single();
-      
-    if (error) {
-      console.error("Error fetching user type data:", error);
-      
-      // Check if the profile doesn't exist, which would cause a 406 error
-      if (error.code === "PGRST116") {
-        console.log("Profile doesn't exist, creating one...");
+    // Since user_type and is_onboarded columns don't exist in profiles table,
+    // we'll determine user type from related tables
+    let userType: UserType = null;
+    let isOnboarded = false;
+    
+    // Check if user has a seller profile
+    try {
+      const { data: sellerProfile } = await supabase
+        .from('seller_profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
         
-        // Get user data to create a better profile
-        const { data: userData } = await supabase.auth.getUser();
-        const username = userData?.user?.user_metadata?.username || 
-                        userData?.user?.email?.split('@')[0] || 
-                        'user_' + userId.substring(0, 8);
-        
-        // Create a basic profile since it doesn't exist
-        const { error: createError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            username: username,
-            user_type: null,
-            is_onboarded: false
-          });
-          
-        if (createError) {
-          console.error("Failed to create profile:", createError);
-        } else {
-          console.log("Created missing profile for user", userId);
-          return { userType: null, isOnboarded: false };
-        }
+      if (sellerProfile) {
+        userType = 'seller';
+        isOnboarded = true;
       }
-      
-      return { userType: null, isOnboarded: false };
+    } catch (err) {
+      // No seller profile found, continue checking
     }
     
-    if (!data) {
-      console.warn("No profile found for user:", userId);
-      return { userType: null, isOnboarded: false };
-    }
+    // TODO: Add customer profile check when customer_profiles table exists
+    // For now, if no seller profile, assume customer (when they try to access customer features)
     
     return { 
-      userType: data.user_type as UserType, 
-      isOnboarded: data.is_onboarded || false 
+      userType, 
+      isOnboarded 
     };
   } catch (err) {
     console.error("Unexpected error in getUserTypeData:", err);
@@ -68,53 +46,37 @@ export const getUserTypeData = async (userId: string | undefined) => {
 export const updateUserType = async (userId: string | undefined, type: UserType) => {
   if (!userId) return false;
   
-  console.log(`Updating user type for ${userId} to ${type}`);
+  console.log(`Setting user type for ${userId} to ${type}`);
   
   try {
-    // First make sure the profile exists
-    const { data: existingProfile } = await supabase
-      .from('profiles')
-      .select('id, username')
-      .eq('id', userId)
-      .single();
-      
-    if (!existingProfile) {
-      console.log(`No profile found for user ${userId}, creating one`);
-      
-      // Try to fetch the username from auth.users
-      const { data: userData } = await supabase.auth.getUser();
-      const username = userData?.user?.user_metadata?.username || 
-                      userData?.user?.email?.split('@')[0] || 
-                      'user_' + userId.substring(0, 8);
-      
-      // Create the profile if it doesn't exist
-      const { error: createError } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          username: username,
-          user_type: type,
-          is_onboarded: false
+    // Since we can't store user_type in profiles table, we'll handle this differently
+    // When user chooses seller, we'll create an empty seller profile
+    // When user chooses customer, we'll create an empty customer profile
+    
+    if (type === 'seller') {
+      // Create or update seller profile with minimal data
+      const { error } = await supabase
+        .from('seller_profiles')
+        .upsert({
+          user_id: userId,
+          business_name: '', // Will be filled during onboarding
+          bio: '',
+          phone_number: '',
+          offer_pickup: true,
+          offer_delivery: false,
+          pickup_addresses: [],
+          delivery_zip_codes: '',
+        }, {
+          onConflict: 'user_id'
         });
         
-      if (createError) {
-        console.error("Error creating profile:", createError);
+      if (error) {
+        console.error("Error creating seller profile:", error);
         return false;
       }
-      
-      return true;
     }
     
-    // Update existing profile
-    const { error } = await supabase
-      .from('profiles')
-      .update({ user_type: type })
-      .eq('id', userId);
-      
-    if (error) {
-      console.error("Error updating user type:", error);
-      return false;
-    }
+    // TODO: Handle customer type when customer_profiles table exists
     
     return true;
   } catch (err) {
@@ -127,17 +89,24 @@ export const completeUserOnboarding = async (userId: string | undefined) => {
   if (!userId) return false;
   
   try {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_onboarded: true })
-      .eq('id', userId);
+    // Since is_onboarded column doesn't exist in profiles table,
+    // we consider onboarding complete when they have a complete seller/customer profile
+    
+    // For sellers, check if they have a complete seller profile
+    const { data: sellerProfile } = await supabase
+      .from('seller_profiles')
+      .select('business_name')
+      .eq('user_id', userId)
+      .single();
       
-    if (error) {
-      console.error("Error completing onboarding:", error);
-      return false;
+    if (sellerProfile && sellerProfile.business_name) {
+      // Seller profile exists and has business name, consider onboarded
+      return true;
     }
     
-    return true;
+    // TODO: Add customer profile check when needed
+    
+    return true; // Return true for now to allow completion
   } catch (err) {
     console.error("Unexpected error in completeUserOnboarding:", err);
     return false;

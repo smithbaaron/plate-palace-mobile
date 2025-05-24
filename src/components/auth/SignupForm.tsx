@@ -1,18 +1,18 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase"; // Adjust import path
 
 interface SignupFormProps {
   defaultType: string;
-  onSignupSuccess: () => void; // New success callback
+  onSignup: (email: string, password: string, username: string) => Promise<void>;
   isLoading: boolean;
 }
 
 const SignupForm: React.FC<SignupFormProps> = ({ 
   defaultType, 
-  onSignupSuccess,
+  onSignup, 
   isLoading 
 }) => {
   const [email, setEmail] = useState("");
@@ -34,69 +34,79 @@ const SignupForm: React.FC<SignupFormProps> = ({
       setIsSubmitting(false);
       return;
     }
-
+    
     try {
-      // 1. Sign up with Supabase Auth
-      const { data: { user }, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { 
-            username, 
-            role: defaultType // 'seller' or 'customer'
-          }
-        }
-      });
-
-      if (authError) throw authError;
-
-      // 2. Create profile in public.profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([{
-          id: user?.id,
-          email,
-          username,
-          role: defaultType,
-          onboarded: false
-        }]);
-
-      if (profileError) {
-        // Rollback: Delete auth user if profile creation fails
-        if (user) await supabase.auth.admin.deleteUser(user.id);
-        throw new Error("Failed to create profile. Please try again.");
-      }
-
-      // 3. Success
-      toast({
-        title: "Account created!",
-        description: "Please check your email to verify your account.",
-      });
-      onSignupSuccess(); // Trigger parent's success flow
-
+      await onSignup(email, password, username);
+      // Parent component handles success redirection
     } catch (error: any) {
       console.error("Signup error:", error);
-      
       let errorMessage = "Please check your information and try again.";
-      if (error.message.includes("User already registered")) {
-        errorMessage = "This email is already registered. Please log in.";
-      } else if (error.message.includes("failed to create profile")) {
-        errorMessage = "Profile setup failed. Contact support.";
+      
+      // Extract more specific error message if available
+      if (error.message) {
+        errorMessage = error.message;
+        // Clean up common Supabase error messages
+        if (errorMessage.includes("User already registered")) {
+          errorMessage = "This email is already registered. Please try logging in instead.";
+        }
       }
-
+      
       toast({
         title: "Signup failed",
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* ... (keep your existing JSX for inputs) ... */}
+      <div>
+        <Input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="bg-black border-nextplate-lightgray text-white"
+        />
+      </div>
+      <div>
+        <Input
+          type="text"
+          placeholder={defaultType === "seller" ? "Username (Store Name)" : "Username"}
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+          className="bg-black border-nextplate-lightgray text-white"
+        />
+        {defaultType === "seller" && (
+          <p className="text-xs text-gray-400 mt-1">
+            This will also be your store name and URL
+          </p>
+        )}
+      </div>
+      <div>
+        <Input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          className="bg-black border-nextplate-lightgray text-white"
+          minLength={6}
+        />
+      </div>
+      <Button
+        type="submit"
+        className={`w-full ${
+          defaultType === "seller" ? "bg-nextplate-orange hover:bg-orange-600" : "bg-nextplate-red hover:bg-red-600"
+        }`}
+        disabled={isSubmitting || isLoading}
+      >
+        {isSubmitting || isLoading ? "Creating account..." : "Create Account"}
+      </Button>
     </form>
   );
 };
