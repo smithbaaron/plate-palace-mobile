@@ -58,7 +58,7 @@ export const useOnboardingHandlers = ({
   setDeliveryOptionsErrors
 }: OnboardingHandlersProps) => {
   const { currentUser } = useAuth();
-  const { completeOnboarding } = useUserType();
+  const { completeOnboarding, resyncUserTypeData } = useUserType();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -206,7 +206,7 @@ export const useOnboardingHandlers = ({
     
     try {
       console.log("Starting seller onboarding completion process");
-      // Save seller profile data to Supabase
+      
       const sellerData = {
         user_id: currentUser.id,
         business_name: businessName,
@@ -221,68 +221,7 @@ export const useOnboardingHandlers = ({
       
       console.log("Saving seller profile data:", sellerData);
       
-      // First, ensure the user type is properly set in profiles table
-      // This helps work around any issues with the profiles table
-      let success = false;
-      let retryCount = 0;
-      const maxRetries = 3;
-      
-      while (!success && retryCount < maxRetries) {
-        try {
-          // Directly update the user type in the profiles table
-          // This is a fallback mechanism that shouldn't be necessary if userType functionality worked
-          console.log(`Attempt ${retryCount + 1}/${maxRetries} to ensure user type is set`);
-          
-          // Check if profile exists
-          const { data: existingProfile } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', currentUser.id)
-            .single();
-            
-          if (existingProfile) {
-            // Update existing profile
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .update({
-                user_type: 'seller',
-                is_onboarded: true, // Ensure this is a boolean true, not a string "true"
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', currentUser.id);
-              
-            if (updateError) throw updateError;
-          } else {
-            // Insert new profile
-            const { error: insertError } = await supabase
-              .from('profiles')
-              .insert([{
-                id: currentUser.id,
-                username: currentUser.username || businessName,
-                user_type: 'seller',
-                is_onboarded: true, // Ensure this is a boolean true, not a string "true"
-                created_at: new Date().toISOString()
-              }]);
-              
-            if (insertError) throw insertError;
-          }
-          
-          success = true;
-        } catch (error) {
-          retryCount++;
-          console.error(`Failed to ensure user type is set (attempt ${retryCount})`, error);
-          if (retryCount >= maxRetries) {
-            console.log("Continuing despite profile update error - will try seller_profiles table anyway");
-            // We'll continue even if this fails
-          }
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
-      
-      // Now handle the seller_profiles table
-      console.log("Now updating seller_profiles table");
-      
-      // Check if seller profile exists first
+      // Save to seller_profiles table
       const { data: existingSellerProfile } = await supabase
         .from('seller_profiles')
         .select('id')
@@ -292,8 +231,6 @@ export const useOnboardingHandlers = ({
       let error;
       
       if (existingSellerProfile) {
-        // Update existing profile
-        console.log("Updating existing seller profile");
         const { error: updateError } = await supabase
           .from('seller_profiles')
           .update({
@@ -310,8 +247,6 @@ export const useOnboardingHandlers = ({
           
         error = updateError;
       } else {
-        // Insert new profile
-        console.log("Creating new seller profile");
         const { error: insertError } = await supabase
           .from('seller_profiles')
           .insert([sellerData]);
@@ -321,53 +256,43 @@ export const useOnboardingHandlers = ({
       
       if (error) {
         console.error("Error with seller_profiles table operation:", error);
-        // We'll still try to complete onboarding even if there's an error with the seller_profiles table
+        throw error;
       }
+
+      // Update profiles table to mark as onboarded
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: currentUser.id,
+          username: currentUser.username || businessName,
+          user_type: 'seller',
+          is_onboarded: true,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
+        });
+
+      if (profileError) {
+        console.error("Error updating profile:", profileError);
+        throw profileError;
+      }
+
+      // Complete onboarding in context
+      await completeOnboarding();
       
-      // Also save pickup addresses to localStorage as backup
+      // Resync user data to ensure everything is up to date
+      await resyncUserTypeData();
+      
+      // Save pickup addresses to localStorage as backup
       localStorage.setItem("pickupAddresses", JSON.stringify(pickupAddresses));
-      
-      // Mark onboarding as complete using the context function
-      // We'll implement our own fallback in case this fails
-      let onboardingCompleted = false;
-      try {
-        console.log("Attempting to complete onboarding via context function");
-        await completeOnboarding();
-        onboardingCompleted = true;
-        console.log("Onboarding completed successfully via context function");
-      } catch (error) {
-        console.error("Error completing onboarding via context function:", error);
-        // Fall back to direct update
-      }
-      
-      // If context function failed, use direct update as fallback
-      if (!onboardingCompleted) {
-        console.log("Using fallback method to complete onboarding");
-        try {
-          // Direct update as fallback
-          const { error: directUpdateError } = await supabase
-            .from('profiles')
-            .update({ is_onboarded: true }) // Ensure this is a boolean true, not a string "true"
-            .eq('id', currentUser.id);
-          
-          if (directUpdateError) throw directUpdateError;
-          onboardingCompleted = true;
-          console.log("Onboarding completed via direct update");
-        } catch (error) {
-          console.error("Fallback direct update also failed:", error);
-        }
-      }
       
       toast({
         title: "Setup complete!",
         description: "Your seller account is ready to go.",
       });
       
-      // Short delay before navigation to ensure state updates are complete
-      setTimeout(() => {
-        console.log("Navigating to dashboard");
-        navigate("/seller/dashboard");
-      }, 500);
+      console.log("Navigating to seller dashboard");
+      navigate("/seller/dashboard", { replace: true });
       
     } catch (error) {
       console.error("Error saving seller profile:", error);

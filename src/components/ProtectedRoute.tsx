@@ -50,6 +50,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Check if we're on an onboarding page
   const isOnOnboardingPage = location.pathname.includes('/onboarding');
 
+  // If user is onboarded and has a user type, redirect them to their dashboard if they're on onboarding
+  if (isOnboarded && userType && isOnOnboardingPage) {
+    console.log("User is already onboarded, redirecting to dashboard");
+    const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
+    return <Navigate to={dashboardUrl} replace />;
+  }
+
   // If user type is required but doesn't match
   if (requiredUserType && userType !== requiredUserType) {
     console.log("User type mismatch", { required: requiredUserType, current: userType });
