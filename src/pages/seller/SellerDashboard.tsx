@@ -22,6 +22,7 @@ import { useSellerPlates } from "@/hooks/seller/use-seller-plates";
 const SellerDashboard = () => {
   const { notifyInfo } = useNotifications();
   const [isAddPlateOpen, setIsAddPlateOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("menu");
   
   const {
     todayPlates,
@@ -39,15 +40,9 @@ const SellerDashboard = () => {
     notifyInfo("Coming soon!", "This feature will be available in the next update.");
   };
 
-  // Render loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-black text-white">
-        <Navigation />
-        <LoadingState />
-      </div>
-    );
-  }
+  // Only show loading for tabs that depend on plates data
+  const platesDataTabs = ["menu", "schedule"];
+  const showLoadingForCurrentTab = platesDataTabs.includes(activeTab) && isLoading;
 
   return (
     <div className="min-h-screen bg-black text-white pb-16">
@@ -75,7 +70,7 @@ const SellerDashboard = () => {
           )}
           
           {/* Dashboard Tabs */}
-          <Tabs defaultValue="menu">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full bg-nextplate-darkgray mb-6">
               <TabsTrigger value="menu" className="flex-1">Menu</TabsTrigger>
               <TabsTrigger value="orders" className="flex-1">Orders</TabsTrigger>
@@ -84,7 +79,9 @@ const SellerDashboard = () => {
             </TabsList>
             
             <TabsContent value="menu" className="animate-fade-in">
-              {tableExists === false ? (
+              {showLoadingForCurrentTab ? (
+                <LoadingState />
+              ) : tableExists === false ? (
                 <DatabaseSetupRequired onRetryClick={loadPlates} />
               ) : (
                 <MenuTabContent 
@@ -100,10 +97,14 @@ const SellerDashboard = () => {
             </TabsContent>
             
             <TabsContent value="schedule" className="animate-fade-in">
-              <ScheduleTabContent
-                platesByDate={platesByDate}
-                sortedDates={sortedDates}
-              />
+              {showLoadingForCurrentTab ? (
+                <LoadingState />
+              ) : (
+                <ScheduleTabContent
+                  platesByDate={platesByDate}
+                  sortedDates={sortedDates}
+                />
+              )}
             </TabsContent>
             
             <TabsContent value="customers" className="animate-fade-in">
