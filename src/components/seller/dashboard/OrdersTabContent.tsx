@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { PackageCheck, Calendar, Filter, ChevronDown, Search, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import {
 import { Order, OrderStatus } from "@/types/order";
 import { useNotifications } from "@/hooks/use-notifications";
 import { format } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Mock data - would be replaced with actual API call
 const MOCK_ORDERS: Order[] = [
@@ -103,15 +104,29 @@ const MOCK_ORDERS: Order[] = [
 
 const OrdersTabContent: React.FC = () => {
   const { notifyInfo } = useNotifications();
-  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus[]>([]);
   const [paymentFilter, setPaymentFilter] = useState<string[]>([]);
   const [deliveryFilter, setDeliveryFilter] = useState<string[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
+  // Simulate loading orders
+  useEffect(() => {
+    const loadOrders = async () => {
+      setIsLoading(true);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setOrders(MOCK_ORDERS);
+      setIsLoading(false);
+    };
+
+    loadOrders();
+  }, []);
+
   const filterOrders = () => {
-    return MOCK_ORDERS.filter(order => {
+    return orders.filter(order => {
       // Search filter
       const matchesSearch = searchQuery === "" || 
         order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -163,6 +178,39 @@ const OrdersTabContent: React.FC = () => {
   const closeOrderModal = () => {
     setSelectedOrder(null);
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-10 w-80 bg-nextplate-darkgray" />
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-20 bg-nextplate-darkgray" />
+            <Skeleton className="h-10 w-20 bg-nextplate-darkgray" />
+            <Skeleton className="h-10 w-20 bg-nextplate-darkgray" />
+          </div>
+        </div>
+        
+        <div className="bg-nextplate-darkgray rounded-xl overflow-hidden">
+          <div className="p-4 space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center space-x-4">
+                <Skeleton className="h-4 w-20 bg-gray-700" />
+                <Skeleton className="h-4 w-32 bg-gray-700" />
+                <Skeleton className="h-4 w-24 bg-gray-700" />
+                <Skeleton className="h-4 w-16 bg-gray-700" />
+                <Skeleton className="h-4 w-16 bg-gray-700" />
+                <Skeleton className="h-4 w-16 bg-gray-700" />
+                <Skeleton className="h-4 w-20 bg-gray-700" />
+                <Skeleton className="h-8 w-24 bg-gray-700" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (filteredOrders.length === 0 && (searchQuery || statusFilter.length > 0 || paymentFilter.length > 0 || deliveryFilter.length > 0)) {
     return (
