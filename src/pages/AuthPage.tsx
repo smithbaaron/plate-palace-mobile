@@ -16,30 +16,18 @@ const AuthPage = () => {
   const { userType, setUserType, isOnboarded } = useUserType();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [isNavigating, setIsNavigating] = useState(false);
   
-  // Handle navigation after authentication
+  // Handle navigation after authentication - simplified logic
   useEffect(() => {
-    // Don't navigate if still loading or already navigating
-    if (loading || isNavigating) return;
+    if (loading) return;
     
-    // Only proceed if authenticated
-    if (!isAuthenticated || !currentUser) {
-      setIsNavigating(false);
-      return;
-    }
-    
-    console.log("Auth state in AuthPage:", { isAuthenticated, userType, isOnboarded, currentUser });
-    
-    // Set navigation flag to prevent multiple attempts
-    setIsNavigating(true);
-    
-    // Add a small delay to ensure state is stable
-    const navigateTimeout = setTimeout(() => {
+    if (isAuthenticated && currentUser) {
+      console.log("User is authenticated, checking redirect path:", { userType, isOnboarded });
+      
       // If user has a complete profile, redirect to dashboard
       if (userType && isOnboarded) {
         const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
-        console.log(`Redirecting authenticated user to ${dashboardUrl}`);
+        console.log(`Redirecting to ${dashboardUrl}`);
         navigate(dashboardUrl, { replace: true });
         return;
       }
@@ -57,28 +45,20 @@ const AuthPage = () => {
         navigate(`/${defaultType}/onboarding`, { replace: true });
         return;
       }
-    }, 100);
-    
-    return () => {
-      clearTimeout(navigateTimeout);
-    };
-  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, defaultType, navigate, isNavigating]);
+    }
+  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, defaultType, navigate]);
   
   const handleLogin = async (email: string, password: string) => {
     try {
       console.log("Attempting login with:", email);
-      setIsNavigating(false); // Reset navigation flag before login
       await login(email, password);
       
       toast({
         title: "Login successful!",
         description: `Welcome back to NextPlate!`,
       });
-      
-      // Navigation will be handled by useEffect after auth state updates
     } catch (error: any) {
       console.error("Login error:", error);
-      setIsNavigating(false);
       toast({
         title: "Login failed",
         description: error.message || "Please check your credentials and try again.",
@@ -91,7 +71,6 @@ const AuthPage = () => {
   const handleSignup = async (email: string, password: string, username: string) => {
     try {
       console.log("Attempting signup with:", email, username);
-      setIsNavigating(false); // Reset navigation flag before signup
       const signupResult = await signup(email, password, username);
       
       if (!signupResult || !signupResult.user) {
@@ -104,11 +83,8 @@ const AuthPage = () => {
         title: "Account created!",
         description: `Welcome to NextPlate!`,
       });
-      
-      // Navigation will be handled by useEffect after auth state updates
     } catch (error: any) {
       console.error("Signup error:", error);
-      setIsNavigating(false);
       toast({
         title: "Signup failed",
         description: error.message || "Please try again.",
@@ -118,7 +94,7 @@ const AuthPage = () => {
     }
   };
   
-  // Show loading state while checking auth or navigating
+  // Show loading state while checking auth
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
@@ -127,20 +103,11 @@ const AuthPage = () => {
     );
   }
   
-  // Show redirecting state if authenticated and about to navigate
-  if (isAuthenticated && isNavigating) {
+  // Don't show auth form if user is authenticated - let useEffect handle redirect
+  if (isAuthenticated && currentUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <div className="animate-pulse">Redirecting to dashboard...</div>
-      </div>
-    );
-  }
-  
-  // Don't show auth form if user is authenticated and should be redirected
-  if (isAuthenticated && (userType || currentUser)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <div className="animate-pulse">Redirecting...</div>
+        <div className="animate-pulse">Setting up your account...</div>
       </div>
     );
   }
