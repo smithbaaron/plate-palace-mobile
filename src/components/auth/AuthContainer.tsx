@@ -19,11 +19,6 @@ const AuthContainer: React.FC<AuthContainerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
 
-  const handleSignupSuccess = () => {
-    // Switch to login tab after successful signup
-    setActiveTab("login");
-  };
-
   return (
     <div className="max-w-md mx-auto bg-nextplate-darkgray rounded-xl p-6 md:p-8 shadow-2xl">
       <div className="text-center mb-6">
@@ -53,7 +48,7 @@ const AuthContainer: React.FC<AuthContainerProps> = ({
         <TabsContent value="signup">
           <SignupForm 
             defaultType={defaultType} 
-            onSignupSuccess={handleSignupSuccess}
+            onSignup={onSignup} 
             isLoading={isLoading}
           />
         </TabsContent>
