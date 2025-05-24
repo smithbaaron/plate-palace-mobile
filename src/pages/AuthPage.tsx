@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUserType } from "@/hooks/useUserTypeContext";
@@ -12,44 +12,57 @@ const AuthPage = () => {
   const [searchParams] = useSearchParams();
   const defaultType = searchParams.get("type") || "seller";
   
-  const { login, signup, isAuthenticated, currentUser, loading, checkAndResyncAuth } = useAuth();
-  const { userType, setUserType, isOnboarded, resyncUserTypeData } = useUserType();
+  const { login, signup, isAuthenticated, currentUser, loading } = useAuth();
+  const { userType, setUserType, isOnboarded } = useUserType();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [hasNavigated, setHasNavigated] = useState(false);
   
-  // Simplified navigation logic to prevent infinite loops
+  // Handle navigation after authentication
   useEffect(() => {
-    if (loading) return;
+    if (loading || hasNavigated) return;
     
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      setHasNavigated(false);
+      return;
+    }
     
     console.log("Auth state in AuthPage:", { isAuthenticated, userType, isOnboarded, currentUser });
     
-    // If we have user type information, redirect accordingly
-    if (userType) {
-      if (!isOnboarded) {
-        console.log(`Redirecting to /${userType}/onboarding`);
-        navigate(`/${userType}/onboarding`, { replace: true });
-      } else {
-        const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
-        console.log(`Redirecting to ${dashboardUrl}`);
-        navigate(dashboardUrl, { replace: true });
-      }
-    } 
-    // If authenticated but no user type yet, redirect to onboarding with default type
-    else if (currentUser) {
-      console.log(`No user type found, redirecting to onboarding as ${defaultType}`);
-      navigate(`/${defaultType}/onboarding`, { replace: true });
+    // Prevent multiple navigation attempts
+    if (hasNavigated) return;
+    
+    // If user has a complete profile, redirect to dashboard
+    if (userType && isOnboarded) {
+      const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
+      console.log(`Redirecting to ${dashboardUrl}`);
+      setHasNavigated(true);
+      navigate(dashboardUrl, { replace: true });
+      return;
     }
-  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, defaultType, navigate]);
+    
+    // If user has type but not onboarded, go to onboarding
+    if (userType && !isOnboarded) {
+      console.log(`Redirecting to /${userType}/onboarding`);
+      setHasNavigated(true);
+      navigate(`/${userType}/onboarding`, { replace: true });
+      return;
+    }
+    
+    // If authenticated but no user type, redirect to onboarding with default type
+    if (currentUser && !userType) {
+      console.log(`No user type found, redirecting to onboarding as ${defaultType}`);
+      setHasNavigated(true);
+      navigate(`/${defaultType}/onboarding`, { replace: true });
+      return;
+    }
+  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, defaultType, navigate, hasNavigated]);
   
   const handleLogin = async (email: string, password: string) => {
     try {
       console.log("Attempting login with:", email);
+      setHasNavigated(false); // Reset navigation flag
       await login(email, password);
-      
-      // Give time for auth state to update
-      await new Promise(resolve => setTimeout(resolve, 1000));
       
       toast({
         title: "Login successful!",
@@ -59,6 +72,11 @@ const AuthPage = () => {
       // Navigation will be handled by useEffect
     } catch (error: any) {
       console.error("Login error:", error);
+      toast({
+        title: "Login failed",
+        description: error.message || "Please check your credentials and try again.",
+        variant: "destructive",
+      });
       throw error;
     }
   };
@@ -66,6 +84,7 @@ const AuthPage = () => {
   const handleSignup = async (email: string, password: string, username: string) => {
     try {
       console.log("Attempting signup with:", email, username);
+      setHasNavigated(false); // Reset navigation flag
       const signupResult = await signup(email, password, username);
       
       if (!signupResult || !signupResult.user) {
@@ -73,9 +92,6 @@ const AuthPage = () => {
       }
       
       console.log("Signup successful");
-      
-      // Give time for auth state to update
-      await new Promise(resolve => setTimeout(resolve, 1500));
       
       toast({
         title: "Account created!",
@@ -85,9 +101,23 @@ const AuthPage = () => {
       // Navigation will be handled by useEffect
     } catch (error: any) {
       console.error("Signup error:", error);
+      toast({
+        title: "Signup failed",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
       throw error;
     }
   };
+  
+  // Don't render auth form if user is authenticated and we're about to redirect
+  if (isAuthenticated && !hasNavigated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className="animate-pulse">Redirecting...</div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-black text-white">
