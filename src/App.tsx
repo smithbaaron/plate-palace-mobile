@@ -10,6 +10,7 @@ import { NotificationProvider } from "@/context/NotificationContext";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
+import VerifyEmail from "./pages/VerifyEmail";
 import SellerDashboard from "./pages/seller/SellerDashboard";
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import CustomerOrders from "./pages/customer/CustomerOrders";
