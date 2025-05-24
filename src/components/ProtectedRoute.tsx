@@ -26,7 +26,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (!loading) {
       const timeoutId = setTimeout(() => {
         setInitialCheckDone(true);
-      }, 300); // Reduced timeout for faster navigation
+      }, 300);
       
       return () => clearTimeout(timeoutId);
     }
@@ -47,6 +47,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={`/auth${requiredUserType ? `?type=${requiredUserType}` : ''}`} state={{ from: location }} replace />;
   }
 
+  // Check if we're on an onboarding page
+  const isOnOnboardingPage = location.pathname.includes('/onboarding');
+
   // If user type is required but doesn't match
   if (requiredUserType && userType !== requiredUserType) {
     console.log("User type mismatch", { required: requiredUserType, current: userType });
@@ -56,22 +59,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       return <Navigate to="/seller/dashboard" replace />;
     } else if (userType === 'customer' && isOnboarded) {
       return <Navigate to="/customer/dashboard" replace />;
-    } else if (userType && !isOnboarded) {
+    } else if (userType && !isOnboarded && !isOnOnboardingPage) {
       return <Navigate to={`/${userType}/onboarding`} replace />;
     }
     
-    // If they don't have a user type yet, send them to onboarding with the required type
-    return <Navigate to={`/${requiredUserType}/onboarding`} replace />;
+    // If they don't have a user type yet and not on onboarding, send them to onboarding
+    if (!userType && !isOnOnboardingPage) {
+      return <Navigate to={`/${requiredUserType}/onboarding`} replace />;
+    }
   }
 
   // If onboarding is required but not completed
-  if (requireOnboarded && !isOnboarded && userType) {
+  if (requireOnboarded && !isOnboarded && userType && !isOnOnboardingPage) {
     console.log("Onboarding required but not completed", { userType, isOnboarded });
     return <Navigate to={`/${userType}/onboarding`} replace />;
   }
   
-  // If no user type but authenticated, redirect to onboarding
-  if (!userType && currentUser) {
+  // If no user type but authenticated and not on onboarding page
+  if (!userType && currentUser && !isOnOnboardingPage) {
     console.log("No user type found, redirecting to onboarding");
     return <Navigate to="/seller/onboarding" replace />;
   }
