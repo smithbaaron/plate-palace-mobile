@@ -48,36 +48,17 @@ CREATE TRIGGER set_updated_at
   FOR EACH ROW
   EXECUTE PROCEDURE public.handle_updated_at();
 
--- Improved trigger function to create a profile entry when a new user signs up
+-- Trigger to create a profile entry when a new user signs up
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Use a more robust approach to handle the username
   INSERT INTO public.profiles (id, username)
-  VALUES (
-    NEW.id, 
-    COALESCE(
-      NEW.raw_user_meta_data->>'username',
-      NEW.email_confirmed_at IS NOT NULL AND NEW.email IS NOT NULL,
-      split_part(NEW.email, '@', 1),
-      'user_' || substring(NEW.id::text, 1, 8)
-    )
-  )
-  ON CONFLICT (id) DO NOTHING; -- Prevent duplicate key errors
-  
+  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)));
   RETURN NEW;
-EXCEPTION
-  WHEN OTHERS THEN
-    -- Log the error but don't fail the user creation
-    RAISE WARNING 'Failed to create profile for user %: %', NEW.id, SQLERRM;
-    RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
--- Drop the old trigger if it exists
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-
--- Create the new trigger
+-- Actually create the trigger
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
