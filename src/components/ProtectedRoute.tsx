@@ -21,12 +21,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const [initialCheckDone, setInitialCheckDone] = useState(false);
   const location = useLocation();
 
-  // Complete initial check after a short delay to allow auth state to stabilize
+  // Complete initial check after auth state stabilizes
   useEffect(() => {
     if (!loading) {
       const timeoutId = setTimeout(() => {
         setInitialCheckDone(true);
-      }, 500);
+      }, 300); // Reduced timeout for faster navigation
       
       return () => clearTimeout(timeoutId);
     }
