@@ -95,7 +95,7 @@ export const signupWithEmail = async (email: string, password: string, username:
   try {
     console.log("Starting signup process for:", email, username);
     
-    // Create the user in Supabase Auth
+    // Create the user in Supabase Auth - let the trigger handle profile creation
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -118,31 +118,39 @@ export const signupWithEmail = async (email: string, password: string, username:
     
     console.log("User created successfully:", data.user.id);
     
-    // Wait a moment to ensure the auth session is established
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Create profile entry with just the basic fields that exist
+    // The database trigger should have created the profile automatically
+    // Let's verify it exists and create it manually if needed
     try {
-      console.log("Creating basic profile for user:", data.user.id);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for trigger
       
-      const { error: profileError } = await supabase
+      const { data: profileCheck, error: profileError } = await supabase
         .from('profiles')
-        .upsert({
-          id: data.user.id,
-          username,
-        }, { 
-          onConflict: 'id',
-          ignoreDuplicates: false
-        });
+        .select('id')
+        .eq('id', data.user.id)
+        .single();
       
-      if (profileError) {
-        console.error("Error creating profile during signup:", profileError);
-        // Continue anyway since the auth user was created successfully
-      } else {
-        console.log("Basic profile created successfully for user:", data.user.id);
+      if (profileError && profileError.code === "PGRST116") {
+        // Profile wasn't created by trigger, create it manually
+        console.log("Creating profile manually for user:", data.user.id);
+        
+        const { error: manualCreateError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            username,
+          });
+        
+        if (manualCreateError) {
+          console.error("Manual profile creation also failed:", manualCreateError);
+          // Don't throw error - user account was created successfully
+        } else {
+          console.log("Manual profile creation successful");
+        }
+      } else if (!profileError) {
+        console.log("Profile exists, signup complete");
       }
-    } catch (err) {
-      console.error("Profile creation failed but continuing:", err);
+    } catch (profileErr) {
+      console.error("Profile verification/creation failed but continuing:", profileErr);
     }
     
     return data;
