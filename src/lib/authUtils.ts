@@ -88,7 +88,172 @@ export const loginWithEmail = async (email: string, password: string) => {
   });
   
   if (error) throw error;
+  
+  // Check if user has a profile, create customer profile if none exists
+  if (data.user) {
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, user_type')
+        .eq('id', data.user.id)
+        .single();
+      
+      // If no profile exists, create a basic customer profile
+      if (profileError && profileError.code === "PGRST116") {
+        console.log("No profile found, creating customer profile for user:", data.user.id);
+        
+        const { error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            username: data.user.email?.split('@')[0] || 'user',
+            user_type: 'customer'
+          });
+          
+        if (createError) {
+          console.error("Failed to create customer profile:", createError);
+        } else {
+          console.log("Created customer profile for user", data.user.id);
+        }
+      }
+    } catch (err) {
+      console.error("Error checking/creating profile during login:", err);
+    }
+  }
+  
   return data;
+};
+
+export const signUpSeller = async (email: string, password: string, username: string) => {
+  try {
+    console.log("Starting seller signup process for:", email, username);
+    
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username,
+          user_type: 'seller',
+        },
+        emailRedirectTo: 'https://preview--plate-palace-mobile.lovable.app/auth/callback'
+      },
+    });
+    
+    if (error) {
+      console.error("Seller signup error:", error);
+      throw error;
+    }
+    
+    if (!data.user) {
+      console.error("No user returned after seller signup");
+      throw new Error("Failed to create seller: undefined");
+    }
+    
+    console.log("Seller created successfully:", data.user.id);
+    
+    // Handle profile creation with seller-specific data
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for trigger
+      
+      const { data: profileCheck, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', data.user.id)
+        .single();
+      
+      if (profileError && profileError.code === "PGRST116") {
+        console.log("Creating seller profile manually for user:", data.user.id);
+        
+        const { error: manualCreateError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            username,
+            user_type: 'seller'
+          });
+        
+        if (manualCreateError) {
+          console.error("Manual seller profile creation failed:", manualCreateError);
+        } else {
+          console.log("Manual seller profile creation successful");
+        }
+      }
+    } catch (profileErr) {
+      console.error("Seller profile verification/creation failed but continuing:", profileErr);
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error("Error during seller signup process:", error);
+    throw error;
+  }
+};
+
+export const signUpCustomer = async (email: string, password: string, username: string) => {
+  try {
+    console.log("Starting customer signup process for:", email, username);
+    
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username,
+          user_type: 'customer',
+        },
+        emailRedirectTo: 'https://preview--plate-palace-mobile.lovable.app/auth/callback'
+      },
+    });
+    
+    if (error) {
+      console.error("Customer signup error:", error);
+      throw error;
+    }
+    
+    if (!data.user) {
+      console.error("No user returned after customer signup");
+      throw new Error("Failed to create customer: undefined");
+    }
+    
+    console.log("Customer created successfully:", data.user.id);
+    
+    // Handle profile creation with customer-specific data
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for trigger
+      
+      const { data: profileCheck, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', data.user.id)
+        .single();
+      
+      if (profileError && profileError.code === "PGRST116") {
+        console.log("Creating customer profile manually for user:", data.user.id);
+        
+        const { error: manualCreateError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            username,
+            user_type: 'customer'
+          });
+        
+        if (manualCreateError) {
+          console.error("Manual customer profile creation failed:", manualCreateError);
+        } else {
+          console.log("Manual customer profile creation successful");
+        }
+      }
+    } catch (profileErr) {
+      console.error("Customer profile verification/creation failed but continuing:", profileErr);
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error("Error during customer signup process:", error);
+    throw error;
+  }
 };
 
 export const signupWithEmail = async (email: string, password: string, username: string) => {
