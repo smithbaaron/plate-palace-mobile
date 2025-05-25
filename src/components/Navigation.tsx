@@ -93,14 +93,14 @@ const Navigation = () => {
                 {/* Menu dropdown for logout */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="text-white hover:text-nextplate-orange">
+                    <Button variant="ghost" className="text-white hover:text-nextplate-orange border border-gray-600 hover:border-nextplate-orange">
                       <Menu size={20} />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-nextplate-darkgray border-gray-700">
+                  <DropdownMenuContent align="end" className="z-[100] bg-black border-gray-700 shadow-xl">
                     <DropdownMenuItem 
                       onClick={handleLogout}
-                      className="text-white hover:bg-gray-700 cursor-pointer"
+                      className="text-white hover:bg-gray-700 cursor-pointer focus:bg-gray-700"
                     >
                       <LogOut size={16} className="mr-2" />
                       Logout
