@@ -19,6 +19,7 @@ import PlateDetails from "./pages/plate/PlateDetails";
 import MealPrepDetails from "./pages/mealprep/MealPrepDetails";
 import Profile from "./pages/profile/Profile";
 import DeliverySettings from "./pages/seller/DeliverySettings";
+import SellerCalendar from "./pages/seller/SellerCalendar";
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -84,6 +85,11 @@ const AppWithProviders = () => {
               } />
               
               {/* Shared Routes */}
+              <Route path="/calendar" element={
+                <ProtectedRoute>
+                  <SellerCalendar />
+                </ProtectedRoute>
+              } />
               <Route path="/plate/:id" element={
                 <ProtectedRoute>
                   <PlateDetails />
