@@ -6,9 +6,9 @@ const NavigationLogo = () => {
     <div className="flex items-center">
       <Link to="/" className="flex items-center">
         <img 
-          src="/lovable-uploads/b6811eb7-aad2-470d-87d0-ef8e2cc34abe.png" 
+          src="/lovable-uploads/7b3638b5-87a3-48c9-b506-2a97a7586b84.png" 
           alt="NextPlate Logo" 
-          className="h-9"
+          className="h-12"
         />
       </Link>
     </div>

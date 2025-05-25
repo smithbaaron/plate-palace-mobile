@@ -22,9 +22,9 @@ const LandingPage = () => {
         <section className="max-w-7xl mx-auto text-center mb-20">
           <div className="flex justify-center mb-6">
             <img 
-              src="/lovable-uploads/b6811eb7-aad2-470d-87d0-ef8e2cc34abe.png" 
+              src="/lovable-uploads/7b3638b5-87a3-48c9-b506-2a97a7586b84.png" 
               alt="NextPlate Logo" 
-              className="h-32 md:h-40"
+              className="h-40 md:h-48"
             />
           </div>
           <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-gray-300">
@@ -159,13 +159,14 @@ const LandingPage = () => {
         </section>
       </main>
       
+      {/* Footer */}
       <footer className="bg-nextplate-darkgray py-10 text-center text-gray-400">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-center mb-4">
             <img 
-              src="/lovable-uploads/b6811eb7-aad2-470d-87d0-ef8e2cc34abe.png" 
+              src="/lovable-uploads/7b3638b5-87a3-48c9-b506-2a97a7586b84.png" 
               alt="NextPlate Logo" 
-              className="h-8"
+              className="h-10"
             />
           </div>
           <p className="text-sm">Connecting independent food sellers with hungry customers</p>
