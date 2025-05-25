@@ -40,10 +40,34 @@
 @layer base {
   * {
     @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
     @apply bg-black text-foreground antialiased;
+    min-height: 100vh;
+    min-height: 100dvh; /* Use dynamic viewport height for mobile */
+    overflow-x: hidden;
+    line-height: 1.5;
+  }
+
+  /* Ensure mobile viewport is properly handled */
+  @media (max-width: 768px) {
+    html {
+      font-size: 14px;
+    }
+    
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
   }
 }
 
@@ -62,5 +86,42 @@
   
   .text-glow {
     text-shadow: 0 0 10px rgba(249, 115, 22, 0.3);
+  }
+
+  /* Mobile-specific utilities */
+  @media (max-width: 768px) {
+    .mobile-container {
+      @apply px-3 py-2;
+      max-width: 100vw;
+    }
+    
+    .mobile-text {
+      @apply text-sm leading-relaxed;
+    }
+    
+    .mobile-spacing {
+      @apply space-y-3;
+    }
+  }
+}
+
+/* Responsive container improvements */
+@media (max-width: 480px) {
+  .max-w-7xl {
+    max-width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .max-w-4xl {
+    max-width: 100%;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  
+  .max-w-2xl {
+    max-width: 100%;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 }
