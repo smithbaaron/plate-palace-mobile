@@ -1,6 +1,7 @@
 
 import React from "react";
 import { Bell } from "lucide-react";
+import { useSellerOrders } from "@/hooks/seller/use-seller-orders";
 
 interface DashboardStatsProps {
   todayPlatesCount: number;
@@ -8,6 +9,8 @@ interface DashboardStatsProps {
 }
 
 const DashboardStats: React.FC<DashboardStatsProps> = ({ todayPlatesCount, futurePlatesCount }) => {
+  const { totalSales, totalOrdersCount, isLoading } = useSellerOrders();
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
       <div className="bg-nextplate-darkgray rounded-xl p-6">
@@ -15,11 +18,15 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({ todayPlatesCount, futur
         <div className="grid grid-cols-2 gap-4">
           <div className="p-3 bg-black bg-opacity-50 rounded-lg">
             <p className="text-sm text-gray-400">Total Sales</p>
-            <p className="text-2xl font-bold">$0</p>
+            <p className="text-2xl font-bold">
+              {isLoading ? "..." : `$${totalSales.toFixed(2)}`}
+            </p>
           </div>
           <div className="p-3 bg-black bg-opacity-50 rounded-lg">
             <p className="text-sm text-gray-400">Total Orders</p>
-            <p className="text-2xl font-bold">0</p>
+            <p className="text-2xl font-bold">
+              {isLoading ? "..." : totalOrdersCount}
+            </p>
           </div>
           <div className="p-3 bg-black bg-opacity-50 rounded-lg">
             <p className="text-sm text-gray-400">Current Menu</p>
