@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { usePlates } from '@/lib/plates-service';
 import { Plate } from '@/components/seller/PlateFormTypes';
@@ -32,8 +31,8 @@ export const useSellerPlates = () => {
     return plateDate.getTime() > today.getTime();
   });
 
-  // Group plates by date
-  const platesByDate = futurePlates.reduce<Record<string, Plate[]>>((acc, plate) => {
+  // Group plates by date - include both today's and future plates
+  const platesByDate = [...todayPlates, ...futurePlates].reduce<Record<string, Plate[]>>((acc, plate) => {
     const dateStr = format(new Date(plate.availableDate), 'yyyy-MM-dd');
     if (!acc[dateStr]) {
       acc[dateStr] = [];
