@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -15,7 +16,6 @@ const AuthPage = () => {
   const { userType, setUserType, isOnboarded } = useUserType();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [isInitializing, setIsInitializing] = useState(true);
   
   // Handle navigation after authentication - simplified logic
   useEffect(() => {
@@ -24,9 +24,6 @@ const AuthPage = () => {
       console.log("Auth is still loading, waiting...");
       return;
     }
-    
-    // Mark that we've finished initializing after auth loading is done
-    setIsInitializing(false);
     
     if (isAuthenticated && currentUser) {
       console.log("User is authenticated, checking redirect path:", { userType, isOnboarded });
@@ -101,8 +98,8 @@ const AuthPage = () => {
     }
   };
   
-  // Show loading state only while auth is loading AND we're still initializing
-  if (loading && isInitializing) {
+  // Show loading state only while auth is loading
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <div className="animate-pulse">Loading...</div>
