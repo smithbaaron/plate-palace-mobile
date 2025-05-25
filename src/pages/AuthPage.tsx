@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -27,9 +26,7 @@ const AuthPage = () => {
     }
     
     // Mark that we've finished initializing after auth loading is done
-    if (isInitializing) {
-      setIsInitializing(false);
-    }
+    setIsInitializing(false);
     
     if (isAuthenticated && currentUser) {
       console.log("User is authenticated, checking redirect path:", { userType, isOnboarded });
@@ -56,7 +53,7 @@ const AuthPage = () => {
         return;
       }
     }
-  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, defaultType, navigate, isInitializing]);
+  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, defaultType, navigate]);
   
   const handleLogin = async (email: string, password: string) => {
     try {
