@@ -60,9 +60,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Initial auth check on mount
     const initializeAuth = async () => {
       console.log("Initializing auth...");
-      await checkAndResyncAuth();
-      if (mounted) {
-        setLoading(false);
+      try {
+        await checkAndResyncAuth();
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
     
