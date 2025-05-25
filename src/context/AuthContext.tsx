@@ -38,49 +38,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!currentSession) {
         setCurrentUser(null);
         setSession(null);
+        setLoading(false);
         return false;
       }
       
       const formattedUser = await formatUser(currentSession.user);
       setCurrentUser(formattedUser);
       setSession(currentSession);
+      setLoading(false);
       return !!formattedUser;
     } catch (error) {
       console.error("Error checking auth state:", error);
-      return false;
-    } finally {
       setLoading(false);
+      return false;
     }
   };
 
   // Set up the auth state listener
   useEffect(() => {
+    let mounted = true;
+    
     // Initial auth check on mount
     checkAndResyncAuth();
     
     // Set up the subscription for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       console.log('Auth state changed:', event);
+      
+      if (!mounted) return;
+      
       setSession(newSession);
       
       if (event === 'SIGNED_IN' && newSession?.user) {
-        const formattedUser = await formatUser(newSession.user);
-        setCurrentUser(formattedUser);
+        try {
+          const formattedUser = await formatUser(newSession.user);
+          setCurrentUser(formattedUser);
+        } catch (error) {
+          console.error("Error formatting user after sign in:", error);
+        }
       } else if (event === 'SIGNED_OUT') {
         setCurrentUser(null);
       }
       
+      // Always set loading to false after handling auth state change
       setLoading(false);
     });
     
     // Add event listener for storage changes (if user clears localStorage in another tab)
     const handleStorageChange = () => {
-      checkAndResyncAuth();
+      if (mounted) {
+        checkAndResyncAuth();
+      }
     };
     
     window.addEventListener('storage', handleStorageChange);
     
     return () => {
+      mounted = false;
       subscription.unsubscribe();
       window.removeEventListener('storage', handleStorageChange);
     };
@@ -94,9 +108,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // User data will be set by the auth state listener
     } catch (error) {
       console.error("Login error", error);
-      throw error;
-    } finally {
       setLoading(false);
+      throw error;
     }
   };
 
@@ -108,9 +121,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return result; // Return the result to the caller
     } catch (error) {
       console.error("Signup error", error);
-      throw error;
-    } finally {
       setLoading(false);
+      throw error;
     }
   };
 
