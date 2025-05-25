@@ -16,17 +16,18 @@ const AuthPage = () => {
   const { userType, setUserType, isOnboarded } = useUserType();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [hasRedirected, setHasRedirected] = useState(false);
   
-  // Handle navigation after authentication - simplified logic
+  // Handle navigation after authentication
   useEffect(() => {
-    // Don't do anything while auth is still loading
-    if (loading) {
-      console.log("Auth is still loading, waiting...");
+    // Don't redirect if we're still loading or have already redirected
+    if (loading || hasRedirected) {
       return;
     }
     
     if (isAuthenticated && currentUser) {
       console.log("User is authenticated, checking redirect path:", { userType, isOnboarded });
+      setHasRedirected(true);
       
       // If user has a complete profile, redirect to dashboard
       if (userType && isOnboarded) {
@@ -50,7 +51,7 @@ const AuthPage = () => {
         return;
       }
     }
-  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, defaultType, navigate]);
+  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, defaultType, navigate, hasRedirected]);
   
   const handleLogin = async (email: string, password: string) => {
     try {
@@ -98,20 +99,26 @@ const AuthPage = () => {
     }
   };
   
-  // Show loading state only while auth is loading
+  // Show loading state while auth is loading
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <div className="animate-pulse">Loading...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nextplate-orange mx-auto mb-4"></div>
+          <div>Loading NextPlate...</div>
+        </div>
       </div>
     );
   }
   
-  // Show setting up message only if user is authenticated
-  if (isAuthenticated && currentUser) {
+  // If authenticated and we're about to redirect, show a brief loading message
+  if (isAuthenticated && currentUser && !hasRedirected) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <div className="animate-pulse">Setting up your account...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nextplate-orange mx-auto mb-4"></div>
+          <div>Setting up your account...</div>
+        </div>
       </div>
     );
   }
