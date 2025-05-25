@@ -16,10 +16,20 @@ const AuthPage = () => {
   const { userType, setUserType, isOnboarded } = useUserType();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [isInitializing, setIsInitializing] = useState(true);
   
   // Handle navigation after authentication - simplified logic
   useEffect(() => {
-    if (loading) return;
+    // Don't do anything while auth is still loading
+    if (loading) {
+      console.log("Auth is still loading, waiting...");
+      return;
+    }
+    
+    // Mark that we've finished initializing after auth loading is done
+    if (isInitializing) {
+      setIsInitializing(false);
+    }
     
     if (isAuthenticated && currentUser) {
       console.log("User is authenticated, checking redirect path:", { userType, isOnboarded });
@@ -46,7 +56,7 @@ const AuthPage = () => {
         return;
       }
     }
-  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, defaultType, navigate]);
+  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, defaultType, navigate, isInitializing]);
   
   const handleLogin = async (email: string, password: string) => {
     try {
@@ -94,8 +104,8 @@ const AuthPage = () => {
     }
   };
   
-  // Show loading state while checking auth
-  if (loading) {
+  // Show loading state only while auth is loading AND we're still initializing
+  if (loading && isInitializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <div className="animate-pulse">Loading...</div>
@@ -103,7 +113,7 @@ const AuthPage = () => {
     );
   }
   
-  // Don't show auth form if user is authenticated - let useEffect handle redirect
+  // Show setting up message only if user is authenticated
   if (isAuthenticated && currentUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
