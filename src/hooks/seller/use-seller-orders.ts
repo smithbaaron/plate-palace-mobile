@@ -10,11 +10,11 @@ export const useSellerOrders = () => {
 
   // Calculate stats from orders
   const calculateStats = () => {
-    // Filter out refunded orders for sales calculation
+    // Filter out refunded orders for both sales and orders count calculation
     const validOrders = orders.filter(order => order.status !== 'refunded');
     
     const totalSales = validOrders.reduce((sum, order) => sum + order.total, 0);
-    const totalOrdersCount = orders.length; // Include all orders in count
+    const totalOrdersCount = validOrders.length; // Only count non-refunded orders
     
     return {
       totalSales,
