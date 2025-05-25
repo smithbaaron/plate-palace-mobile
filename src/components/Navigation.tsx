@@ -5,7 +5,13 @@ import { useAuth } from "@/context/AuthContext";
 import { useUserType } from "@/context/UserTypeContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Home, User, Package, Calendar, Bell, Menu, X } from "lucide-react";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Home, User, Package, Calendar, Bell, Menu, X, LogOut } from "lucide-react";
 
 const Navigation = () => {
   const { isAuthenticated, currentUser, logout } = useAuth();
@@ -30,6 +36,11 @@ const Navigation = () => {
   
   // Determine dashboard URL based on user type
   const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
+  
+  const handleLogout = async () => {
+    await logout();
+    // This will automatically redirect to auth page via the auth context
+  };
   
   return (
     <nav className="fixed w-full z-50 bg-black bg-opacity-90 backdrop-blur-lg border-b border-gray-800">
@@ -78,9 +89,24 @@ const Navigation = () => {
                     )}
                   </Button>
                 </div>
-                <Button variant="ghost" onClick={logout} className="text-white hover:text-nextplate-orange">
-                  Logout
-                </Button>
+                
+                {/* Menu dropdown for logout */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="text-white hover:text-nextplate-orange">
+                      <Menu size={20} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-nextplate-darkgray border-gray-700">
+                    <DropdownMenuItem 
+                      onClick={handleLogout}
+                      className="text-white hover:bg-gray-700 cursor-pointer"
+                    >
+                      <LogOut size={16} className="mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <Link to="/auth">
@@ -120,7 +146,7 @@ const Navigation = () => {
                   Profile
                 </Link>
                 <button
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="block w-full text-left px-3 py-2 text-white hover:text-nextplate-orange"
                 >
                   Logout
