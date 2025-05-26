@@ -38,7 +38,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onAddPlateClick, onCr
           className="bg-green-600 hover:bg-green-700 flex items-center"
         >
           <Package size={16} className="mr-1" />
-          Create Bundle
+          Create Meal Prep Package
         </Button>
       </div>
     </div>
