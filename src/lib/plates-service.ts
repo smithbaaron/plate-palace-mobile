@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { Plate } from '@/components/seller/PlateFormTypes';
 import { useAuth } from '@/context/AuthContext';
@@ -15,6 +14,9 @@ export type DBPlate = {
   image_url: string | null;
   sold_count: number;
   size: string;
+  is_single: boolean;
+  is_bundle: boolean;
+  is_available: boolean;
 };
 
 // Convert a DB plate to a frontend plate
@@ -28,6 +30,9 @@ export const dbPlateToPlate = (dbPlate: any): Plate => ({
   imageUrl: dbPlate.image_url,
   soldCount: dbPlate.sold_count || 0,
   size: dbPlate.size || 'M',
+  isSingle: dbPlate.is_single ?? true,
+  isBundle: dbPlate.is_bundle ?? false,
+  isAvailable: dbPlate.is_available ?? true,
 });
 
 // Convert a frontend plate to a DB plate
@@ -41,6 +46,9 @@ export const plateToDbPlate = (plate: Omit<Plate, 'id' | 'soldCount'>, sellerId:
   image_url: plate.imageUrl || null,
   sold_count: 0,
   size: plate.size,
+  is_single: plate.isSingle,
+  is_bundle: plate.isBundle,
+  is_available: plate.isAvailable,
 });
 
 // Service functions for interacting with plates in Supabase

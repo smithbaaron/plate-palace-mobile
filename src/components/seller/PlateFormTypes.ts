@@ -17,6 +17,11 @@ export const formSchema = z.object({
   }),
   imageUrl: z.string().optional(),
   size: z.enum(["S", "M", "L"]).default("M"),
+  isSingle: z.boolean().default(true),
+  isBundle: z.boolean().default(false),
+}).refine((data) => data.isSingle || data.isBundle, {
+  message: "At least one availability option must be selected",
+  path: ["isSingle"], // This will show the error on the isSingle field
 });
 
 export type Plate = {
@@ -29,9 +34,33 @@ export type Plate = {
   imageUrl?: string;
   soldCount: number;
   size: PlateSize;
+  isSingle: boolean;
+  isBundle: boolean;
+  isAvailable: boolean;
 };
 
 export type PlateFormValues = z.infer<typeof formSchema>;
+
+// Bundle types
+export type Bundle = {
+  id: string;
+  sellerId: string;
+  name: string;
+  plateCount: number;
+  price: number;
+  availableDate: Date;
+  availabilityScope: 'day' | 'week';
+  createdAt: Date;
+};
+
+export type BundleFormValues = {
+  name: string;
+  plateCount: number;
+  price: number;
+  availableDate: Date;
+  availabilityScope: 'day' | 'week';
+  selectedPlateIds: string[];
+};
 
 // Order Status Types for Notification System
 export type OrderStatus = "pending" | "preparing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";

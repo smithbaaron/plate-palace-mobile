@@ -23,6 +23,7 @@ import PlateBasicDetails from "./PlateBasicDetails";
 import PlateSizeSelector from "./PlateSizeSelector";
 import PlateNutritionalInfo from "./PlateNutritionalInfo";
 import PlateAvailabilityDate from "./PlateAvailabilityDate";
+import PlateAvailabilityOptions from "./PlateAvailabilityOptions";
 
 // Re-export the types from PlateFormTypes for backward compatibility
 export type { PlateSize, Plate } from "./PlateFormTypes";
@@ -48,10 +49,22 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({ open, onOpenCha
       availableDate: new Date(new Date().setHours(0, 0, 0, 0)),
       imageUrl: "",
       size: "M",
+      isSingle: true,
+      isBundle: false,
     },
   });
 
   const handleSubmit = (data: PlateFormValues) => {
+    // Validate that at least one availability option is selected
+    if (!data.isSingle && !data.isBundle) {
+      toast({
+        title: "Invalid Selection",
+        description: "Please select at least one availability option.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Add image preview to the form data if available
     if (imagePreview) {
       data.imageUrl = imagePreview;
@@ -67,6 +80,9 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({ open, onOpenCha
         availableDate: data.availableDate,
         imageUrl: data.imageUrl,
         size: data.size,
+        isSingle: data.isSingle,
+        isBundle: data.isBundle,
+        isAvailable: true,
       });
     }
     
@@ -78,7 +94,7 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({ open, onOpenCha
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-nextplate-darkgray text-white">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-nextplate-darkgray text-white">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Add Single Plate</DialogTitle>
           <DialogDescription className="text-gray-400">
@@ -105,6 +121,9 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({ open, onOpenCha
             
             {/* Available Date Field */}
             <PlateAvailabilityDate form={form} />
+            
+            {/* Availability Options */}
+            <PlateAvailabilityOptions form={form} />
             
             <DialogFooter>
               <Button 

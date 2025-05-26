@@ -1,9 +1,9 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Package } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useNotifications } from "@/hooks/use-notifications";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardHeaderProps {
   onAddPlateClick: () => void;
@@ -12,7 +12,11 @@ interface DashboardHeaderProps {
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onAddPlateClick, onCreateMealPrepClick }) => {
   const { currentUser } = useAuth();
-  const { notifyInfo } = useNotifications();
+  const navigate = useNavigate();
+
+  const handleCreateBundle = () => {
+    navigate("/seller/create-bundle");
+  };
 
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
@@ -30,11 +34,11 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onAddPlateClick, onCr
           New Plate
         </Button>
         <Button
-          onClick={onCreateMealPrepClick}
-          className="bg-nextplate-orange hover:bg-orange-600 flex items-center"
+          onClick={handleCreateBundle}
+          className="bg-green-600 hover:bg-green-700 flex items-center"
         >
-          <Plus size={16} className="mr-1" />
-          Meal Prep
+          <Package size={16} className="mr-1" />
+          Create Bundle
         </Button>
       </div>
     </div>
