@@ -20,7 +20,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { usePlates } from "@/lib/plates-service";
 import { useAuth } from "@/context/AuthContext";
-import { BundleFormValues } from "@/components/seller/PlateFormTypes";
+import { BundleFormValues, Plate } from "@/components/seller/PlateFormTypes";
+import AddSinglePlateForm from "@/components/seller/AddSinglePlateForm";
 
 const bundleSchema = z.object({
   name: z.string().min(3, "Bundle name must be at least 3 characters"),
@@ -44,11 +45,12 @@ const CreateBundle = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { currentUser } = useAuth();
-  const { fetchPlates } = usePlates();
+  const { fetchPlates, addPlate } = usePlates();
   
   const [availablePlates, setAvailablePlates] = useState<any[]>([]);
   const [selectedPlateIds, setSelectedPlateIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showAddPlateForm, setShowAddPlateForm] = useState(false);
 
   const form = useForm<BundleFormSchema>({
     resolver: zodResolver(bundleSchema),
@@ -104,6 +106,28 @@ const CreateBundle = () => {
       const newSelection = selectedPlateIds.filter(id => id !== plateId);
       setSelectedPlateIds(newSelection);
       form.setValue("selectedPlateIds", newSelection);
+    }
+  };
+
+  const handleAddPlate = async (newPlateData: Omit<Plate, "id" | "soldCount">) => {
+    try {
+      const savedPlate = await addPlate(newPlateData);
+      // Refresh the available plates list
+      const plates = await fetchPlates();
+      const bundlePlates = plates.filter(plate => plate.isBundle && plate.isAvailable);
+      setAvailablePlates(bundlePlates);
+      
+      toast({
+        title: "Plate Added",
+        description: `${savedPlate.name} has been added to your menu and is available for bundles.`,
+      });
+    } catch (error) {
+      console.error("Error adding plate:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add plate. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -280,16 +304,39 @@ const CreateBundle = () => {
               {/* Plate Selection */}
               <Card className="bg-nextplate-darkgray border-gray-800">
                 <CardHeader>
-                  <CardTitle className="text-white">Select Plates</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Choose {form.watch("plateCount")} plates for your bundle
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-white">Select Plates</CardTitle>
+                      <CardDescription className="text-gray-400">
+                        Choose {form.watch("plateCount")} plates for your bundle
+                      </CardDescription>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={() => setShowAddPlateForm(true)}
+                      className="bg-nextplate-orange hover:bg-orange-600"
+                      size="sm"
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      Create Plate
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {availablePlates.length === 0 ? (
-                    <p className="text-gray-400 text-center py-8">
-                      No plates available for bundles. Make sure you have plates marked as "Available for Meal Prep Bundles".
-                    </p>
+                    <div className="text-center py-8">
+                      <p className="text-gray-400 mb-4">
+                        No plates available for bundles. Create plates that are marked as "Available for Meal Prep Bundles".
+                      </p>
+                      <Button
+                        type="button"
+                        onClick={() => setShowAddPlateForm(true)}
+                        className="bg-nextplate-orange hover:bg-orange-600"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Your First Plate
+                      </Button>
+                    </div>
                   ) : (
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {availablePlates.map((plate) => (
@@ -366,6 +413,13 @@ const CreateBundle = () => {
           </form>
         </div>
       </div>
+
+      {/* Add Plate Form Modal */}
+      <AddSinglePlateForm
+        open={showAddPlateForm}
+        onOpenChange={setShowAddPlateForm}
+        onSubmit={handleAddPlate}
+      />
     </div>
   );
 };
