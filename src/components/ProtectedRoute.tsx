@@ -57,6 +57,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={dashboardUrl} replace />;
   }
 
+  // If on onboarding page and no user type yet, allow access (they're setting up their type)
+  if (isOnOnboardingPage && !userType && currentUser) {
+    console.log("On onboarding page without user type - allowing access");
+    return <>{children}</>;
+  }
+
   // If user type is required but doesn't match
   if (requiredUserType && userType !== requiredUserType) {
     console.log("User type mismatch", { required: requiredUserType, current: userType });
@@ -84,7 +90,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   
   // If no user type but authenticated and not on onboarding page
   if (!userType && currentUser && !isOnOnboardingPage) {
-    console.log("No user type found, redirecting to onboarding");
+    console.log("No user type found, redirecting to seller onboarding");
     return <Navigate to="/seller/onboarding" replace />;
   }
   
