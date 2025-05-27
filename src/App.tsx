@@ -20,6 +20,7 @@ import MealPrepDetails from "./pages/mealprep/MealPrepDetails";
 import Profile from "./pages/profile/Profile";
 import DeliverySettings from "./pages/seller/DeliverySettings";
 import SellerCalendar from "./pages/seller/SellerCalendar";
+import CreateBundle from "./pages/seller/CreateBundle";
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -59,6 +60,11 @@ const AppWithProviders = () => {
               <Route path="/seller/dashboard" element={
                 <ProtectedRoute requiredUserType="seller" requireOnboarded={true}>
                   <SellerDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/seller/create-bundle" element={
+                <ProtectedRoute requiredUserType="seller" requireOnboarded={true}>
+                  <CreateBundle />
                 </ProtectedRoute>
               } />
               <Route path="/seller/delivery-settings" element={
