@@ -1,10 +1,9 @@
-
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Package, Plus } from "lucide-react";
+import { Calendar, Package, Plus, Copy } from "lucide-react";
 import { format } from "date-fns";
 
 import Navigation from "@/components/Navigation";
@@ -48,9 +47,11 @@ const CreateBundle = () => {
   const { fetchPlates, addPlate } = usePlates();
   
   const [availablePlates, setAvailablePlates] = useState<any[]>([]);
+  const [allPlates, setAllPlates] = useState<any[]>([]); // Store all plates for duplication
   const [selectedPlateIds, setSelectedPlateIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showAddPlateForm, setShowAddPlateForm] = useState(false);
+  const [plateToEdit, setPlateToEdit] = useState<Plate | null>(null);
 
   const form = useForm<BundleFormSchema>({
     resolver: zodResolver(bundleSchema),
@@ -69,6 +70,7 @@ const CreateBundle = () => {
     const loadPlates = async () => {
       try {
         const plates = await fetchPlates();
+        setAllPlates(plates); // Store all plates for duplication
         // Filter plates that are available for bundles and currently available
         const bundlePlates = plates.filter(plate => plate.isBundle && plate.isAvailable);
         setAvailablePlates(bundlePlates);
@@ -112,8 +114,9 @@ const CreateBundle = () => {
   const handleAddPlate = async (newPlateData: Omit<Plate, "id" | "soldCount">) => {
     try {
       const savedPlate = await addPlate(newPlateData);
-      // Refresh the available plates list
+      // Refresh both all plates and available plates lists
       const plates = await fetchPlates();
+      setAllPlates(plates);
       const bundlePlates = plates.filter(plate => plate.isBundle && plate.isAvailable);
       setAvailablePlates(bundlePlates);
       
@@ -129,6 +132,30 @@ const CreateBundle = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleDuplicatePlate = (plateId: string) => {
+    const plateToClone = allPlates.find(plate => plate.id === plateId);
+    if (plateToClone) {
+      // Create a copy of the plate with modified name and reset some fields
+      const duplicatedPlate: Plate = {
+        ...plateToClone,
+        id: '', // Will be generated when saved
+        name: `${plateToClone.name} (Copy)`,
+        availableDate: new Date(new Date().setHours(0, 0, 0, 0)), // Set to today
+        soldCount: 0,
+        isBundle: true, // Ensure it's available for bundles
+        isAvailable: true,
+      };
+      
+      setPlateToEdit(duplicatedPlate);
+      setShowAddPlateForm(true);
+    }
+  };
+
+  const handleFormClose = () => {
+    setShowAddPlateForm(false);
+    setPlateToEdit(null);
   };
 
   const onSubmit = async (data: BundleFormSchema) => {
@@ -311,15 +338,17 @@ const CreateBundle = () => {
                         Choose {form.watch("plateCount")} plates for your bundle
                       </CardDescription>
                     </div>
-                    <Button
-                      type="button"
-                      onClick={() => setShowAddPlateForm(true)}
-                      className="bg-nextplate-orange hover:bg-orange-600"
-                      size="sm"
-                    >
-                      <Plus className="mr-1 h-4 w-4" />
-                      Create Plate
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        onClick={() => setShowAddPlateForm(true)}
+                        className="bg-nextplate-orange hover:bg-orange-600"
+                        size="sm"
+                      >
+                        <Plus className="mr-1 h-4 w-4" />
+                        Create New
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -328,14 +357,30 @@ const CreateBundle = () => {
                       <p className="text-gray-400 mb-4">
                         No plates available for bundles. Create plates that are marked as "Available for Meal Prep Bundles".
                       </p>
-                      <Button
-                        type="button"
-                        onClick={() => setShowAddPlateForm(true)}
-                        className="bg-nextplate-orange hover:bg-orange-600"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create Your First Plate
-                      </Button>
+                      <div className="flex justify-center gap-3">
+                        <Button
+                          type="button"
+                          onClick={() => setShowAddPlateForm(true)}
+                          className="bg-nextplate-orange hover:bg-orange-600"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create Your First Plate
+                        </Button>
+                        {allPlates.length > 0 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              // Show the first plate as an example for duplication
+                              handleDuplicatePlate(allPlates[0].id);
+                            }}
+                            className="text-gray-300 border-gray-700"
+                          >
+                            <Copy className="mr-2 h-4 w-4" />
+                            Duplicate Existing
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -360,15 +405,65 @@ const CreateBundle = () => {
                               ${plate.price.toFixed(2)} • Size: {plate.size} • Qty: {plate.quantity}
                             </p>
                           </div>
-                          {plate.imageUrl && (
-                            <img
-                              src={plate.imageUrl}
-                              alt={plate.name}
-                              className="w-12 h-12 object-cover rounded"
-                            />
-                          )}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDuplicatePlate(plate.id)}
+                              className="text-gray-400 border-gray-600 hover:bg-gray-700"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                            {plate.imageUrl && (
+                              <img
+                                src={plate.imageUrl}
+                                alt={plate.name}
+                                className="w-12 h-12 object-cover rounded"
+                              />
+                            )}
+                          </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+                  
+                  {/* Show duplication option for all plates */}
+                  {allPlates.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-700">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-400">
+                          Want to modify an existing plate?
+                        </p>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-gray-300 border-gray-700"
+                            >
+                              <Copy className="mr-1 h-4 w-4" />
+                              Duplicate & Edit
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 bg-gray-800 border-gray-700">
+                            <div className="space-y-2 max-h-60 overflow-y-auto">
+                              <h4 className="font-medium text-white">Select plate to duplicate:</h4>
+                              {allPlates.map((plate) => (
+                                <button
+                                  key={plate.id}
+                                  type="button"
+                                  onClick={() => handleDuplicatePlate(plate.id)}
+                                  className="w-full text-left p-2 hover:bg-gray-700 rounded text-sm text-white"
+                                >
+                                  {plate.name} - ${plate.price.toFixed(2)}
+                                </button>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
                   )}
                   
@@ -417,8 +512,9 @@ const CreateBundle = () => {
       {/* Add Plate Form Modal */}
       <AddSinglePlateForm
         open={showAddPlateForm}
-        onOpenChange={setShowAddPlateForm}
+        onOpenChange={handleFormClose}
         onSubmit={handleAddPlate}
+        initialPlate={plateToEdit}
       />
     </div>
   );
