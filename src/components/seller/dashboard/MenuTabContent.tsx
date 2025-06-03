@@ -1,5 +1,6 @@
 
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Plate } from "@/components/seller/PlateFormTypes";
 import PlateCard from "./PlateCard";
 import EmptyMenuState from "./EmptyMenuState";
@@ -15,10 +16,16 @@ const MenuTabContent: React.FC<MenuTabContentProps> = ({
   onAddPlateClick, 
   onCreateMealPrepClick 
 }) => {
+  const navigate = useNavigate();
+
+  const handleCreateMealPrep = () => {
+    navigate("/seller/create-bundle");
+  };
+
   if (todayPlates.length === 0) {
     return <EmptyMenuState 
       onAddPlateClick={onAddPlateClick}
-      onCreateMealPrepClick={onCreateMealPrepClick}
+      onCreateMealPrepClick={handleCreateMealPrep}
     />;
   }
 
