@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 import { Plate } from '@/components/seller/PlateFormTypes';
 import { useAuth } from '@/context/AuthContext';
@@ -51,15 +52,40 @@ export const plateToDbPlate = (plate: Omit<Plate, 'id' | 'soldCount'>, sellerId:
   is_available: plate.isAvailable,
 });
 
+// Helper function to get seller profile ID from auth user ID
+const getSellerProfileId = async (authUserId: string): Promise<string> => {
+  console.log('Getting seller profile ID for auth user:', authUserId);
+  
+  const { data, error } = await supabase
+    .from('seller_profiles')
+    .select('id')
+    .eq('user_id', authUserId)
+    .single();
+    
+  if (error) {
+    console.error('Error fetching seller profile:', error);
+    throw new Error(`Failed to fetch seller profile: ${error.message}`);
+  }
+  
+  if (!data) {
+    throw new Error('Seller profile not found. Please complete your seller onboarding first.');
+  }
+  
+  console.log('Found seller profile ID:', data.id);
+  return data.id;
+};
+
 // Service functions for interacting with plates in Supabase
 export const platesService = {
   // Get all plates for a seller
-  getSellerPlates: async (sellerId: string) => {
+  getSellerPlates: async (authUserId: string) => {
     try {
+      const sellerProfileId = await getSellerProfileId(authUserId);
+      
       const { data, error } = await supabase
         .from('plates')
         .select('*')
-        .eq('seller_id', sellerId)
+        .eq('seller_id', sellerProfileId)
         .order('available_date', { ascending: true });
         
       if (error) throw error;
@@ -73,9 +99,14 @@ export const platesService = {
   },
   
   // Add a new plate
-  addPlate: async (plate: Omit<Plate, 'id' | 'soldCount'>, sellerId: string) => {
+  addPlate: async (plate: Omit<Plate, 'id' | 'soldCount'>, authUserId: string) => {
     try {
-      const dbPlate = plateToDbPlate(plate, sellerId);
+      console.log('Adding plate for auth user:', authUserId);
+      const sellerProfileId = await getSellerProfileId(authUserId);
+      console.log('Using seller profile ID:', sellerProfileId);
+      
+      const dbPlate = plateToDbPlate(plate, sellerProfileId);
+      console.log('Prepared DB plate:', dbPlate);
       
       const { data, error } = await supabase
         .from('plates')
@@ -83,8 +114,12 @@ export const platesService = {
         .select()
         .single();
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error inserting plate:', error);
+        throw error;
+      }
       
+      console.log('Successfully added plate:', data);
       return dbPlateToPlate(data);
     } catch (error) {
       console.error('Error adding plate:', error);
@@ -93,15 +128,16 @@ export const platesService = {
   },
   
   // Update a plate
-  updatePlate: async (plate: Plate, sellerId: string) => {
+  updatePlate: async (plate: Plate, authUserId: string) => {
     try {
-      const dbPlate = plateToDbPlate(plate, sellerId);
+      const sellerProfileId = await getSellerProfileId(authUserId);
+      const dbPlate = plateToDbPlate(plate, sellerProfileId);
       
       const { data, error } = await supabase
         .from('plates')
         .update(dbPlate)
         .eq('id', plate.id)
-        .eq('seller_id', sellerId) // Security: ensure the plate belongs to this seller
+        .eq('seller_id', sellerProfileId) // Security: ensure the plate belongs to this seller
         .select()
         .single();
         
@@ -115,13 +151,15 @@ export const platesService = {
   },
   
   // Delete a plate
-  deletePlate: async (plateId: string, sellerId: string) => {
+  deletePlate: async (plateId: string, authUserId: string) => {
     try {
+      const sellerProfileId = await getSellerProfileId(authUserId);
+      
       const { error } = await supabase
         .from('plates')
         .delete()
         .eq('id', plateId)
-        .eq('seller_id', sellerId); // Security: ensure the plate belongs to this seller
+        .eq('seller_id', sellerProfileId); // Security: ensure the plate belongs to this seller
         
       if (error) throw error;
       
