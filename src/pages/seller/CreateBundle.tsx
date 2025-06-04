@@ -65,27 +65,38 @@ const CreateBundle = () => {
     },
   });
 
+  // Function to refresh plates data
+  const refreshPlatesData = async () => {
+    try {
+      console.log('Refreshing plates data...');
+      const plates = await fetchPlates();
+      console.log('Fetched plates:', plates);
+      
+      setAllPlates(plates); // Store all plates for duplication
+      
+      // Filter plates that are available for bundles and currently available
+      const bundlePlates = plates.filter(plate => {
+        const isEligible = plate.isBundle && plate.isAvailable;
+        console.log(`Plate ${plate.name} - isBundle: ${plate.isBundle}, isAvailable: ${plate.isAvailable}, eligible: ${isEligible}`);
+        return isEligible;
+      });
+      
+      console.log('Bundle eligible plates:', bundlePlates);
+      setAvailablePlates(bundlePlates);
+    } catch (error) {
+      console.error("Error refreshing plates:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh plates. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Load available plates for bundles
   React.useEffect(() => {
-    const loadPlates = async () => {
-      try {
-        const plates = await fetchPlates();
-        setAllPlates(plates); // Store all plates for duplication
-        // Filter plates that are available for bundles and currently available
-        const bundlePlates = plates.filter(plate => plate.isBundle && plate.isAvailable);
-        setAvailablePlates(bundlePlates);
-      } catch (error) {
-        console.error("Error loading plates:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load your plates. Please try again.",
-          variant: "destructive",
-        });
-      }
-    };
-
     if (currentUser) {
-      loadPlates();
+      refreshPlatesData();
     }
   }, [currentUser, fetchPlates, toast]);
 
@@ -113,12 +124,12 @@ const CreateBundle = () => {
 
   const handleAddPlate = async (newPlateData: Omit<Plate, "id" | "soldCount">) => {
     try {
+      console.log('Adding new plate:', newPlateData);
       const savedPlate = await addPlate(newPlateData);
-      // Refresh both all plates and available plates lists
-      const plates = await fetchPlates();
-      setAllPlates(plates);
-      const bundlePlates = plates.filter(plate => plate.isBundle && plate.isAvailable);
-      setAvailablePlates(bundlePlates);
+      console.log('Plate saved successfully:', savedPlate);
+      
+      // Refresh the plates data to include the new plate
+      await refreshPlatesData();
       
       toast({
         title: "Plate Added",
