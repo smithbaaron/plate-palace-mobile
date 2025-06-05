@@ -9,12 +9,14 @@ interface MenuTabContentProps {
   todayPlates: Plate[];
   onAddPlateClick: () => void;
   onCreateMealPrepClick: () => void;
+  mealPrepPlatesCount: number;
 }
 
 const MenuTabContent: React.FC<MenuTabContentProps> = ({ 
   todayPlates, 
   onAddPlateClick, 
-  onCreateMealPrepClick 
+  onCreateMealPrepClick,
+  mealPrepPlatesCount 
 }) => {
   const navigate = useNavigate();
 
@@ -26,6 +28,7 @@ const MenuTabContent: React.FC<MenuTabContentProps> = ({
     return <EmptyMenuState 
       onAddPlateClick={onAddPlateClick}
       onCreateMealPrepClick={handleCreateMealPrep}
+      mealPrepPlatesCount={mealPrepPlatesCount}
     />;
   }
 

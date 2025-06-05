@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Navigation from "@/components/Navigation";
@@ -90,6 +89,7 @@ const SellerDashboard = () => {
                   todayPlates={todayPlates}
                   onAddPlateClick={() => setIsAddPlateOpen(true)}
                   onCreateMealPrepClick={handleCreateMealPrep}
+                  mealPrepPlatesCount={mealPrepPlates.length}
                 />
               )}
             </TabsContent>
