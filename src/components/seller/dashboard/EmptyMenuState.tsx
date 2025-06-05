@@ -6,9 +6,16 @@ import { Plus } from "lucide-react";
 interface EmptyMenuStateProps {
   onAddPlateClick: () => void;
   onCreateMealPrepClick: () => void;
+  mealPrepPlatesCount: number;
 }
 
-const EmptyMenuState: React.FC<EmptyMenuStateProps> = ({ onAddPlateClick, onCreateMealPrepClick }) => {
+const EmptyMenuState: React.FC<EmptyMenuStateProps> = ({ 
+  onAddPlateClick, 
+  onCreateMealPrepClick, 
+  mealPrepPlatesCount 
+}) => {
+  const canCreateMealPrep = mealPrepPlatesCount >= 2;
+
   return (
     <div className="bg-nextplate-darkgray rounded-xl p-6 text-center">
       <div className="py-20">
@@ -24,13 +31,15 @@ const EmptyMenuState: React.FC<EmptyMenuStateProps> = ({ onAddPlateClick, onCrea
             <Plus size={16} className="mr-1" />
             Add Single Plate
           </Button>
-          <Button
-            onClick={onCreateMealPrepClick}
-            className="bg-nextplate-orange hover:bg-orange-600"
-          >
-            <Plus size={16} className="mr-1" />
-            Add Meal Prep Package
-          </Button>
+          {canCreateMealPrep && (
+            <Button
+              onClick={onCreateMealPrepClick}
+              className="bg-nextplate-orange hover:bg-orange-600"
+            >
+              <Plus size={16} className="mr-1" />
+              Add Meal Prep Package
+            </Button>
+          )}
         </div>
       </div>
     </div>
