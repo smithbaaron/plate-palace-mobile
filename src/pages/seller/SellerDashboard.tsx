@@ -27,6 +27,7 @@ const SellerDashboard = () => {
   const {
     todayPlates,
     futurePlates,
+    mealPrepPlates,
     platesByDate,
     sortedDates,
     isLoading,
@@ -54,6 +55,7 @@ const SellerDashboard = () => {
           <DashboardHeader 
             onAddPlateClick={() => setIsAddPlateOpen(true)} 
             onCreateMealPrepClick={handleCreateMealPrep}
+            mealPrepPlatesCount={mealPrepPlates.length}
           />
           
           {/* Error message if plates failed to load */}

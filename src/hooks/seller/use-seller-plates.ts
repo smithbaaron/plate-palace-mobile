@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { usePlates } from '@/lib/plates-service';
 import { Plate } from '@/components/seller/PlateFormTypes';
@@ -30,6 +31,9 @@ export const useSellerPlates = () => {
     plateDate.setHours(0, 0, 0, 0);
     return plateDate.getTime() > today.getTime();
   });
+
+  // Find plates available for meal prep bundles
+  const mealPrepPlates = plates.filter(plate => plate.isBundle && plate.isAvailable);
 
   // Group plates by date - include both today's and future plates
   const platesByDate = [...todayPlates, ...futurePlates].reduce<Record<string, Plate[]>>((acc, plate) => {
@@ -110,6 +114,7 @@ export const useSellerPlates = () => {
     plates,
     todayPlates,
     futurePlates,
+    mealPrepPlates,
     platesByDate,
     sortedDates,
     isLoading,

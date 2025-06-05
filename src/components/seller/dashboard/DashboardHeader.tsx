@@ -8,15 +8,22 @@ import { useNavigate } from "react-router-dom";
 interface DashboardHeaderProps {
   onAddPlateClick: () => void;
   onCreateMealPrepClick: () => void;
+  mealPrepPlatesCount: number;
 }
 
-const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onAddPlateClick, onCreateMealPrepClick }) => {
+const DashboardHeader: React.FC<DashboardHeaderProps> = ({ 
+  onAddPlateClick, 
+  onCreateMealPrepClick, 
+  mealPrepPlatesCount 
+}) => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
   const handleCreateBundle = () => {
     navigate("/seller/create-bundle");
   };
+
+  const canCreateMealPrep = mealPrepPlatesCount >= 2;
 
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
@@ -33,13 +40,15 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onAddPlateClick, onCr
           <Plus size={16} className="mr-1" />
           New Plate
         </Button>
-        <Button
-          onClick={handleCreateBundle}
-          className="bg-green-600 hover:bg-green-700 flex items-center"
-        >
-          <Package size={16} className="mr-1" />
-          Create Meal Prep Package
-        </Button>
+        {canCreateMealPrep && (
+          <Button
+            onClick={handleCreateBundle}
+            className="bg-green-600 hover:bg-green-700 flex items-center"
+          >
+            <Package size={16} className="mr-1" />
+            Create Meal Prep Package
+          </Button>
+        )}
       </div>
     </div>
   );
