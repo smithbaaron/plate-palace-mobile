@@ -20,6 +20,14 @@ export const useSellerPlates = () => {
     today.setHours(0, 0, 0, 0);
     const plateDate = new Date(plate.availableDate);
     plateDate.setHours(0, 0, 0, 0);
+    
+    console.log('Filtering today plates:', {
+      plateName: plate.name,
+      plateDate: plateDate.toISOString(),
+      today: today.toISOString(),
+      isToday: plateDate.getTime() === today.getTime()
+    });
+    
     return plateDate.getTime() === today.getTime();
   });
 
@@ -29,11 +37,27 @@ export const useSellerPlates = () => {
     today.setHours(0, 0, 0, 0);
     const plateDate = new Date(plate.availableDate);
     plateDate.setHours(0, 0, 0, 0);
+    
+    console.log('Filtering future plates:', {
+      plateName: plate.name,
+      plateDate: plateDate.toISOString(),
+      today: today.toISOString(),
+      isFuture: plateDate.getTime() > today.getTime()
+    });
+    
     return plateDate.getTime() > today.getTime();
   });
 
   // Find plates available for meal prep bundles
-  const mealPrepPlates = plates.filter(plate => plate.isBundle && plate.isAvailable);
+  const mealPrepPlates = plates.filter(plate => {
+    console.log('Filtering meal prep plates:', {
+      plateName: plate.name,
+      isBundle: plate.isBundle,
+      isAvailable: plate.isAvailable,
+      eligible: plate.isBundle && plate.isAvailable
+    });
+    return plate.isBundle && plate.isAvailable;
+  });
 
   // Group plates by date - include both today's and future plates
   const platesByDate = [...todayPlates, ...futurePlates].reduce<Record<string, Plate[]>>((acc, plate) => {
@@ -69,6 +93,7 @@ export const useSellerPlates = () => {
       }
       
       const fetchedPlates = await fetchPlates();
+      console.log('Loaded plates from database:', fetchedPlates);
       setPlates(fetchedPlates);
       setError(null);
     } catch (err) {
@@ -83,6 +108,8 @@ export const useSellerPlates = () => {
   // Add a new plate
   const handleAddPlate = async (newPlateData: Omit<Plate, "id" | "soldCount">) => {
     try {
+      console.log('Adding new plate:', newPlateData);
+      
       // Check if table exists before attempting to add
       if (tableExists === false) {
         throw new Error("Plates table does not exist. Please set up your database first.");
@@ -90,9 +117,14 @@ export const useSellerPlates = () => {
       
       // Save the plate to Supabase
       const savedPlate = await addPlate(newPlateData);
+      console.log('Plate saved to database:', savedPlate);
       
       // Update local state with the new plate
-      setPlates(prevPlates => [...prevPlates, savedPlate]);
+      setPlates(prevPlates => {
+        const updatedPlates = [...prevPlates, savedPlate];
+        console.log('Updated local plates state:', updatedPlates);
+        return updatedPlates;
+      });
       
       // Notify user of success
       notifyPlateAdded(newPlateData.name);
@@ -109,6 +141,17 @@ export const useSellerPlates = () => {
   useEffect(() => {
     loadPlates();
   }, []);
+
+  // Debug logging for plates state changes
+  useEffect(() => {
+    console.log('Plates state updated:', {
+      totalPlates: plates.length,
+      todayPlatesCount: todayPlates.length,
+      futurePlatesCount: futurePlates.length,
+      mealPrepPlatesCount: mealPrepPlates.length,
+      allPlates: plates
+    });
+  }, [plates, todayPlates, futurePlates, mealPrepPlates]);
 
   return {
     plates,
