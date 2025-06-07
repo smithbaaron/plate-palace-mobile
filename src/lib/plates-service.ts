@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { Plate } from '@/components/seller/PlateFormTypes';
 import { useAuth } from '@/context/AuthContext';
@@ -56,23 +55,28 @@ export const plateToDbPlate = (plate: Omit<Plate, 'id' | 'soldCount'>, sellerId:
 const getSellerProfileId = async (authUserId: string): Promise<string> => {
   console.log('Getting seller profile ID for auth user:', authUserId);
   
-  const { data, error } = await supabase
-    .from('seller_profiles')
-    .select('id')
-    .eq('user_id', authUserId)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('seller_profiles')
+      .select('id')
+      .eq('user_id', authUserId)
+      .single();
+      
+    if (error) {
+      console.error('Error fetching seller profile:', error);
+      throw new Error(`Failed to fetch seller profile: ${error.message}`);
+    }
     
-  if (error) {
-    console.error('Error fetching seller profile:', error);
-    throw new Error(`Failed to fetch seller profile: ${error.message}`);
+    if (!data) {
+      throw new Error('Seller profile not found. Please complete your seller onboarding first.');
+    }
+    
+    console.log('Found seller profile ID:', data.id);
+    return data.id;
+  } catch (error) {
+    console.error('Error in getSellerProfileId:', error);
+    throw error;
   }
-  
-  if (!data) {
-    throw new Error('Seller profile not found. Please complete your seller onboarding first.');
-  }
-  
-  console.log('Found seller profile ID:', data.id);
-  return data.id;
 };
 
 // Service functions for interacting with plates in Supabase
@@ -80,7 +84,9 @@ export const platesService = {
   // Get all plates for a seller
   getSellerPlates: async (authUserId: string) => {
     try {
+      console.log('Fetching plates for auth user:', authUserId);
       const sellerProfileId = await getSellerProfileId(authUserId);
+      console.log('Using seller profile ID:', sellerProfileId);
       
       const { data, error } = await supabase
         .from('plates')
@@ -88,12 +94,19 @@ export const platesService = {
         .eq('seller_id', sellerProfileId)
         .order('available_date', { ascending: true });
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching plates from database:', error);
+        throw error;
+      }
+      
+      console.log('Raw plates data from database:', data);
       
       // Convert DB plates to frontend plates
-      return data.map(dbPlateToPlate);
+      const plates = data.map(dbPlateToPlate);
+      console.log('Converted plates:', plates);
+      return plates;
     } catch (error) {
-      console.error('Error fetching plates:', error);
+      console.error('Error in getSellerPlates:', error);
       throw error;
     }
   },
@@ -102,11 +115,13 @@ export const platesService = {
   addPlate: async (plate: Omit<Plate, 'id' | 'soldCount'>, authUserId: string) => {
     try {
       console.log('Adding plate for auth user:', authUserId);
+      console.log('Plate data to add:', plate);
+      
       const sellerProfileId = await getSellerProfileId(authUserId);
-      console.log('Using seller profile ID:', sellerProfileId);
+      console.log('Using seller profile ID for new plate:', sellerProfileId);
       
       const dbPlate = plateToDbPlate(plate, sellerProfileId);
-      console.log('Prepared DB plate:', dbPlate);
+      console.log('Prepared DB plate data:', dbPlate);
       
       const { data, error } = await supabase
         .from('plates')
@@ -115,14 +130,22 @@ export const platesService = {
         .single();
         
       if (error) {
-        console.error('Error inserting plate:', error);
+        console.error('Error inserting plate into database:', error);
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         throw error;
       }
       
-      console.log('Successfully added plate:', data);
-      return dbPlateToPlate(data);
+      console.log('Successfully added plate to database:', data);
+      const convertedPlate = dbPlateToPlate(data);
+      console.log('Converted new plate:', convertedPlate);
+      return convertedPlate;
     } catch (error) {
-      console.error('Error adding plate:', error);
+      console.error('Error in addPlate service:', error);
       throw error;
     }
   },
@@ -177,20 +200,30 @@ export const usePlates = () => {
   
   const fetchPlates = async () => {
     if (!currentUser?.id) {
-      console.error('User ID not available');
+      console.error('User ID not available for fetching plates');
       return [];
     }
     
-    return await platesService.getSellerPlates(currentUser.id);
+    try {
+      return await platesService.getSellerPlates(currentUser.id);
+    } catch (error) {
+      console.error('Error in fetchPlates hook:', error);
+      throw error;
+    }
   };
   
   const addPlate = async (plate: Omit<Plate, 'id' | 'soldCount'>) => {
     if (!currentUser?.id) {
-      console.error('User ID not available');
+      console.error('User ID not available for adding plate');
       throw new Error('User not authenticated');
     }
     
-    return await platesService.addPlate(plate, currentUser.id);
+    try {
+      return await platesService.addPlate(plate, currentUser.id);
+    } catch (error) {
+      console.error('Error in addPlate hook:', error);
+      throw error;
+    }
   };
 
   return { fetchPlates, addPlate };
