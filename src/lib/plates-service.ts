@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 import { Plate } from '@/components/seller/PlateFormTypes';
 import { useAuth } from '@/context/AuthContext';
@@ -53,28 +54,53 @@ export const plateToDbPlate = (plate: Omit<Plate, 'id' | 'soldCount'>, sellerId:
 
 // Helper function to get seller profile ID from auth user ID
 const getSellerProfileId = async (authUserId: string): Promise<string> => {
-  console.log('Getting seller profile ID for auth user:', authUserId);
+  console.log('🔍 Getting seller profile ID for auth user:', authUserId);
   
   try {
+    // First, let's check if the user exists in auth.users
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('🔐 Current authenticated user:', user?.id, 'Expected:', authUserId);
+    
+    if (authError) {
+      console.error('❌ Authentication error:', authError);
+      throw new Error(`Authentication error: ${authError.message}`);
+    }
+    
+    if (!user || user.id !== authUserId) {
+      console.error('❌ User authentication mismatch. Current user:', user?.id, 'Expected:', authUserId);
+      throw new Error('User authentication mismatch');
+    }
+    
+    // Now get the seller profile
+    console.log('🔍 Querying seller_profiles table for user_id:', authUserId);
     const { data, error } = await supabase
       .from('seller_profiles')
       .select('id')
       .eq('user_id', authUserId)
       .single();
       
+    console.log('📊 Seller profile query result:', { data, error });
+      
     if (error) {
-      console.error('Error fetching seller profile:', error);
+      console.error('❌ Error fetching seller profile:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       throw new Error(`Failed to fetch seller profile: ${error.message}`);
     }
     
     if (!data) {
+      console.error('❌ No seller profile found for user_id:', authUserId);
       throw new Error('Seller profile not found. Please complete your seller onboarding first.');
     }
     
-    console.log('Found seller profile ID:', data.id);
+    console.log('✅ Found seller profile ID:', data.id);
     return data.id;
   } catch (error) {
-    console.error('Error in getSellerProfileId:', error);
+    console.error('❌ Error in getSellerProfileId:', error);
     throw error;
   }
 };
@@ -84,9 +110,9 @@ export const platesService = {
   // Get all plates for a seller
   getSellerPlates: async (authUserId: string) => {
     try {
-      console.log('Fetching plates for auth user:', authUserId);
+      console.log('📋 Fetching plates for auth user:', authUserId);
       const sellerProfileId = await getSellerProfileId(authUserId);
-      console.log('Using seller profile ID:', sellerProfileId);
+      console.log('🆔 Using seller profile ID:', sellerProfileId);
       
       const { data, error } = await supabase
         .from('plates')
@@ -95,18 +121,18 @@ export const platesService = {
         .order('available_date', { ascending: true });
         
       if (error) {
-        console.error('Error fetching plates from database:', error);
+        console.error('❌ Error fetching plates from database:', error);
         throw error;
       }
       
-      console.log('Raw plates data from database:', data);
+      console.log('📊 Raw plates data from database:', data);
       
       // Convert DB plates to frontend plates
       const plates = data.map(dbPlateToPlate);
-      console.log('Converted plates:', plates);
+      console.log('✅ Converted plates:', plates);
       return plates;
     } catch (error) {
-      console.error('Error in getSellerPlates:', error);
+      console.error('❌ Error in getSellerPlates:', error);
       throw error;
     }
   },
@@ -114,38 +140,90 @@ export const platesService = {
   // Add a new plate
   addPlate: async (plate: Omit<Plate, 'id' | 'soldCount'>, authUserId: string) => {
     try {
-      console.log('Adding plate for auth user:', authUserId);
-      console.log('Plate data to add:', plate);
+      console.log('🍽️ Starting addPlate process...');
+      console.log('👤 Auth user ID:', authUserId);
+      console.log('📝 Plate data to add:', plate);
       
+      // Step 1: Get seller profile ID
+      console.log('🔍 Step 1: Getting seller profile ID...');
       const sellerProfileId = await getSellerProfileId(authUserId);
-      console.log('Using seller profile ID for new plate:', sellerProfileId);
+      console.log('✅ Step 1 complete. Seller profile ID:', sellerProfileId);
       
+      // Step 2: Convert plate data to DB format
+      console.log('🔄 Step 2: Converting plate data to DB format...');
       const dbPlate = plateToDbPlate(plate, sellerProfileId);
-      console.log('Prepared DB plate data:', dbPlate);
+      console.log('✅ Step 2 complete. DB plate data:', dbPlate);
       
+      // Step 3: Validate required fields
+      console.log('✅ Step 3: Validating required fields...');
+      if (!dbPlate.name || !dbPlate.seller_id || !dbPlate.available_date) {
+        const missingFields = [];
+        if (!dbPlate.name) missingFields.push('name');
+        if (!dbPlate.seller_id) missingFields.push('seller_id');
+        if (!dbPlate.available_date) missingFields.push('available_date');
+        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      }
+      console.log('✅ Step 3 complete. All required fields present.');
+      
+      // Step 4: Check if plates table exists and is accessible
+      console.log('🔍 Step 4: Testing plates table access...');
+      const { error: testError } = await supabase
+        .from('plates')
+        .select('count')
+        .limit(1);
+      
+      if (testError) {
+        console.error('❌ Cannot access plates table:', testError);
+        throw new Error(`Cannot access plates table: ${testError.message}`);
+      }
+      console.log('✅ Step 4 complete. Plates table is accessible.');
+      
+      // Step 5: Insert the plate
+      console.log('💾 Step 5: Inserting plate into database...');
       const { data, error } = await supabase
         .from('plates')
         .insert(dbPlate)
         .select()
         .single();
         
+      console.log('📊 Insert operation result:', { data, error });
+        
       if (error) {
-        console.error('Error inserting plate into database:', error);
-        console.error('Error details:', {
+        console.error('❌ Error inserting plate into database:', error);
+        console.error('❌ Error details:', {
           message: error.message,
           details: error.details,
           hint: error.hint,
           code: error.code
         });
-        throw error;
+        
+        // Provide more specific error messages
+        if (error.code === '42501') {
+          throw new Error('Permission denied: You may not have the required permissions to add plates. Please check your seller profile setup.');
+        } else if (error.code === '23503') {
+          throw new Error('Invalid seller reference: Your seller profile may not be properly set up.');
+        } else {
+          throw new Error(`Database error: ${error.message}`);
+        }
       }
       
-      console.log('Successfully added plate to database:', data);
+      if (!data) {
+        console.error('❌ No data returned from insert operation');
+        throw new Error('Insert operation succeeded but no data was returned');
+      }
+      
+      console.log('✅ Step 5 complete. Successfully added plate to database:', data);
+      
+      // Step 6: Convert and return the result
+      console.log('🔄 Step 6: Converting result back to frontend format...');
       const convertedPlate = dbPlateToPlate(data);
-      console.log('Converted new plate:', convertedPlate);
+      console.log('✅ Step 6 complete. Final converted plate:', convertedPlate);
+      
+      console.log('🎉 addPlate process completed successfully!');
       return convertedPlate;
     } catch (error) {
-      console.error('Error in addPlate service:', error);
+      console.error('💥 FATAL ERROR in addPlate service:', error);
+      console.error('💥 Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       throw error;
     }
   },
@@ -200,28 +278,31 @@ export const usePlates = () => {
   
   const fetchPlates = async () => {
     if (!currentUser?.id) {
-      console.error('User ID not available for fetching plates');
+      console.error('❌ User ID not available for fetching plates');
       return [];
     }
     
     try {
       return await platesService.getSellerPlates(currentUser.id);
     } catch (error) {
-      console.error('Error in fetchPlates hook:', error);
+      console.error('❌ Error in fetchPlates hook:', error);
       throw error;
     }
   };
   
   const addPlate = async (plate: Omit<Plate, 'id' | 'soldCount'>) => {
     if (!currentUser?.id) {
-      console.error('User ID not available for adding plate');
+      console.error('❌ User ID not available for adding plate');
       throw new Error('User not authenticated');
     }
     
     try {
-      return await platesService.addPlate(plate, currentUser.id);
+      console.log('🎯 Hook: Starting addPlate with user ID:', currentUser.id);
+      const result = await platesService.addPlate(plate, currentUser.id);
+      console.log('🎯 Hook: addPlate completed successfully:', result);
+      return result;
     } catch (error) {
-      console.error('Error in addPlate hook:', error);
+      console.error('❌ Error in addPlate hook:', error);
       throw error;
     }
   };
