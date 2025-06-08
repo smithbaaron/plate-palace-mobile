@@ -1,11 +1,12 @@
-
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
-import { Search, Package, User, MapPin } from "lucide-react";
+import { Search, Package, User, MapPin, Heart, Clock, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
 
@@ -101,9 +102,53 @@ const MOCK_MEAL_PREPS = [
   }
 ];
 
+// Mock data for purchased items
+const MOCK_PURCHASED_PLATES = [
+  {
+    id: "purchased1",
+    plateId: "plate1",
+    name: "Chicken Alfredo Pasta",
+    seller: "Taste of Home",
+    price: 12.99,
+    quantity: 2,
+    purchasedAt: "2025-06-08T10:30:00Z",
+    status: "ready",
+    image: "https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+  },
+  {
+    id: "purchased2",
+    plateId: "plate2",
+    name: "Teriyaki Salmon Bowl",
+    seller: "Healthy Meals",
+    price: 14.99,
+    quantity: 1,
+    purchasedAt: "2025-06-08T12:15:00Z",
+    status: "confirmed",
+    image: "https://images.unsplash.com/photo-1580554530778-ca36943938b2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+  }
+];
+
+const MOCK_PURCHASED_MEAL_PREPS = [
+  {
+    id: "purchased_prep1",
+    prepId: "prep1",
+    name: "5-Day Keto Package",
+    seller: "Healthy Meals",
+    price: 59.99,
+    mealCount: 10,
+    purchasedAt: "2025-06-07T14:20:00Z",
+    deliveryDate: "2025-06-09",
+    image: "https://images.unsplash.com/photo-1611599537845-1c7aca0091c0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+  }
+];
+
+// Mock favorite sellers (would come from user preferences)
+const MOCK_FAVORITE_SELLERS = ["seller1", "seller2"];
+
 const CustomerDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("sellers");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [favoriteSellers, setFavoriteSellers] = useState<string[]>(MOCK_FAVORITE_SELLERS);
   const navigate = useNavigate();
   const { notifyInfo, notifySuccess } = useNotifications();
   
@@ -133,6 +178,17 @@ const CustomerDashboard = () => {
         prep.description.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : MOCK_MEAL_PREPS;
+
+  // Get favorite sellers data
+  const favoriteSellersList = MOCK_SELLERS.filter(seller => 
+    favoriteSellers.includes(seller.id)
+  );
+
+  // Get today's purchases
+  const today = new Date().toDateString();
+  const todaysPurchasedPlates = MOCK_PURCHASED_PLATES.filter(item => 
+    new Date(item.purchasedAt).toDateString() === today
+  );
   
   const handleOrderPlate = (plateId: string, plateName: string) => {
     notifyInfo("Order Placed", `Your order for ${plateName} has been placed! 🍽️`);
@@ -140,11 +196,26 @@ const CustomerDashboard = () => {
 
   const handleViewSellerMenu = (sellerId: string, sellerName: string) => {
     notifySuccess("Menu Loaded", `Viewing ${sellerName}'s menu`);
-    // In future this would navigate to the seller's full menu
   };
 
-  const handleFollowSeller = (sellerId: string, sellerName: string) => {
-    notifySuccess("Seller Followed", `You're now following ${sellerName}! 🎉`);
+  const handleToggleFavorite = (sellerId: string, sellerName: string) => {
+    const isFavorite = favoriteSellers.includes(sellerId);
+    if (isFavorite) {
+      setFavoriteSellers(prev => prev.filter(id => id !== sellerId));
+      notifyInfo("Seller Unfavorited", `${sellerName} removed from favorites`);
+    } else {
+      setFavoriteSellers(prev => [...prev, sellerId]);
+      notifySuccess("Seller Favorited", `${sellerName} added to favorites! ❤️`);
+    }
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch(status) {
+      case "ready": return "bg-green-500";
+      case "confirmed": return "bg-blue-500";
+      case "preparing": return "bg-yellow-500";
+      default: return "bg-gray-500";
+    }
   };
   
   return (
@@ -175,6 +246,9 @@ const CustomerDashboard = () => {
           {/* Browse Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full bg-nextplate-darkgray mb-8">
+              <TabsTrigger value="overview" className="flex-1 text-lg py-3">
+                Overview
+              </TabsTrigger>
               <TabsTrigger value="sellers" className="flex-1 text-lg py-3">
                 Browse Sellers
               </TabsTrigger>
@@ -185,6 +259,177 @@ const CustomerDashboard = () => {
                 Meal Prep Packages
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="overview" className="animate-fade-in space-y-8">
+              {/* Today's Orders */}
+              <div>
+                <h2 className="text-2xl font-bold mb-4 flex items-center">
+                  <Calendar className="mr-2 text-nextplate-red" />
+                  Today's Orders
+                </h2>
+                {todaysPurchasedPlates.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {todaysPurchasedPlates.map(item => (
+                      <Card key={item.id} className="bg-nextplate-darkgray border-gray-800">
+                        <CardContent className="p-4">
+                          <div className="flex items-center space-x-4">
+                            <img 
+                              src={item.image} 
+                              alt={item.name}
+                              className="w-16 h-16 rounded-lg object-cover"
+                            />
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-sm">{item.name}</h3>
+                              <p className="text-xs text-gray-400">by {item.seller}</p>
+                              <div className="flex items-center justify-between mt-2">
+                                <span className="text-sm font-bold text-nextplate-red">
+                                  ${(item.price * item.quantity).toFixed(2)}
+                                </span>
+                                <Badge className={`${getStatusBadgeColor(item.status)} text-xs`}>
+                                  {item.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="bg-nextplate-darkgray border-gray-800">
+                    <CardContent className="p-8 text-center">
+                      <Package size={48} className="mx-auto text-gray-500 mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No orders today</h3>
+                      <p className="text-gray-400 mb-4">Start your day with something delicious!</p>
+                      <Button 
+                        className="bg-nextplate-red hover:bg-red-600"
+                        onClick={() => setActiveTab("plates")}
+                      >
+                        Browse Plates
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Favorite Sellers */}
+              <div>
+                <h2 className="text-2xl font-bold mb-4 flex items-center">
+                  <Heart className="mr-2 text-nextplate-red" />
+                  Favorite Sellers
+                </h2>
+                {favoriteSellersList.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {favoriteSellersList.map(seller => (
+                      <Card key={seller.id} className="bg-nextplate-darkgray border-gray-800 hover:ring-2 hover:ring-nextplate-red transition-all">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg">{seller.name}</CardTitle>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-nextplate-red hover:bg-nextplate-red hover:text-white"
+                              onClick={() => handleToggleFavorite(seller.id, seller.name)}
+                            >
+                              <Heart fill="currentColor" size={16} />
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex items-center space-x-4">
+                            <img 
+                              src={seller.image} 
+                              alt={seller.name}
+                              className="w-16 h-16 rounded-lg object-cover"
+                            />
+                            <div className="flex-1">
+                              <p className="text-sm text-gray-300 mb-2">{seller.description}</p>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-400">⭐ {seller.rating}</span>
+                                <Button 
+                                  size="sm"
+                                  className="bg-nextplate-red hover:bg-red-600"
+                                  onClick={() => handleViewSellerMenu(seller.id, seller.name)}
+                                >
+                                  View Menu
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="bg-nextplate-darkgray border-gray-800">
+                    <CardContent className="p-8 text-center">
+                      <Heart size={48} className="mx-auto text-gray-500 mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No favorite sellers yet</h3>
+                      <p className="text-gray-400 mb-4">Discover and save your favorite home chefs!</p>
+                      <Button 
+                        className="bg-nextplate-red hover:bg-red-600"
+                        onClick={() => setActiveTab("sellers")}
+                      >
+                        Browse Sellers
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Recent Meal Preps */}
+              <div>
+                <h2 className="text-2xl font-bold mb-4 flex items-center">
+                  <Package className="mr-2 text-nextplate-red" />
+                  Recent Meal Preps
+                </h2>
+                {MOCK_PURCHASED_MEAL_PREPS.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {MOCK_PURCHASED_MEAL_PREPS.map(prep => (
+                      <Card key={prep.id} className="bg-nextplate-darkgray border-gray-800">
+                        <CardContent className="p-6">
+                          <div className="flex items-center space-x-4">
+                            <img 
+                              src={prep.image} 
+                              alt={prep.name}
+                              className="w-20 h-20 rounded-lg object-cover"
+                            />
+                            <div className="flex-1">
+                              <h3 className="font-semibold mb-1">{prep.name}</h3>
+                              <p className="text-sm text-gray-400 mb-2">by {prep.seller}</p>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="font-bold text-nextplate-red">${prep.price}</span>
+                                  <span className="text-sm text-gray-400 ml-2">• {prep.mealCount} meals</span>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-sm text-gray-400">Delivery</p>
+                                  <p className="text-sm font-medium">{prep.deliveryDate}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="bg-nextplate-darkgray border-gray-800">
+                    <CardContent className="p-8 text-center">
+                      <Package size={48} className="mx-auto text-gray-500 mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No meal preps purchased</h3>
+                      <p className="text-gray-400 mb-4">Save time with weekly meal prep packages!</p>
+                      <Button 
+                        className="bg-nextplate-red hover:bg-red-600"
+                        onClick={() => setActiveTab("mealpreps")}
+                      >
+                        Browse Meal Preps
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
             
             <TabsContent value="sellers" className="animate-fade-in">
               {filteredSellers.length > 0 ? (
@@ -229,10 +474,14 @@ const CustomerDashboard = () => {
                           </Button>
                           <Button 
                             variant="outline" 
-                            className="border-nextplate-red text-nextplate-red hover:bg-nextplate-red hover:text-white"
-                            onClick={() => handleFollowSeller(seller.id, seller.name)}
+                            className={`border-nextplate-red ${
+                              favoriteSellers.includes(seller.id) 
+                                ? 'bg-nextplate-red text-white' 
+                                : 'text-nextplate-red hover:bg-nextplate-red hover:text-white'
+                            }`}
+                            onClick={() => handleToggleFavorite(seller.id, seller.name)}
                           >
-                            Follow
+                            <Heart fill={favoriteSellers.includes(seller.id) ? "currentColor" : "none"} size={16} />
                           </Button>
                         </div>
                       </div>
