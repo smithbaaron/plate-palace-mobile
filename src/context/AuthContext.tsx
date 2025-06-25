@@ -6,7 +6,7 @@ import { User, formatUser, loginWithEmail, signupWithEmail, logoutUser } from "@
 
 interface AuthContextType {
   currentUser: User | null;
-  supabaseUser: SupabaseUser | null;
+  supabaseUser: SupabaseUser | null; // Add this to access metadata
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, username: string) => Promise<any>;
@@ -31,7 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
 
-  // Simplified auth check function
+  // Function to check and resync auth state
   const checkAndResyncAuth = async (): Promise<boolean> => {
     try {
       console.log("Checking auth state...");
@@ -57,29 +57,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Simplified auth initialization
+  // Set up the auth state listener
   useEffect(() => {
     let mounted = true;
-    let loadingTimeout: NodeJS.Timeout;
     
+    // Initial auth check on mount
     const initializeAuth = async () => {
       console.log("Initializing auth...");
-      
-      // Set a maximum loading time of 5 seconds
-      loadingTimeout = setTimeout(() => {
-        if (mounted) {
-          console.log("Auth loading timeout - setting loading to false");
-          setLoading(false);
-        }
-      }, 5000);
-      
       try {
         await checkAndResyncAuth();
       } catch (error) {
         console.error("Error initializing auth:", error);
       } finally {
         if (mounted) {
-          clearTimeout(loadingTimeout);
           setLoading(false);
         }
       }
@@ -87,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     initializeAuth();
     
-    // Simplified auth state listener
+    // Set up the subscription for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       console.log('Auth state changed:', event);
       
@@ -101,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const formattedUser = await formatUser(newSession.user);
           setCurrentUser(formattedUser);
           setSupabaseUser(newSession.user);
-          setLoading(false);
+          setLoading(false); // Set loading to false immediately after sign in
         } catch (error) {
           console.error("Error formatting user after sign in:", error);
           setLoading(false);
@@ -116,29 +106,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     return () => {
       mounted = false;
-      clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
   }, []);
 
-  // Simplified login function
+  // Login function
   const login = async (email: string, password: string) => {
     try {
       console.log("Starting login process...");
-      await loginWithEmail(email, password);
-      console.log("Login completed");
+      const result = await loginWithEmail(email, password);
+      console.log("Login completed, user data will be set by auth listener");
+      // Don't set loading here - let the auth state listener handle it
     } catch (error) {
       console.error("Login error", error);
       throw error;
     }
   };
 
-  // Simplified signup function
+  // Signup function
   const signup = async (email: string, password: string, username: string) => {
     try {
       console.log("Starting signup process...");
       const result = await signupWithEmail(email, password, username);
-      console.log("Signup completed");
+      console.log("Signup completed, user data will be set by auth listener");
       return result;
     } catch (error) {
       console.error("Signup error", error);
@@ -146,10 +136,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Simplified logout function
+  // Logout function
   const logout = async () => {
     try {
       await logoutUser();
+      // User data will be cleared by the auth state listener
     } catch (error) {
       console.error("Logout error", error);
     }

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -13,36 +12,25 @@ const AuthPage = () => {
   const defaultType = searchParams.get("type") || "seller";
   
   const { login, signup, isAuthenticated, currentUser, supabaseUser, loading } = useAuth();
-  const { userType, isOnboarded } = useUserType();
+  const { userType, setUserType, isOnboarded } = useUserType();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [redirectTimeout, setRedirectTimeout] = useState<NodeJS.Timeout | null>(null);
   
-  // Simplified redirect logic with timeout
+  // Handle navigation after authentication
   useEffect(() => {
-    // Clear any existing timeout
-    if (redirectTimeout) {
-      clearTimeout(redirectTimeout);
-    }
-
-    // Don't redirect if still loading
+    // Don't redirect if we're still loading
     if (loading) {
       return;
     }
     
     if (isAuthenticated && currentUser) {
-      console.log("User authenticated, preparing redirect...");
+      console.log("User is authenticated, checking redirect path:", { userType, isOnboarded, currentUser });
       
-      // Set a timeout to ensure redirect happens even if logic gets complex
-      const timeout = setTimeout(() => {
-        console.log("Redirect timeout - forcing navigation");
-        const fallbackUrl = defaultType === "customer" ? "/customer/dashboard" : "/seller/dashboard";
-        navigate(fallbackUrl, { replace: true });
-      }, 2000);
+      // Check if user has a role in their metadata or profile
+      const userRole = supabaseUser?.user_metadata?.role || supabaseUser?.app_metadata?.role;
+      console.log("User role from metadata:", userRole);
       
-      setRedirectTimeout(timeout);
-      
-      // Quick redirect logic
+      // If user has a complete profile, redirect to dashboard immediately
       if (userType && isOnboarded) {
         const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
         console.log(`Redirecting to ${dashboardUrl}`);
@@ -50,30 +38,31 @@ const AuthPage = () => {
         return;
       }
       
+      // If user has type but not onboarded, go to onboarding
       if (userType && !isOnboarded) {
         console.log(`Redirecting to /${userType}/onboarding`);
         navigate(`/${userType}/onboarding`, { replace: true });
         return;
       }
       
-      const userRole = supabaseUser?.user_metadata?.role || supabaseUser?.app_metadata?.role;
+      // Check user role from metadata to determine redirect
       if (userRole === "customer") {
+        console.log("User is a customer, redirecting to customer dashboard");
         navigate("/customer/dashboard", { replace: true });
         return;
       } else if (userRole === "seller") {
+        console.log("User is a seller, redirecting to seller onboarding");
         navigate("/seller/onboarding", { replace: true });
         return;
       }
       
-      // Default fallback
-      navigate(`/${defaultType}/onboarding`, { replace: true });
-    }
-
-    return () => {
-      if (redirectTimeout) {
-        clearTimeout(redirectTimeout);
+      // If authenticated but no user type and no role metadata, redirect based on defaultType
+      if (!userType && !userRole) {
+        console.log(`No user type or role found, redirecting to onboarding as ${defaultType}`);
+        navigate(`/${defaultType}/onboarding`, { replace: true });
+        return;
       }
-    };
+    }
   }, [isAuthenticated, userType, isOnboarded, loading, currentUser, supabaseUser, defaultType, navigate]);
   
   const handleLogin = async (email: string, password: string) => {
@@ -85,6 +74,8 @@ const AuthPage = () => {
         title: "Login successful!",
         description: `Welcome back to NextPlate!`,
       });
+      
+      // The useEffect will handle the redirect
     } catch (error: any) {
       console.error("Login error:", error);
       toast({
@@ -111,6 +102,8 @@ const AuthPage = () => {
         title: "Account created!",
         description: `Welcome to NextPlate!`,
       });
+      
+      // The useEffect will handle the redirect
     } catch (error: any) {
       console.error("Signup error:", error);
       toast({
@@ -122,7 +115,7 @@ const AuthPage = () => {
     }
   };
   
-  // Show loading state with timeout
+  // Show loading state while auth is loading
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
@@ -134,7 +127,7 @@ const AuthPage = () => {
     );
   }
   
-  // If authenticated, show brief redirect message
+  // If authenticated, don't show the auth form - just redirect (handled by useEffect)
   if (isAuthenticated && currentUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
