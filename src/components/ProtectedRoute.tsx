@@ -18,22 +18,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { isAuthenticated, loading, currentUser, supabaseUser } = useAuth();
   const { userType, isOnboarded } = useUserType();
-  const [initialCheckDone, setInitialCheckDone] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const location = useLocation();
 
-  // Complete initial check after auth state stabilizes
+  // Simplified ready check with timeout
   useEffect(() => {
+    const readyTimeout = setTimeout(() => {
+      setIsReady(true);
+    }, loading ? 3000 : 100); // 3 second timeout for loading, immediate if not loading
+
     if (!loading) {
-      const timeoutId = setTimeout(() => {
-        setInitialCheckDone(true);
-      }, 300);
-      
-      return () => clearTimeout(timeoutId);
+      setIsReady(true);
     }
+
+    return () => clearTimeout(readyTimeout);
   }, [loading]);
 
-  // Show loading state during initial auth check
-  if (loading || !initialCheckDone) {
+  // Show loading state only briefly
+  if (!isReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <div className="animate-pulse">Loading...</div>
@@ -44,76 +46,39 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // If not authenticated, redirect to login
   if (!isAuthenticated) {
     console.log("Not authenticated, redirecting to auth");
-    return <Navigate to={`/auth${requiredUserType ? `?type=${requiredUserType}` : ''}`} state={{ from: location }} replace />;
+    return <Navigate to={`/auth${requiredUserType ? `?type=${requiredUserType}` : ''}`} replace />;
   }
 
-  // Check if we're on an onboarding page
   const isOnOnboardingPage = location.pathname.includes('/onboarding');
+  const userRole = supabaseUser?.user_metadata?.role || supabaseUser?.app_metadata?.role;
 
-  // If user is onboarded and has a user type, redirect them to their dashboard if they're on onboarding
+  // If already onboarded and on onboarding page, redirect to dashboard
   if (isOnboarded && userType && isOnOnboardingPage) {
-    console.log("User is already onboarded, redirecting to dashboard");
     const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
     return <Navigate to={dashboardUrl} replace />;
   }
 
-  // Check user role from metadata if userType is not set
-  const userRole = supabaseUser?.user_metadata?.role || supabaseUser?.app_metadata?.role;
-  
-  // If user has role in metadata but no userType, redirect to appropriate dashboard
-  if (userRole && !userType && !isOnOnboardingPage) {
-    console.log("User has role in metadata:", userRole);
-    if (userRole === "customer") {
+  // Handle role-based redirects
+  if (userRole && !isOnOnboardingPage) {
+    if (userRole === "customer" && (!requiredUserType || requiredUserType === "customer")) {
       return <Navigate to="/customer/dashboard" replace />;
-    } else if (userRole === "seller") {
+    } else if (userRole === "seller" && (!requiredUserType || requiredUserType === "seller")) {
       return <Navigate to="/seller/dashboard" replace />;
     }
   }
 
-  // If on onboarding page and no user type yet, allow access (they're setting up their type)
-  if (isOnOnboardingPage && !userType && currentUser) {
-    console.log("On onboarding page without user type - allowing access");
-    return <>{children}</>;
+  // If user type required but doesn't match
+  if (requiredUserType && userType && userType !== requiredUserType) {
+    const correctDashboard = userType === 'seller' ? "/seller/dashboard" : "/customer/dashboard";
+    return <Navigate to={correctDashboard} replace />;
   }
 
-  // If user type is required but doesn't match
-  if (requiredUserType && userType !== requiredUserType) {
-    console.log("User type mismatch", { required: requiredUserType, current: userType });
-    
-    // If they have a different user type, send them to their correct dashboard
-    if (userType === 'seller' && isOnboarded) {
-      return <Navigate to="/seller/dashboard" replace />;
-    } else if (userType === 'customer' && isOnboarded) {
-      return <Navigate to="/customer/dashboard" replace />;
-    } else if (userType && !isOnboarded && !isOnOnboardingPage) {
-      return <Navigate to={`/${userType}/onboarding`} replace />;
-    }
-    
-    // Check role metadata as fallback
-    if (userRole === 'customer' && requiredUserType === 'seller') {
-      return <Navigate to="/customer/dashboard" replace />;
-    } else if (userRole === 'seller' && requiredUserType === 'customer') {
-      return <Navigate to="/seller/dashboard" replace />;
-    }
-    
-    // If they don't have a user type yet and not on onboarding, send them to onboarding
-    if (!userType && !userRole && !isOnOnboardingPage) {
-      return <Navigate to={`/${requiredUserType}/onboarding`} replace />;
-    }
-  }
-
-  // If onboarding is required but not completed
+  // If onboarding required but not completed
   if (requireOnboarded && !isOnboarded && userType && !isOnOnboardingPage) {
-    console.log("Onboarding required but not completed", { userType, isOnboarded });
     return <Navigate to={`/${userType}/onboarding`} replace />;
   }
   
-  // If no user type but authenticated and not on onboarding page
-  if (!userType && !userRole && currentUser && !isOnOnboardingPage) {
-    console.log("No user type found, redirecting to seller onboarding");
-    return <Navigate to="/seller/onboarding" replace />;
-  }
-  
+  // Default: allow access to content
   return <>{children}</>;
 };
 
