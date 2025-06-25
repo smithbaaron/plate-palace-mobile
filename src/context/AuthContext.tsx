@@ -1,11 +1,12 @@
 
 import React, { createContext, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { Session } from '@supabase/supabase-js';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { User, formatUser, loginWithEmail, signupWithEmail, logoutUser } from "@/lib/authUtils";
 
 interface AuthContextType {
   currentUser: User | null;
+  supabaseUser: SupabaseUser | null; // Add this to access metadata
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, username: string) => Promise<any>;
@@ -26,6 +27,7 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
 
@@ -35,9 +37,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log("Checking auth state...");
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       
-      if (!currentSession) {
+      if (!currentSession || !currentSession.user) {
         console.log("No session found");
         setCurrentUser(null);
+        setSupabaseUser(null);
         setSession(null);
         return false;
       }
@@ -45,6 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log("Session found, formatting user");
       const formattedUser = await formatUser(currentSession.user);
       setCurrentUser(formattedUser);
+      setSupabaseUser(currentSession.user);
       setSession(currentSession);
       return !!formattedUser;
     } catch (error) {
@@ -86,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log("User signed in, formatting user data");
           const formattedUser = await formatUser(newSession.user);
           setCurrentUser(formattedUser);
+          setSupabaseUser(newSession.user);
           setLoading(false); // Set loading to false immediately after sign in
         } catch (error) {
           console.error("Error formatting user after sign in:", error);
@@ -94,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (event === 'SIGNED_OUT') {
         console.log("User signed out");
         setCurrentUser(null);
+        setSupabaseUser(null);
         setLoading(false);
       }
     });
@@ -142,6 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value = {
     currentUser,
+    supabaseUser,
     isAuthenticated: !!currentUser,
     login,
     signup,

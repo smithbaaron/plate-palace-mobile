@@ -16,7 +16,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredUserType, 
   requireOnboarded = true 
 }) => {
-  const { isAuthenticated, loading, currentUser } = useAuth();
+  const { isAuthenticated, loading, currentUser, supabaseUser } = useAuth();
   const { userType, isOnboarded } = useUserType();
   const [initialCheckDone, setInitialCheckDone] = useState(false);
   const location = useLocation();
@@ -58,7 +58,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Check user role from metadata if userType is not set
-  const userRole = currentUser?.user_metadata?.role || currentUser?.app_metadata?.role;
+  const userRole = supabaseUser?.user_metadata?.role || supabaseUser?.app_metadata?.role;
   
   // If user has role in metadata but no userType, redirect to appropriate dashboard
   if (userRole && !userType && !isOnOnboardingPage) {

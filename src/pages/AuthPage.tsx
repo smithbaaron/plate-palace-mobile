@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -12,7 +11,7 @@ const AuthPage = () => {
   const [searchParams] = useSearchParams();
   const defaultType = searchParams.get("type") || "seller";
   
-  const { login, signup, isAuthenticated, currentUser, loading } = useAuth();
+  const { login, signup, isAuthenticated, currentUser, supabaseUser, loading } = useAuth();
   const { userType, setUserType, isOnboarded } = useUserType();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -28,7 +27,7 @@ const AuthPage = () => {
       console.log("User is authenticated, checking redirect path:", { userType, isOnboarded, currentUser });
       
       // Check if user has a role in their metadata or profile
-      const userRole = currentUser.user_metadata?.role || currentUser.app_metadata?.role;
+      const userRole = supabaseUser?.user_metadata?.role || supabaseUser?.app_metadata?.role;
       console.log("User role from metadata:", userRole);
       
       // If user has a complete profile, redirect to dashboard immediately
@@ -64,7 +63,7 @@ const AuthPage = () => {
         return;
       }
     }
-  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, defaultType, navigate]);
+  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, supabaseUser, defaultType, navigate]);
   
   const handleLogin = async (email: string, password: string) => {
     try {
