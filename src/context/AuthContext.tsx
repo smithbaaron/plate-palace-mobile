@@ -6,7 +6,7 @@ import { User, formatUser, loginWithEmail, signupWithEmail, logoutUser } from "@
 
 interface AuthContextType {
   currentUser: User | null;
-  supabaseUser: SupabaseUser | null;
+  supabaseUser: SupabaseUser | null; // Add this to access metadata
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, username: string) => Promise<any>;
@@ -60,15 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Set up the auth state listener
   useEffect(() => {
     let mounted = true;
-    let loadingTimeout: NodeJS.Timeout;
-    
-    // Set a timeout to prevent infinite loading
-    loadingTimeout = setTimeout(() => {
-      if (mounted) {
-        console.log("Auth loading timeout reached, setting loading to false");
-        setLoading(false);
-      }
-    }, 10000); // 10 seconds timeout
     
     // Initial auth check on mount
     const initializeAuth = async () => {
@@ -79,7 +70,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("Error initializing auth:", error);
       } finally {
         if (mounted) {
-          clearTimeout(loadingTimeout);
           setLoading(false);
         }
       }
@@ -93,7 +83,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (!mounted) return;
       
-      clearTimeout(loadingTimeout);
       setSession(newSession);
       
       if (event === 'SIGNED_IN' && newSession?.user) {
@@ -102,12 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const formattedUser = await formatUser(newSession.user);
           setCurrentUser(formattedUser);
           setSupabaseUser(newSession.user);
-          // Set loading to false with a small delay to ensure everything is processed
-          setTimeout(() => {
-            if (mounted) {
-              setLoading(false);
-            }
-          }, 500);
+          setLoading(false); // Set loading to false immediately after sign in
         } catch (error) {
           console.error("Error formatting user after sign in:", error);
           setLoading(false);
@@ -122,7 +106,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     return () => {
       mounted = false;
-      clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
   }, []);
@@ -131,13 +114,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       console.log("Starting login process...");
-      setLoading(true);
       const result = await loginWithEmail(email, password);
       console.log("Login completed, user data will be set by auth listener");
-      // Don't set loading to false here - let the auth state listener handle it
+      // Don't set loading here - let the auth state listener handle it
     } catch (error) {
       console.error("Login error", error);
-      setLoading(false);
       throw error;
     }
   };
@@ -146,13 +127,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (email: string, password: string, username: string) => {
     try {
       console.log("Starting signup process...");
-      setLoading(true);
       const result = await signupWithEmail(email, password, username);
       console.log("Signup completed, user data will be set by auth listener");
       return result;
     } catch (error) {
       console.error("Signup error", error);
-      setLoading(false);
       throw error;
     }
   };
@@ -160,12 +139,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Logout function
   const logout = async () => {
     try {
-      setLoading(true);
       await logoutUser();
       // User data will be cleared by the auth state listener
     } catch (error) {
       console.error("Logout error", error);
-      setLoading(false);
     }
   };
 
