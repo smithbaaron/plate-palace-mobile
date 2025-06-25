@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -26,44 +27,37 @@ const AuthPage = () => {
     if (isAuthenticated && currentUser) {
       console.log("User is authenticated, checking redirect path:", { userType, isOnboarded, currentUser });
       
-      // Check if user has a role in their metadata or profile
-      const userRole = supabaseUser?.user_metadata?.role || supabaseUser?.app_metadata?.role;
-      console.log("User role from metadata:", userRole);
-      
-      // If user has a complete profile, redirect to dashboard immediately
-      if (userType && isOnboarded) {
-        const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
-        console.log(`Redirecting to ${dashboardUrl}`);
-        navigate(dashboardUrl, { replace: true });
-        return;
+      // For sellers, prioritize onboarding flow if not completed
+      if (defaultType === "seller") {
+        if (userType === "seller" && isOnboarded) {
+          console.log("Seller is onboarded, redirecting to dashboard");
+          navigate("/seller/dashboard", { replace: true });
+          return;
+        } else {
+          console.log("Seller needs onboarding, redirecting to onboarding");
+          navigate("/seller/onboarding", { replace: true });
+          return;
+        }
       }
       
-      // If user has type but not onboarded, go to onboarding
-      if (userType && !isOnboarded) {
-        console.log(`Redirecting to /${userType}/onboarding`);
-        navigate(`/${userType}/onboarding`, { replace: true });
-        return;
+      // For customers
+      if (defaultType === "customer") {
+        if (userType === "customer" && isOnboarded) {
+          console.log("Customer is onboarded, redirecting to dashboard");
+          navigate("/customer/dashboard", { replace: true });
+          return;
+        } else {
+          console.log("Customer needs onboarding, redirecting to onboarding");
+          navigate("/customer/onboarding", { replace: true });
+          return;
+        }
       }
       
-      // Check user role from metadata to determine redirect
-      if (userRole === "customer") {
-        console.log("User is a customer, redirecting to customer dashboard");
-        navigate("/customer/dashboard", { replace: true });
-        return;
-      } else if (userRole === "seller") {
-        console.log("User is a seller, redirecting to seller onboarding");
-        navigate("/seller/onboarding", { replace: true });
-        return;
-      }
-      
-      // If authenticated but no user type and no role metadata, redirect based on defaultType
-      if (!userType && !userRole) {
-        console.log(`No user type or role found, redirecting to onboarding as ${defaultType}`);
-        navigate(`/${defaultType}/onboarding`, { replace: true });
-        return;
-      }
+      // Fallback - if no specific type is determined, use the URL type
+      console.log(`Fallback redirect to ${defaultType} onboarding`);
+      navigate(`/${defaultType}/onboarding`, { replace: true });
     }
-  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, supabaseUser, defaultType, navigate]);
+  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, defaultType, navigate]);
   
   const handleLogin = async (email: string, password: string) => {
     try {
@@ -115,13 +109,16 @@ const AuthPage = () => {
     }
   };
   
-  // Show loading state while auth is loading
+  // Show loading state while auth is loading (but with a timeout)
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nextplate-orange mx-auto mb-4"></div>
           <div>Loading NextPlate...</div>
+          <div className="text-sm text-gray-400 mt-2">
+            If this takes too long, please refresh the page
+          </div>
         </div>
       </div>
     );
@@ -133,7 +130,7 @@ const AuthPage = () => {
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nextplate-orange mx-auto mb-4"></div>
-          <div>Redirecting...</div>
+          <div>Redirecting to your dashboard...</div>
         </div>
       </div>
     );
