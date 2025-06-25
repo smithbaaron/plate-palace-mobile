@@ -86,16 +86,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log("User signed in, formatting user data");
           const formattedUser = await formatUser(newSession.user);
           setCurrentUser(formattedUser);
+          setLoading(false); // Set loading to false immediately after sign in
         } catch (error) {
           console.error("Error formatting user after sign in:", error);
+          setLoading(false);
         }
       } else if (event === 'SIGNED_OUT') {
         console.log("User signed out");
         setCurrentUser(null);
+        setLoading(false);
       }
-      
-      // Set loading to false after handling auth state change
-      setLoading(false);
     });
     
     return () => {
@@ -106,26 +106,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Login function
   const login = async (email: string, password: string) => {
-    setLoading(true);
     try {
-      await loginWithEmail(email, password);
-      // User data will be set by the auth state listener
+      console.log("Starting login process...");
+      const result = await loginWithEmail(email, password);
+      console.log("Login completed, user data will be set by auth listener");
+      // Don't set loading here - let the auth state listener handle it
     } catch (error) {
       console.error("Login error", error);
-      setLoading(false);
       throw error;
     }
   };
 
   // Signup function
   const signup = async (email: string, password: string, username: string) => {
-    setLoading(true);
     try {
+      console.log("Starting signup process...");
       const result = await signupWithEmail(email, password, username);
+      console.log("Signup completed, user data will be set by auth listener");
       return result;
     } catch (error) {
       console.error("Signup error", error);
-      setLoading(false);
       throw error;
     }
   };

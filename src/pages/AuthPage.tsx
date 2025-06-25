@@ -16,20 +16,18 @@ const AuthPage = () => {
   const { userType, setUserType, isOnboarded } = useUserType();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [hasRedirected, setHasRedirected] = useState(false);
   
   // Handle navigation after authentication
   useEffect(() => {
-    // Don't redirect if we're still loading or have already redirected
-    if (loading || hasRedirected) {
+    // Don't redirect if we're still loading
+    if (loading) {
       return;
     }
     
     if (isAuthenticated && currentUser) {
       console.log("User is authenticated, checking redirect path:", { userType, isOnboarded });
-      setHasRedirected(true);
       
-      // If user has a complete profile, redirect to dashboard
+      // If user has a complete profile, redirect to dashboard immediately
       if (userType && isOnboarded) {
         const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
         console.log(`Redirecting to ${dashboardUrl}`);
@@ -51,7 +49,7 @@ const AuthPage = () => {
         return;
       }
     }
-  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, defaultType, navigate, hasRedirected]);
+  }, [isAuthenticated, userType, isOnboarded, loading, currentUser, defaultType, navigate]);
   
   const handleLogin = async (email: string, password: string) => {
     try {
@@ -62,6 +60,8 @@ const AuthPage = () => {
         title: "Login successful!",
         description: `Welcome back to NextPlate!`,
       });
+      
+      // The useEffect will handle the redirect
     } catch (error: any) {
       console.error("Login error:", error);
       toast({
@@ -88,6 +88,8 @@ const AuthPage = () => {
         title: "Account created!",
         description: `Welcome to NextPlate!`,
       });
+      
+      // The useEffect will handle the redirect
     } catch (error: any) {
       console.error("Signup error:", error);
       toast({
@@ -111,13 +113,13 @@ const AuthPage = () => {
     );
   }
   
-  // If authenticated and we're about to redirect, show a brief loading message
-  if (isAuthenticated && currentUser && !hasRedirected) {
+  // If authenticated, don't show the auth form - just redirect (handled by useEffect)
+  if (isAuthenticated && currentUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nextplate-orange mx-auto mb-4"></div>
-          <div>Setting up your account...</div>
+          <div>Redirecting...</div>
         </div>
       </div>
     );
