@@ -19,6 +19,8 @@ export const formSchema = z.object({
   size: z.enum(["S", "M", "L"]).default("M"),
   isSingle: z.boolean().default(true),
   isBundle: z.boolean().default(false),
+  deliveryAvailable: z.boolean().default(false),
+  pickupTime: z.string().optional(),
 }).refine((data) => data.isSingle || data.isBundle, {
   message: "At least one availability option must be selected",
   path: ["isSingle"], // This will show the error on the isSingle field
@@ -37,6 +39,8 @@ export type Plate = {
   isSingle: boolean;
   isBundle: boolean;
   isAvailable: boolean;
+  deliveryAvailable?: boolean;
+  pickupTime?: string;
 };
 
 export type PlateFormValues = z.infer<typeof formSchema>;

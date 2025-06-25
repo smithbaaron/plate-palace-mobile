@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { Plate } from '@/components/seller/PlateFormTypes';
 import { useAuth } from '@/context/AuthContext';
@@ -18,6 +17,8 @@ export type DBPlate = {
   is_single: boolean;
   is_bundle: boolean;
   is_available: boolean;
+  delivery_available: boolean | null;
+  pickup_time: string | null;
 };
 
 // Convert a DB plate to a frontend plate
@@ -34,6 +35,8 @@ export const dbPlateToPlate = (dbPlate: any): Plate => ({
   isSingle: dbPlate.is_single ?? true,
   isBundle: dbPlate.is_bundle ?? false,
   isAvailable: dbPlate.is_available ?? true,
+  deliveryAvailable: dbPlate.delivery_available ?? false,
+  pickupTime: dbPlate.pickup_time || '',
 });
 
 // Convert a frontend plate to a DB plate
@@ -50,6 +53,8 @@ export const plateToDbPlate = (plate: Omit<Plate, 'id' | 'soldCount'>, sellerId:
   is_single: plate.isSingle,
   is_bundle: plate.isBundle,
   is_available: plate.isAvailable,
+  delivery_available: plate.deliveryAvailable ?? false,
+  pickup_time: plate.pickupTime || null,
 });
 
 // Helper function to get seller profile ID from auth user ID

@@ -24,6 +24,7 @@ import PlateSizeSelector from "./PlateSizeSelector";
 import PlateNutritionalInfo from "./PlateNutritionalInfo";
 import PlateAvailabilityDate from "./PlateAvailabilityDate";
 import PlateAvailabilityOptions from "./PlateAvailabilityOptions";
+import PlateDeliveryPickupOptions from "./PlateDeliveryPickupOptions";
 
 // Re-export the types from PlateFormTypes for backward compatibility
 export type { PlateSize, Plate } from "./PlateFormTypes";
@@ -57,6 +58,8 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({
       size: "M",
       isSingle: true,
       isBundle: false,
+      deliveryAvailable: false,
+      pickupTime: "",
     },
   });
 
@@ -74,6 +77,8 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({
         size: initialPlate.size,
         isSingle: initialPlate.isSingle,
         isBundle: initialPlate.isBundle,
+        deliveryAvailable: initialPlate.deliveryAvailable || false,
+        pickupTime: initialPlate.pickupTime || "",
       });
       setImagePreview(initialPlate.imageUrl || null);
     } else if (open && !initialPlate) {
@@ -88,6 +93,8 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({
         size: "M",
         isSingle: true,
         isBundle: false,
+        deliveryAvailable: false,
+        pickupTime: "",
       });
       setImagePreview(null);
     }
@@ -122,6 +129,8 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({
         isSingle: data.isSingle,
         isBundle: data.isBundle,
         isAvailable: true,
+        deliveryAvailable: data.deliveryAvailable,
+        pickupTime: data.pickupTime,
       });
     }
     
@@ -171,6 +180,9 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({
             
             {/* Availability Options */}
             <PlateAvailabilityOptions form={form} />
+            
+            {/* Delivery and Pickup Options */}
+            <PlateDeliveryPickupOptions form={form} />
             
             <DialogFooter>
               <Button 
