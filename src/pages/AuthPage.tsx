@@ -25,7 +25,11 @@ const AuthPage = () => {
     }
     
     if (isAuthenticated && currentUser) {
-      console.log("User is authenticated, checking redirect path:", { userType, isOnboarded });
+      console.log("User is authenticated, checking redirect path:", { userType, isOnboarded, currentUser });
+      
+      // Check if user has a role in their metadata or profile
+      const userRole = currentUser.user_metadata?.role || currentUser.app_metadata?.role;
+      console.log("User role from metadata:", userRole);
       
       // If user has a complete profile, redirect to dashboard immediately
       if (userType && isOnboarded) {
@@ -42,9 +46,20 @@ const AuthPage = () => {
         return;
       }
       
-      // If authenticated but no user type, redirect to onboarding with default type
-      if (!userType) {
-        console.log(`No user type found, redirecting to onboarding as ${defaultType}`);
+      // Check user role from metadata to determine redirect
+      if (userRole === "customer") {
+        console.log("User is a customer, redirecting to customer dashboard");
+        navigate("/customer/dashboard", { replace: true });
+        return;
+      } else if (userRole === "seller") {
+        console.log("User is a seller, redirecting to seller onboarding");
+        navigate("/seller/onboarding", { replace: true });
+        return;
+      }
+      
+      // If authenticated but no user type and no role metadata, redirect based on defaultType
+      if (!userType && !userRole) {
+        console.log(`No user type or role found, redirecting to onboarding as ${defaultType}`);
         navigate(`/${defaultType}/onboarding`, { replace: true });
         return;
       }

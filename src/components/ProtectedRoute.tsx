@@ -57,6 +57,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={dashboardUrl} replace />;
   }
 
+  // Check user role from metadata if userType is not set
+  const userRole = currentUser?.user_metadata?.role || currentUser?.app_metadata?.role;
+  
+  // If user has role in metadata but no userType, redirect to appropriate dashboard
+  if (userRole && !userType && !isOnOnboardingPage) {
+    console.log("User has role in metadata:", userRole);
+    if (userRole === "customer") {
+      return <Navigate to="/customer/dashboard" replace />;
+    } else if (userRole === "seller") {
+      return <Navigate to="/seller/dashboard" replace />;
+    }
+  }
+
   // If on onboarding page and no user type yet, allow access (they're setting up their type)
   if (isOnOnboardingPage && !userType && currentUser) {
     console.log("On onboarding page without user type - allowing access");
@@ -76,8 +89,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       return <Navigate to={`/${userType}/onboarding`} replace />;
     }
     
+    // Check role metadata as fallback
+    if (userRole === 'customer' && requiredUserType === 'seller') {
+      return <Navigate to="/customer/dashboard" replace />;
+    } else if (userRole === 'seller' && requiredUserType === 'customer') {
+      return <Navigate to="/seller/dashboard" replace />;
+    }
+    
     // If they don't have a user type yet and not on onboarding, send them to onboarding
-    if (!userType && !isOnOnboardingPage) {
+    if (!userType && !userRole && !isOnOnboardingPage) {
       return <Navigate to={`/${requiredUserType}/onboarding`} replace />;
     }
   }
@@ -89,7 +109,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
   
   // If no user type but authenticated and not on onboarding page
-  if (!userType && currentUser && !isOnOnboardingPage) {
+  if (!userType && !userRole && currentUser && !isOnOnboardingPage) {
     console.log("No user type found, redirecting to seller onboarding");
     return <Navigate to="/seller/onboarding" replace />;
   }
