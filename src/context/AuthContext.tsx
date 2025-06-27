@@ -6,7 +6,7 @@ import { User, formatUser, loginWithEmail, signupWithEmail, logoutUser } from "@
 
 interface AuthContextType {
   currentUser: User | null;
-  supabaseUser: SupabaseUser | null; // Add this to access metadata
+  supabaseUser: SupabaseUser | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, username: string) => Promise<any>;
@@ -29,27 +29,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<Session | null>(null);
 
-  // Function to check and resync auth state
   const checkAndResyncAuth = async (): Promise<boolean> => {
     try {
-      console.log("Checking auth state...");
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (!currentSession || !currentSession.user) {
-        console.log("No session found");
+      if (!session?.user) {
         setCurrentUser(null);
         setSupabaseUser(null);
-        setSession(null);
         return false;
       }
       
-      console.log("Session found, formatting user");
-      const formattedUser = await formatUser(currentSession.user);
+      const formattedUser = await formatUser(session.user);
       setCurrentUser(formattedUser);
-      setSupabaseUser(currentSession.user);
-      setSession(currentSession);
+      setSupabaseUser(session.user);
       return !!formattedUser;
     } catch (error) {
       console.error("Error checking auth state:", error);
@@ -57,51 +50,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Set up the auth state listener
   useEffect(() => {
     let mounted = true;
     
-    // Initial auth check on mount
     const initializeAuth = async () => {
-      console.log("Initializing auth...");
-      try {
-        await checkAndResyncAuth();
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+      await checkAndResyncAuth();
+      if (mounted) {
+        setLoading(false);
       }
     };
     
     initializeAuth();
     
-    // Set up the subscription for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      console.log('Auth state changed:', event);
-      
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       
-      setSession(newSession);
-      
-      if (event === 'SIGNED_IN' && newSession?.user) {
-        try {
-          console.log("User signed in, formatting user data");
-          const formattedUser = await formatUser(newSession.user);
-          setCurrentUser(formattedUser);
-          setSupabaseUser(newSession.user);
-          setLoading(false); // Set loading to false immediately after sign in
-        } catch (error) {
-          console.error("Error formatting user after sign in:", error);
-          setLoading(false);
-        }
+      if (event === 'SIGNED_IN' && session?.user) {
+        const formattedUser = await formatUser(session.user);
+        setCurrentUser(formattedUser);
+        setSupabaseUser(session.user);
       } else if (event === 'SIGNED_OUT') {
-        console.log("User signed out");
         setCurrentUser(null);
         setSupabaseUser(null);
-        setLoading(false);
       }
+      setLoading(false);
     });
     
     return () => {
@@ -110,40 +82,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Login function
   const login = async (email: string, password: string) => {
-    try {
-      console.log("Starting login process...");
-      const result = await loginWithEmail(email, password);
-      console.log("Login completed, user data will be set by auth listener");
-      // Don't set loading here - let the auth state listener handle it
-    } catch (error) {
-      console.error("Login error", error);
-      throw error;
-    }
+    await loginWithEmail(email, password);
   };
 
-  // Signup function
   const signup = async (email: string, password: string, username: string) => {
-    try {
-      console.log("Starting signup process...");
-      const result = await signupWithEmail(email, password, username);
-      console.log("Signup completed, user data will be set by auth listener");
-      return result;
-    } catch (error) {
-      console.error("Signup error", error);
-      throw error;
-    }
+    return await signupWithEmail(email, password, username);
   };
 
-  // Logout function
   const logout = async () => {
-    try {
-      await logoutUser();
-      // User data will be cleared by the auth state listener
-    } catch (error) {
-      console.error("Logout error", error);
-    }
+    await logoutUser();
   };
 
   const value = {
