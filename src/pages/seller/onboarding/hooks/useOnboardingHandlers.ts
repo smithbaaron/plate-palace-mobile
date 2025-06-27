@@ -283,16 +283,18 @@ export const useOnboardingHandlers = ({
       // Resync user data to ensure everything is up to date
       await resyncUserTypeData();
       
-      // Save pickup addresses to localStorage as backup
-      localStorage.setItem("pickupAddresses", JSON.stringify(pickupAddresses));
-      
       toast({
         title: "Setup complete!",
-        description: "Your seller account is ready to go.",
+        description: "Your seller account is ready. You can now add plates to your menu!",
       });
       
-      console.log("Navigating to seller dashboard");
-      navigate("/seller/dashboard", { replace: true });
+      // Force navigate to dashboard after a short delay to ensure state is updated
+      setTimeout(() => {
+        console.log("Navigating to seller dashboard");
+        navigate("/seller/dashboard", { replace: true });
+        // Force page refresh to ensure fresh state
+        window.location.reload();
+      }, 1000);
       
     } catch (error) {
       console.error("Error saving seller profile:", error);
