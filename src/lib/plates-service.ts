@@ -1,8 +1,9 @@
+
 import { supabase } from './supabase';
 import { Plate } from '@/components/seller/PlateFormTypes';
 import { useAuth } from '@/context/AuthContext';
 
-// Type definition for database plates
+// Type definition for database plates - simplified to match original table
 export type DBPlate = {
   id?: string;
   seller_id: string;
@@ -14,10 +15,10 @@ export type DBPlate = {
   image_url: string | null;
   sold_count: number;
   size: string;
-  is_single: boolean;
-  is_bundle: boolean;
-  is_available: boolean;
-  // Temporarily remove these until migration is applied
+  // Remove all new columns until migrations are applied
+  // is_single: boolean;
+  // is_bundle: boolean;
+  // is_available: boolean;
   // delivery_available: boolean | null;
   // pickup_time: string | null;
 };
@@ -33,11 +34,12 @@ export const dbPlateToPlate = (dbPlate: any): Plate => ({
   imageUrl: dbPlate.image_url,
   soldCount: dbPlate.sold_count || 0,
   size: dbPlate.size || 'M',
-  isSingle: dbPlate.is_single ?? true,
-  isBundle: dbPlate.is_bundle ?? false,
-  isAvailable: dbPlate.is_available ?? true,
-  deliveryAvailable: dbPlate.delivery_available ?? false,
-  pickupTime: dbPlate.pickup_time || '',
+  // Set default values for missing columns
+  isSingle: true,
+  isBundle: false,
+  isAvailable: true,
+  deliveryAvailable: false,
+  pickupTime: '',
 });
 
 // Convert a frontend plate to a DB plate
@@ -51,10 +53,10 @@ export const plateToDbPlate = (plate: Omit<Plate, 'id' | 'soldCount'>, sellerId:
   image_url: plate.imageUrl || null,
   sold_count: 0,
   size: plate.size,
-  is_single: plate.isSingle,
-  is_bundle: plate.isBundle,
-  is_available: plate.isAvailable,
-  // Temporarily remove these until migration is applied
+  // Remove all new columns until migrations are applied
+  // is_single: plate.isSingle,
+  // is_bundle: plate.isBundle,
+  // is_available: plate.isAvailable,
   // delivery_available: plate.deliveryAvailable ?? false,
   // pickup_time: plate.pickupTime || null,
 });
