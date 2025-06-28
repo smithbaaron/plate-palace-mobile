@@ -105,10 +105,29 @@ export const useSellerPlates = () => {
     }
   };
 
-  // Add a new plate
+  // Add a new plate with improved error handling
   const handleAddPlate = async (newPlateData: Omit<Plate, "id" | "soldCount">) => {
+    console.log('🚀 Starting handleAddPlate with data:', newPlateData);
+    
     try {
-      console.log('Adding new plate:', newPlateData);
+      // Validate required fields before proceeding
+      if (!newPlateData.name || !newPlateData.name.trim()) {
+        throw new Error("Plate name is required");
+      }
+      
+      if (!newPlateData.price || newPlateData.price <= 0) {
+        throw new Error("Valid price is required");
+      }
+      
+      if (!newPlateData.quantity || newPlateData.quantity <= 0) {
+        throw new Error("Valid quantity is required");
+      }
+      
+      if (!newPlateData.availableDate) {
+        throw new Error("Available date is required");
+      }
+      
+      console.log('✅ Validation passed, proceeding with plate addition');
       
       // Check if table exists before attempting to add
       if (tableExists === false) {
@@ -116,23 +135,31 @@ export const useSellerPlates = () => {
       }
       
       // Save the plate to Supabase
+      console.log('💾 Calling addPlate service...');
       const savedPlate = await addPlate(newPlateData);
-      console.log('Plate saved to database:', savedPlate);
+      console.log('✅ Plate saved successfully:', savedPlate);
       
       // Update local state with the new plate
       setPlates(prevPlates => {
         const updatedPlates = [...prevPlates, savedPlate];
-        console.log('Updated local plates state:', updatedPlates);
+        console.log('🔄 Updated local plates state:', updatedPlates);
         return updatedPlates;
       });
       
       // Notify user of success
       notifyPlateAdded(newPlateData.name);
+      console.log('🎉 Plate addition completed successfully');
       
       return savedPlate;
     } catch (err) {
-      console.error("Error adding plate:", err);
-      notifyError("Error adding plate", "Could not save your plate. Please try again.");
+      console.error("💥 Error in handleAddPlate:", err);
+      
+      // Show user-friendly error message
+      const errorMessage = err instanceof Error ? err.message : "Could not save your plate. Please try again.";
+      
+      notifyError("Failed to add plate", errorMessage);
+      
+      // Re-throw the error so the form can handle it
       throw err;
     }
   };

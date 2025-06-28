@@ -45,6 +45,7 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({
 }) => {
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<PlateFormValues>({
     resolver: zodResolver(formSchema),
@@ -100,25 +101,35 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({
     }
   }, [open, initialPlate, form]);
 
-  const handleSubmit = (data: PlateFormValues) => {
-    // Validate that at least one availability option is selected
-    if (!data.isSingle && !data.isBundle) {
-      toast({
-        title: "Invalid Selection",
-        description: "Please select at least one availability option.",
-        variant: "destructive",
-      });
+  const handleSubmit = async (data: PlateFormValues) => {
+    console.log('📝 Form submitted with data:', data);
+    
+    // Prevent double submission
+    if (isSubmitting) {
+      console.log('⚠️ Already submitting, ignoring duplicate submission');
       return;
     }
-
-    // Add image preview to the form data if available
-    if (imagePreview) {
-      data.imageUrl = imagePreview;
-    }
     
-    // Call the onSubmit callback if it exists
-    if (onSubmit) {
-      onSubmit({
+    setIsSubmitting(true);
+    
+    try {
+      // Validate that at least one availability option is selected
+      if (!data.isSingle && !data.isBundle) {
+        toast({
+          title: "Invalid Selection",
+          description: "Please select at least one availability option.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Add image preview to the form data if available
+      if (imagePreview) {
+        data.imageUrl = imagePreview;
+      }
+      
+      console.log('🔄 Preparing plate data for submission...');
+      const plateData = {
         name: data.name,
         quantity: data.quantity,
         price: data.price,
@@ -131,13 +142,37 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({
         isAvailable: true,
         deliveryAvailable: data.deliveryAvailable,
         pickupTime: data.pickupTime,
+      };
+      
+      console.log('📤 Calling onSubmit with plate data:', plateData);
+      
+      // Call the onSubmit callback if it exists
+      if (onSubmit) {
+        await onSubmit(plateData);
+        console.log('✅ onSubmit completed successfully');
+        
+        // Reset form and close dialog only after successful submission
+        form.reset();
+        setImagePreview(null);
+        onOpenChange(false);
+        
+        toast({
+          title: "Success!",
+          description: `${data.name} has been added to your menu.`,
+        });
+      }
+    } catch (error) {
+      console.error('💥 Error during form submission:', error);
+      
+      // Don't close the dialog on error so user can retry
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add plate. Please try again.",
+        variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    // Reset form and close dialog
-    form.reset();
-    setImagePreview(null);
-    onOpenChange(false);
   };
 
   const isEditing = !!initialPlate;
@@ -145,7 +180,7 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({
   const dialogDescription = isEditing 
     ? "Modify the plate details below. This will create a new plate based on your changes."
     : "Create a new plate for your menu. Required fields are marked with an asterisk (*).";
-  const buttonText = isEditing ? "Save Changes" : "Add Plate";
+  const buttonText = isSubmitting ? "Adding..." : (isEditing ? "Save Changes" : "Add Plate");
   const buttonIcon = isEditing ? Edit : Plus;
 
   return (
@@ -190,12 +225,14 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({
                 variant="outline" 
                 className="text-gray-300 border-gray-700" 
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
                 className="bg-nextplate-orange hover:bg-orange-600"
+                disabled={isSubmitting}
               >
                 {React.createElement(buttonIcon, { size: 16, className: "mr-1" })}
                 {buttonText}
