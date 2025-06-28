@@ -32,20 +32,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkAndResyncAuth = async (): Promise<boolean> => {
     try {
+      console.log("🔍 Checking auth state...");
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user) {
+        console.log("❌ No session found");
         setCurrentUser(null);
         setSupabaseUser(null);
         return false;
       }
       
+      console.log("✅ Session found, formatting user...");
       const formattedUser = await formatUser(session.user);
+      console.log("👤 Formatted user:", formattedUser);
       setCurrentUser(formattedUser);
       setSupabaseUser(session.user);
       return !!formattedUser;
     } catch (error) {
-      console.error("Error checking auth state:", error);
+      console.error("💥 Error checking auth state:", error);
       return false;
     }
   };
@@ -54,8 +58,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
     
     const initializeAuth = async () => {
+      console.log("🚀 Initializing auth...");
       await checkAndResyncAuth();
       if (mounted) {
+        console.log("✅ Auth initialization complete, setting loading to false");
         setLoading(false);
       }
     };
@@ -65,11 +71,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       
+      console.log("🔄 Auth state changed:", event, session?.user?.id);
+      
       if (event === 'SIGNED_IN' && session?.user) {
         const formattedUser = await formatUser(session.user);
+        console.log("✅ User signed in:", formattedUser);
         setCurrentUser(formattedUser);
         setSupabaseUser(session.user);
       } else if (event === 'SIGNED_OUT') {
+        console.log("👋 User signed out");
         setCurrentUser(null);
         setSupabaseUser(null);
       }
@@ -83,14 +93,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string) => {
+    console.log("🔐 Attempting login for:", email);
     await loginWithEmail(email, password);
   };
 
   const signup = async (email: string, password: string, username: string) => {
+    console.log("📝 Attempting signup for:", email, username);
     return await signupWithEmail(email, password, username);
   };
 
   const logout = async () => {
+    console.log("👋 Attempting logout");
     await logoutUser();
   };
 
@@ -104,6 +117,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     checkAndResyncAuth,
   };
+
+  console.log("🎯 AuthProvider render - loading:", loading, "isAuthenticated:", !!currentUser);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
