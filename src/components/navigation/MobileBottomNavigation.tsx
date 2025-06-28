@@ -1,6 +1,7 @@
 
 import { Link, useLocation } from "react-router-dom";
 import { Home, ShoppingCart, Menu } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +25,7 @@ const MobileBottomNavigation = ({
   unreadNotifications 
 }: MobileBottomNavigationProps) => {
   const location = useLocation();
+  const { logout } = useAuth();
   
   // Only show on authenticated pages
   if (!isAuthenticated) {
@@ -31,9 +33,11 @@ const MobileBottomNavigation = ({
   }
 
   const handleLogout = async () => {
-    // This will be handled by the parent Navigation component
-    // For now, we'll redirect to auth page
-    window.location.href = '/auth';
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   return (

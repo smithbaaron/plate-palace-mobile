@@ -293,8 +293,8 @@ export const useOnboardingHandlers = ({
         description: "Your seller account is ready. You can now add plates to your menu!",
       });
       
-      // Navigate immediately without delay
-      navigate("/seller/dashboard", { replace: true });
+      // Use window.location.href to force navigation
+      window.location.href = "/seller/dashboard";
       
     } catch (error) {
       console.error("Error saving seller profile:", error);
