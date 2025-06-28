@@ -1,4 +1,5 @@
 
+
 import { supabase } from './supabase';
 import { Plate } from '@/components/seller/PlateFormTypes';
 import { useAuth } from '@/context/AuthContext';
@@ -98,12 +99,22 @@ const getSellerProfileId = async (authUserId: string): Promise<string> => {
         hint: error.hint,
         code: error.code
       });
-      throw new Error(`Failed to fetch seller profile: ${error.message}`);
+      
+      // Handle specific error cases
+      if (error.code === 'PGRST116') {
+        // No seller profile found
+        throw new Error('You need to complete seller onboarding first. Please go to the seller onboarding page to set up your seller profile.');
+      } else if (error.code === '42P01') {
+        // Table doesn't exist
+        throw new Error('Seller profiles table does not exist. Please contact support or check your database setup.');
+      } else {
+        throw new Error(`Failed to fetch seller profile: ${error.message}`);
+      }
     }
     
     if (!data) {
       console.error('❌ No seller profile found for user_id:', authUserId);
-      throw new Error('Seller profile not found. Please complete your seller onboarding first.');
+      throw new Error('You need to complete seller onboarding first. Please go to the seller onboarding page to set up your seller profile.');
     }
     
     console.log('✅ Found seller profile ID:', data.id);
@@ -153,7 +164,7 @@ export const platesService = {
       console.log('👤 Auth user ID:', authUserId);
       console.log('📝 Plate data to add:', plate);
       
-      // Step 1: Get seller profile ID
+      // Step 1: Get seller profile ID (this will throw if no seller profile exists)
       console.log('🔍 Step 1: Getting seller profile ID...');
       const sellerProfileId = await getSellerProfileId(authUserId);
       console.log('✅ Step 1 complete. Seller profile ID:', sellerProfileId);
@@ -208,7 +219,7 @@ export const platesService = {
         
         // Provide more specific error messages
         if (error.code === '42501') {
-          throw new Error('Permission denied: You may not have the required permissions to add plates. Please check your seller profile setup.');
+          throw new Error('You need to complete seller onboarding first. Please go to the seller onboarding page to set up your seller profile before adding plates.');
         } else if (error.code === '23503') {
           throw new Error('Invalid seller reference: Your seller profile may not be properly set up.');
         } else {
@@ -318,3 +329,4 @@ export const usePlates = () => {
 
   return { fetchPlates, addPlate };
 };
+
