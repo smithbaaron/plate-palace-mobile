@@ -17,9 +17,8 @@ export type DBPlate = {
   is_single: boolean;
   is_bundle: boolean;
   is_available: boolean;
-  // Temporarily remove these until migration is applied
-  // delivery_available: boolean | null;
-  // pickup_time: string | null;
+  delivery_available: boolean | null;
+  pickup_time: string | null;
 };
 
 // Convert a DB plate to a frontend plate
@@ -54,9 +53,8 @@ export const plateToDbPlate = (plate: Omit<Plate, 'id' | 'soldCount'>, sellerId:
   is_single: plate.isSingle,
   is_bundle: plate.isBundle,
   is_available: plate.isAvailable,
-  // Temporarily remove these until migration is applied
-  // delivery_available: plate.deliveryAvailable ?? false,
-  // pickup_time: plate.pickupTime || null,
+  delivery_available: plate.deliveryAvailable ?? false,
+  pickup_time: plate.pickupTime || null,
 });
 
 // Helper function to get seller profile ID from auth user ID
