@@ -1,14 +1,14 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { 
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, Menu, LogOut } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
+import NotificationDropdown from "./NotificationDropdown";
 
 interface DesktopNavigationProps {
   isAuthenticated: boolean;
@@ -46,19 +46,8 @@ const DesktopNavigation = ({
               Profile
             </Button>
           </Link>
-          <div className="relative">
-            <Button variant="ghost" className="text-white hover:text-nextplate-orange">
-              <Bell size={20} />
-              {unreadNotifications > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-2 -right-2 h-5 min-w-5 p-0 flex items-center justify-center rounded-full"
-                >
-                  {unreadNotifications}
-                </Badge>
-              )}
-            </Button>
-          </div>
+          
+          <NotificationDropdown unreadCount={unreadNotifications} />
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

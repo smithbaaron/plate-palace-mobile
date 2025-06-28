@@ -1,7 +1,6 @@
 
 import { Link, useLocation } from "react-router-dom";
-import { Home, ShoppingCart, Bell, Menu } from "lucide-react";
-import { useState } from "react";
+import { Home, ShoppingCart, Menu } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import NotificationDropdown from "./NotificationDropdown";
 
 interface MobileBottomNavigationProps {
   isAuthenticated: boolean;
@@ -75,15 +75,10 @@ const MobileBottomNavigation = ({
         )}
 
         {/* Notifications */}
-        <button className="flex flex-col items-center p-2 text-gray-400 relative">
-          <Bell size={20} />
-          {unreadNotifications > 0 && (
-            <span className="absolute -top-1 -right-1 bg-nextplate-orange text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              {unreadNotifications > 9 ? "9+" : unreadNotifications}
-            </span>
-          )}
-          <span className="text-xs mt-1">Alerts</span>
-        </button>
+        <div className="flex flex-col items-center">
+          <NotificationDropdown unreadCount={unreadNotifications} />
+          <span className="text-xs mt-1 text-gray-400">Alerts</span>
+        </div>
 
         {/* Menu */}
         <DropdownMenu>
