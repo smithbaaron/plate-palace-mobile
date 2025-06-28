@@ -25,13 +25,19 @@ export const formatUser = async (supabaseUser: SupabaseUser | null): Promise<Use
   let isOnboarded = false;
   
   try {
-    // Try to get the profile
+    // Try to get the profile with a timeout
     console.log("🔍 Checking profiles table...");
-    const { data, error } = await supabase
+    const profilePromise = supabase
       .from('profiles')
       .select('username')
       .eq('id', supabaseUser.id)
       .single();
+      
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("Profile query timeout")), 5000)
+    );
+    
+    const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
       
     if (data && !error) {
       username = data.username || username;
@@ -44,16 +50,23 @@ export const formatUser = async (supabaseUser: SupabaseUser | null): Promise<Use
     }
   } catch (err) {
     console.error("💥 Error checking profile:", err);
+    // Continue with default username
   }
   
-  // Check for seller profile to determine user type
+  // Check for seller profile to determine user type with timeout
   try {
     console.log("🔍 Checking seller_profiles table...");
-    const { data: sellerProfile, error } = await supabase
+    const sellerPromise = supabase
       .from('seller_profiles')
       .select('id')
       .eq('user_id', supabaseUser.id)
       .single();
+      
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("Seller profile query timeout")), 5000)
+    );
+    
+    const { data: sellerProfile, error } = await Promise.race([sellerPromise, timeoutPromise]) as any;
       
     if (sellerProfile && !error) {
       userType = 'seller';
