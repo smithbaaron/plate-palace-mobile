@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -277,24 +278,23 @@ export const useOnboardingHandlers = ({
         throw profileError;
       }
 
+      console.log("Successfully saved profile data, completing onboarding...");
+
       // Complete onboarding in context
       await completeOnboarding();
       
       // Resync user data to ensure everything is up to date
       await resyncUserTypeData();
       
+      console.log("Onboarding completed, navigating to dashboard...");
+      
       toast({
         title: "Setup complete!",
         description: "Your seller account is ready. You can now add plates to your menu!",
       });
       
-      // Force navigate to dashboard after a short delay to ensure state is updated
-      setTimeout(() => {
-        console.log("Navigating to seller dashboard");
-        navigate("/seller/dashboard", { replace: true });
-        // Force page refresh to ensure fresh state
-        window.location.reload();
-      }, 1000);
+      // Navigate immediately without delay
+      navigate("/seller/dashboard", { replace: true });
       
     } catch (error) {
       console.error("Error saving seller profile:", error);
