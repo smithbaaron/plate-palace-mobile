@@ -49,44 +49,93 @@ export const plateToDbPlate = (plate: Omit<Plate, 'id' | 'soldCount'>, sellerId:
   size: plate.size,
 });
 
-// Helper function to validate seller profile - simplified without debug function
+// Enhanced seller profile validation with detailed logging
 const validateSellerProfile = async (authUserId: string): Promise<{ sellerId: string; isValid: boolean; error?: string }> => {
   console.log('🔍 Validating seller profile for user:', authUserId);
   
   try {
-    // Query seller profile directly
+    // First, check if the user exists in auth
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('👤 Current auth user:', user?.id, 'Expected:', authUserId);
+    
+    if (authError || !user) {
+      console.error('❌ Auth error or no user:', authError);
+      return { sellerId: '', isValid: false, error: 'User not authenticated' };
+    }
+    
+    if (user.id !== authUserId) {
+      console.error('❌ User ID mismatch:', user.id, 'vs', authUserId);
+      return { sellerId: '', isValid: false, error: 'User ID mismatch' };
+    }
+    
+    // Query seller profile with detailed logging
+    console.log('🔍 Querying seller_profiles table for user_id:', authUserId);
     const { data: sellerProfile, error: profileError } = await supabase
       .from('seller_profiles')
       .select('id, business_name, user_id')
       .eq('user_id', authUserId)
       .single();
     
-    console.log('🔍 Seller profile data:', sellerProfile);
+    console.log('📊 Seller profile query result:', {
+      data: sellerProfile,
+      error: profileError,
+      errorCode: profileError?.code,
+      errorMessage: profileError?.message
+    });
     
     if (profileError) {
-      console.error('❌ Error fetching seller profile:', profileError);
-      
       if (profileError.code === 'PGRST116') {
-        return { sellerId: '', isValid: false, error: 'No seller profile exists. Please complete seller onboarding.' };
+        console.error('❌ No seller profile found for user:', authUserId);
+        return { 
+          sellerId: '', 
+          isValid: false, 
+          error: 'No seller profile exists. Please complete seller onboarding first.' 
+        };
       }
       
-      return { sellerId: '', isValid: false, error: `Failed to fetch seller profile: ${profileError.message}` };
+      console.error('❌ Database error fetching seller profile:', profileError);
+      return { 
+        sellerId: '', 
+        isValid: false, 
+        error: `Database error: ${profileError.message}` 
+      };
     }
     
     if (!sellerProfile) {
-      return { sellerId: '', isValid: false, error: 'No seller profile found. Please complete seller onboarding.' };
+      console.error('❌ Seller profile query returned null');
+      return { 
+        sellerId: '', 
+        isValid: false, 
+        error: 'No seller profile found. Please complete seller onboarding.' 
+      };
     }
     
+    console.log('✅ Seller profile found:', {
+      id: sellerProfile.id,
+      business_name: sellerProfile.business_name,
+      user_id: sellerProfile.user_id
+    });
+    
+    // Check if business name is properly set
     if (!sellerProfile.business_name || sellerProfile.business_name.trim() === '') {
-      return { sellerId: '', isValid: false, error: 'Seller profile is incomplete. Please ensure your business name is set in seller onboarding.' };
+      console.error('❌ Business name is empty or null');
+      return { 
+        sellerId: sellerProfile.id, 
+        isValid: false, 
+        error: 'Seller profile is incomplete. Please set your business name in seller onboarding.' 
+      };
     }
     
     console.log('✅ Seller profile validation successful:', sellerProfile.id);
     return { sellerId: sellerProfile.id, isValid: true };
     
   } catch (error) {
-    console.error('❌ Error validating seller profile:', error);
-    return { sellerId: '', isValid: false, error: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}` };
+    console.error('❌ Unexpected error in seller profile validation:', error);
+    return { 
+      sellerId: '', 
+      isValid: false, 
+      error: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    };
   }
 };
 
@@ -135,14 +184,14 @@ export const platesService = {
     }
   },
   
-  // Add a new plate with improved validation
+  // Add a new plate with enhanced validation and debugging
   addPlate: async (plate: Omit<Plate, 'id' | 'soldCount'>, authUserId: string) => {
     try {
       console.log('🍽️ Starting addPlate process...');
       console.log('👤 Auth user ID:', authUserId);
       console.log('📝 Plate data to add:', plate);
       
-      // Step 1: Validate seller profile and get seller ID
+      // Step 1: Enhanced seller profile validation
       console.log('🔍 Step 1: Validating seller profile...');
       const validation = await validateSellerProfile(authUserId);
       
@@ -159,8 +208,23 @@ export const platesService = {
       const dbPlate = plateToDbPlate(plate, sellerProfileId);
       console.log('✅ Step 2 complete. DB plate data:', dbPlate);
       
-      // Step 3: Insert the plate
-      console.log('💾 Step 3: Inserting plate into database...');
+      // Step 3: Test RLS policy by checking if we can query seller_profiles
+      console.log('🔐 Step 3: Testing RLS access...');
+      const { data: testQuery, error: testError } = await supabase
+        .from('seller_profiles')
+        .select('id')
+        .eq('user_id', authUserId)
+        .single();
+        
+      console.log('🔐 RLS test result:', { data: testQuery, error: testError });
+      
+      if (testError || !testQuery) {
+        console.error('❌ RLS test failed - user cannot access their seller profile');
+        throw new Error('Permission error: Cannot access seller profile. Please log out and log back in.');
+      }
+      
+      // Step 4: Insert the plate with detailed error handling
+      console.log('💾 Step 4: Inserting plate into database...');
       const { data, error } = await supabase
         .from('plates')
         .insert(dbPlate)
@@ -168,7 +232,7 @@ export const platesService = {
         .single();
         
       console.log('📊 Insert operation result:', { data, error });
-        
+      
       if (error) {
         console.error('❌ Error inserting plate into database:', error);
         console.error('❌ Error details:', {
@@ -178,13 +242,25 @@ export const platesService = {
           code: error.code
         });
         
-        // Provide more specific error messages based on error codes
+        // Provide specific error messages based on error codes
         if (error.code === '42501') {
-          throw new Error('Permission denied: Your seller profile may not be properly set up. Please ensure your business name is completed in seller onboarding.');
+          // Check if the issue is with the seller_id reference
+          console.log('🔍 Checking if seller_id exists in seller_profiles...');
+          const { data: sellerCheck } = await supabase
+            .from('seller_profiles')
+            .select('id')
+            .eq('id', sellerProfileId)
+            .single();
+            
+          if (!sellerCheck) {
+            throw new Error('Seller profile ID is invalid. Please complete seller onboarding again.');
+          }
+          
+          throw new Error(`RLS Policy Error: Your seller profile exists but the database security policy is blocking the insert. Please contact support or try logging out and back in.`);
         } else if (error.code === '23503') {
           throw new Error('Invalid seller reference: Your seller profile was not found. Please complete seller onboarding again.');
         } else {
-          throw new Error(`Database error: ${error.message}`);
+          throw new Error(`Database error (${error.code}): ${error.message}`);
         }
       }
       
@@ -193,12 +269,12 @@ export const platesService = {
         throw new Error('Insert operation succeeded but no data was returned');
       }
       
-      console.log('✅ Step 3 complete. Successfully added plate to database:', data);
+      console.log('✅ Step 4 complete. Successfully added plate to database:', data);
       
-      // Step 4: Convert and return the result
-      console.log('🔄 Step 4: Converting result back to frontend format...');
+      // Step 5: Convert and return the result
+      console.log('🔄 Step 5: Converting result back to frontend format...');
       const convertedPlate = dbPlateToPlate(data);
-      console.log('✅ Step 4 complete. Final converted plate:', convertedPlate);
+      console.log('✅ Step 5 complete. Final converted plate:', convertedPlate);
       
       console.log('🎉 addPlate process completed successfully!');
       return convertedPlate;
