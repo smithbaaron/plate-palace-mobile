@@ -36,9 +36,9 @@ export const dbPlateToPlate = (dbPlate: any): Plate => ({
   pickupTime: '',
 });
 
-// Convert a frontend plate to a DB plate
-export const plateToDbPlate = (plate: Omit<Plate, 'id' | 'soldCount'>, sellerId: string): Omit<DBPlate, 'id'> => ({
-  seller_id: sellerId,
+// Convert a frontend plate to a DB plate - now takes seller profile ID instead of user ID
+export const plateToDbPlate = (plate: Omit<Plate, 'id' | 'soldCount'>, sellerProfileId: string): Omit<DBPlate, 'id'> => ({
+  seller_id: sellerProfileId, // This now correctly references seller_profiles.id
   name: plate.name,
   quantity: plate.quantity,
   price: plate.price,
@@ -126,7 +126,7 @@ const validateSellerProfile = async (authUserId: string): Promise<{ sellerId: st
       };
     }
     
-    console.log('✅ Seller profile validation successful:', sellerProfile.id);
+    console.log('✅ Seller profile validation successful. Profile ID:', sellerProfile.id);
     return { sellerId: sellerProfile.id, isValid: true };
     
   } catch (error) {
@@ -149,6 +149,7 @@ const getSellerProfileId = async (authUserId: string): Promise<string> => {
     throw new Error(validation.error || 'Seller profile validation failed');
   }
   
+  console.log('✅ Retrieved seller profile ID:', validation.sellerId);
   return validation.sellerId;
 };
 
@@ -164,7 +165,7 @@ export const platesService = {
       const { data, error } = await supabase
         .from('plates')
         .select('*')
-        .eq('seller_id', sellerProfileId)
+        .eq('seller_id', sellerProfileId) // Now using correct seller profile ID
         .order('available_date', { ascending: true });
         
       if (error) {
@@ -191,37 +192,32 @@ export const platesService = {
       console.log('👤 Auth user ID:', authUserId);
       console.log('📝 Plate data to add:', plate);
       
-      // Step 1: Enhanced seller profile validation
-      console.log('🔍 Step 1: Validating seller profile...');
-      const validation = await validateSellerProfile(authUserId);
-      
-      if (!validation.isValid) {
-        console.error('❌ Seller profile validation failed:', validation.error);
-        throw new Error(validation.error || 'Seller profile validation failed');
-      }
-      
-      const sellerProfileId = validation.sellerId;
+      // Step 1: Get the seller profile ID (this validates the profile exists and is complete)
+      console.log('🔍 Step 1: Getting seller profile ID...');
+      const sellerProfileId = await getSellerProfileId(authUserId);
       console.log('✅ Step 1 complete. Seller profile ID:', sellerProfileId);
       
-      // Step 2: Convert plate data to DB format
+      // Step 2: Convert plate data to DB format using the seller profile ID
       console.log('🔄 Step 2: Converting plate data to DB format...');
-      const dbPlate = plateToDbPlate(plate, sellerProfileId);
+      const dbPlate = plateToDbPlate(plate, sellerProfileId); // Now using seller profile ID
       console.log('✅ Step 2 complete. DB plate data:', dbPlate);
       
-      // Step 3: Test RLS policy by checking if we can query seller_profiles
-      console.log('🔐 Step 3: Testing RLS access...');
-      const { data: testQuery, error: testError } = await supabase
+      // Step 3: Verify the seller profile exists in the database
+      console.log('🔐 Step 3: Verifying seller profile exists...');
+      const { data: profileCheck, error: profileCheckError } = await supabase
         .from('seller_profiles')
-        .select('id')
-        .eq('user_id', authUserId)
+        .select('id, business_name')
+        .eq('id', sellerProfileId)
         .single();
         
-      console.log('🔐 RLS test result:', { data: testQuery, error: testError });
+      console.log('🔐 Profile verification result:', { data: profileCheck, error: profileCheckError });
       
-      if (testError || !testQuery) {
-        console.error('❌ RLS test failed - user cannot access their seller profile');
-        throw new Error('Permission error: Cannot access seller profile. Please log out and log back in.');
+      if (profileCheckError || !profileCheck) {
+        console.error('❌ Seller profile not found in database');
+        throw new Error('Seller profile not found. Please complete seller onboarding.');
       }
+      
+      console.log('✅ Step 3 complete. Seller profile verified:', profileCheck);
       
       // Step 4: Insert the plate with detailed error handling
       console.log('💾 Step 4: Inserting plate into database...');
@@ -244,21 +240,9 @@ export const platesService = {
         
         // Provide specific error messages based on error codes
         if (error.code === '42501') {
-          // Check if the issue is with the seller_id reference
-          console.log('🔍 Checking if seller_id exists in seller_profiles...');
-          const { data: sellerCheck } = await supabase
-            .from('seller_profiles')
-            .select('id')
-            .eq('id', sellerProfileId)
-            .single();
-            
-          if (!sellerCheck) {
-            throw new Error('Seller profile ID is invalid. Please complete seller onboarding again.');
-          }
-          
-          throw new Error(`RLS Policy Error: Your seller profile exists but the database security policy is blocking the insert. Please contact support or try logging out and back in.`);
+          throw new Error(`RLS Policy Error: Database security policy is blocking the insert. Please ensure you have completed seller onboarding properly.`);
         } else if (error.code === '23503') {
-          throw new Error('Invalid seller reference: Your seller profile was not found. Please complete seller onboarding again.');
+          throw new Error('Foreign key constraint error: Seller profile reference is invalid. Please complete seller onboarding again.');
         } else {
           throw new Error(`Database error (${error.code}): ${error.message}`);
         }
@@ -288,7 +272,7 @@ export const platesService = {
   updatePlate: async (plate: Plate, authUserId: string) => {
     try {
       const sellerProfileId = await getSellerProfileId(authUserId);
-      const dbPlate = plateToDbPlate(plate, sellerProfileId);
+      const dbPlate = plateToDbPlate(plate, sellerProfileId); // Now using seller profile ID
       
       const { data, error } = await supabase
         .from('plates')
