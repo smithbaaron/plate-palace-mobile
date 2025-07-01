@@ -37,48 +37,73 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const isOnOnboardingPage = location.pathname.includes('/onboarding');
   const userRole = supabaseUser?.user_metadata?.role || supabaseUser?.app_metadata?.role;
 
+  console.log('🔍 ProtectedRoute Debug:', {
+    userType,
+    userRole,
+    isOnboarded,
+    isOnOnboardingPage,
+    requiredUserType,
+    currentPath: location.pathname
+  });
+
   // If onboarded user is on onboarding page, redirect to dashboard
   if (isOnboarded && userType && isOnOnboardingPage) {
     const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
+    console.log('✅ Redirecting onboarded user to dashboard:', dashboardUrl);
     return <Navigate to={dashboardUrl} replace />;
   }
 
-  // If user has role metadata but no userType, redirect to dashboard
-  if (userRole && !userType && !isOnOnboardingPage) {
+  // If user has role metadata but no userType, and they're onboarded, redirect to dashboard
+  if (userRole && !userType && !isOnOnboardingPage && isOnboarded) {
     const dashboardUrl = userRole === "seller" ? "/seller/dashboard" : "/customer/dashboard";
+    console.log('✅ Redirecting user with role metadata to dashboard:', dashboardUrl);
     return <Navigate to={dashboardUrl} replace />;
   }
 
   // Allow access to onboarding pages when setting up user type
-  if (isOnOnboardingPage && !userType) {
+  if (isOnOnboardingPage && !isOnboarded) {
+    console.log('✅ Allowing access to onboarding page');
     return <>{children}</>;
   }
 
   // Check user type requirements
   if (requiredUserType && userType !== requiredUserType) {
+    console.log('❌ User type mismatch. Required:', requiredUserType, 'Current:', userType);
+    
+    // If user has a different type and is onboarded, redirect to their dashboard
     if (userType && isOnboarded) {
       const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
+      console.log('✅ Redirecting to correct user type dashboard:', dashboardUrl);
       return <Navigate to={dashboardUrl} replace />;
     }
-    if (userRole && userRole !== requiredUserType) {
+    
+    // If user has role metadata that doesn't match, redirect to their dashboard
+    if (userRole && userRole !== requiredUserType && isOnboarded) {
       const dashboardUrl = userRole === "seller" ? "/seller/dashboard" : "/customer/dashboard";
+      console.log('✅ Redirecting based on role metadata:', dashboardUrl);
       return <Navigate to={dashboardUrl} replace />;
     }
+    
+    // If no user type and not on onboarding, redirect to required type onboarding
     if (!userType && !userRole && !isOnOnboardingPage) {
+      console.log('✅ Redirecting to required type onboarding:', requiredUserType);
       return <Navigate to={`/${requiredUserType}/onboarding`} replace />;
     }
   }
 
   // Check onboarding requirements
   if (requireOnboarded && !isOnboarded && userType && !isOnOnboardingPage) {
+    console.log('✅ Redirecting to complete onboarding for type:', userType);
     return <Navigate to={`/${userType}/onboarding`} replace />;
   }
   
-  // Default redirect for users without type or role
-  if (!userType && !userRole && !isOnOnboardingPage) {
+  // Default redirect for users without type or role (prefer seller)
+  if (!userType && !userRole && !isOnOnboardingPage && !isOnboarded) {
+    console.log('✅ Default redirect to seller onboarding');
     return <Navigate to="/seller/onboarding" replace />;
   }
   
+  console.log('✅ Allowing access to protected content');
   return <>{children}</>;
 };
 

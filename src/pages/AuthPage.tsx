@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -28,27 +27,40 @@ const AuthPage = () => {
     }
     
     const userRole = supabaseUser?.user_metadata?.role || supabaseUser?.app_metadata?.role;
-    console.log("👤 User role from metadata:", userRole);
+    console.log("👤 User role from metadata:", userRole, "userType:", userType, "isOnboarded:", isOnboarded);
     
-    // Quick redirect based on existing data
+    // Priority 1: If user has type and is onboarded, go to dashboard
     if (userType && isOnboarded) {
       const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
-      console.log("✅ User is onboarded, redirecting to:", dashboardUrl);
+      console.log("✅ User is onboarded with type, redirecting to:", dashboardUrl);
       navigate(dashboardUrl, { replace: true });
-    } else if (userRole === "customer") {
-      console.log("🛒 Customer role detected, redirecting to dashboard");
-      navigate("/customer/dashboard", { replace: true });
-    } else if (userRole === "seller") {
-      console.log("🏪 Seller role detected, redirecting to onboarding");
-      navigate("/seller/onboarding", { replace: true });
-    } else if (userType) {
-      console.log("📋 UserType exists, redirecting to onboarding:", userType);
-      navigate(`/${userType}/onboarding`, { replace: true });
-    } else {
-      console.log("🔄 No specific user data, using default type:", defaultType);
-      navigate(`/${defaultType}/onboarding`, { replace: true });
+      return;
     }
-  }, [isAuthenticated, userType, isOnboarded, loading, supabaseUser, defaultType, navigate]);
+    
+    // Priority 2: If user has type but not onboarded, go to onboarding
+    if (userType && !isOnboarded) {
+      console.log("📋 User has type but not onboarded, redirecting to onboarding:", userType);
+      navigate(`/${userType}/onboarding`, { replace: true });
+      return;
+    }
+    
+    // Priority 3: If user has role metadata, use that
+    if (userRole) {
+      if (userRole === "seller") {
+        console.log("🏪 Seller role detected, redirecting to seller onboarding");
+        navigate("/seller/onboarding", { replace: true });
+      } else if (userRole === "customer") {
+        console.log("🛒 Customer role detected, redirecting to customer dashboard");
+        navigate("/customer/dashboard", { replace: true });
+      }
+      return;
+    }
+    
+    // Priority 4: Default to seller onboarding
+    console.log("🔄 No specific user data, defaulting to seller onboarding");
+    navigate("/seller/onboarding", { replace: true });
+    
+  }, [isAuthenticated, userType, isOnboarded, loading, supabaseUser, navigate]);
   
   const handleLogin = async (email: string, password: string) => {
     try {
