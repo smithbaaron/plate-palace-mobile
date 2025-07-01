@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { Plate } from '@/components/seller/PlateFormTypes';
 import { useAuth } from '@/context/AuthContext';
@@ -15,12 +14,6 @@ export type DBPlate = {
   image_url: string | null;
   sold_count: number;
   size: string;
-  // Remove all new columns until migrations are applied
-  // is_single: boolean;
-  // is_bundle: boolean;
-  // is_available: boolean;
-  // delivery_available: boolean | null;
-  // pickup_time: string | null;
 };
 
 // Convert a DB plate to a frontend plate
@@ -53,142 +46,58 @@ export const plateToDbPlate = (plate: Omit<Plate, 'id' | 'soldCount'>, sellerId:
   image_url: plate.imageUrl || null,
   sold_count: 0,
   size: plate.size,
-  // Remove all new columns until migrations are applied
-  // is_single: plate.isSingle,
-  // is_bundle: plate.isBundle,
-  // is_available: plate.isAvailable,
-  // delivery_available: plate.deliveryAvailable ?? false,
-  // pickup_time: plate.pickupTime || null,
 });
 
-// Helper function to get seller profile ID from auth user ID with improved timeout handling
+// Helper function to debug and validate seller profile
+const validateSellerProfile = async (authUserId: string): Promise<{ sellerId: string; isValid: boolean; error?: string }> => {
+  console.log('🔍 Validating seller profile for user:', authUserId);
+  
+  try {
+    // Use the debug function to check seller profile status
+    const { data: debugData, error: debugError } = await supabase
+      .rpc('debug_seller_profile', { user_uuid: authUserId });
+    
+    console.log('🔍 Seller profile debug data:', debugData);
+    
+    if (debugError) {
+      console.error('❌ Debug function error:', debugError);
+      return { sellerId: '', isValid: false, error: `Debug function failed: ${debugError.message}` };
+    }
+    
+    if (!debugData || debugData.length === 0) {
+      return { sellerId: '', isValid: false, error: 'No seller profile data found' };
+    }
+    
+    const profile = debugData[0];
+    
+    if (!profile.has_profile) {
+      return { sellerId: '', isValid: false, error: 'No seller profile exists. Please complete seller onboarding.' };
+    }
+    
+    if (!profile.profile_complete) {
+      return { sellerId: '', isValid: false, error: 'Seller profile is incomplete. Please ensure your business name is set.' };
+    }
+    
+    console.log('✅ Seller profile validation successful:', profile.seller_profile_id);
+    return { sellerId: profile.seller_profile_id, isValid: true };
+    
+  } catch (error) {
+    console.error('❌ Error validating seller profile:', error);
+    return { sellerId: '', isValid: false, error: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}` };
+  }
+};
+
+// Helper function to get seller profile ID from auth user ID
 const getSellerProfileId = async (authUserId: string): Promise<string> => {
   console.log('🔍 Getting seller profile ID for auth user:', authUserId);
   
-  try {
-    // First, let's check if the user exists in auth.users
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    console.log('🔐 Current authenticated user:', user?.id, 'Expected:', authUserId);
-    
-    if (authError) {
-      console.error('❌ Authentication error:', authError);
-      throw new Error(`Authentication error: ${authError.message}`);
-    }
-    
-    if (!user || user.id !== authUserId) {
-      console.error('❌ User authentication mismatch. Current user:', user?.id, 'Expected:', authUserId);
-      throw new Error('User authentication mismatch');
-    }
-    
-    // Now get the seller profile with improved timeout handling
-    console.log('🔍 Querying seller_profiles table for user_id:', authUserId);
-    
-    // Try multiple approaches to get the seller profile
-    let sellerProfileData = null;
-    let lastError = null;
-    
-    // Approach 1: Direct query with longer timeout
-    try {
-      console.log('📡 Attempt 1: Direct seller profile query...');
-      const { data, error } = await Promise.race([
-        supabase
-          .from('seller_profiles')
-          .select('id, business_name, created_at')
-          .eq('user_id', authUserId)
-          .single(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Query timeout after 8 seconds')), 8000)
-        )
-      ]) as any;
-      
-      if (data && !error) {
-        sellerProfileData = data;
-        console.log('✅ Direct query successful:', sellerProfileData);
-      } else {
-        lastError = error;
-        console.log('⚠️ Direct query failed:', error);
-      }
-    } catch (err: any) {
-      lastError = err;
-      console.log('⚠️ Direct query timed out or failed:', err.message);
-    }
-    
-    // Approach 2: If direct query failed, try a simpler query
-    if (!sellerProfileData) {
-      try {
-        console.log('📡 Attempt 2: Simplified seller profile query...');
-        const { data, error } = await Promise.race([
-          supabase
-            .from('seller_profiles')
-            .select('id')
-            .eq('user_id', authUserId)
-            .limit(1),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Query timeout after 5 seconds')), 5000)
-          )
-        ]) as any;
-        
-        if (data && data.length > 0 && !error) {
-          sellerProfileData = data[0];
-          console.log('✅ Simplified query successful:', sellerProfileData);
-        } else {
-          lastError = error;
-          console.log('⚠️ Simplified query failed:', error);
-        }
-      } catch (err: any) {
-        lastError = err;
-        console.log('⚠️ Simplified query timed out or failed:', err.message);
-      }
-    }
-    
-    // Approach 3: Check if this is a database connectivity issue
-    if (!sellerProfileData) {
-      try {
-        console.log('📡 Attempt 3: Testing database connectivity...');
-        const { error: connectError } = await Promise.race([
-          supabase.from('seller_profiles').select('count').limit(1),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Connectivity test timeout')), 3000)
-          )
-        ]) as any;
-        
-        if (connectError) {
-          console.error('❌ Database connectivity issue:', connectError);
-          throw new Error('Database connection problem. Please try again in a moment.');
-        } else {
-          console.log('✅ Database is accessible, but seller profile not found');
-        }
-      } catch (err: any) {
-        if (err.message.includes('timeout')) {
-          console.error('❌ Database appears to be slow or unresponsive');
-          throw new Error('Database is currently slow. Please try again in a moment.');
-        }
-      }
-    }
-    
-    // Final evaluation
-    if (!sellerProfileData) {
-      console.error('❌ No seller profile found after all attempts');
-      console.error('❌ Last error was:', lastError);
-      
-      // Provide specific error messages based on the last error
-      if (lastError?.code === 'PGRST116') {
-        throw new Error('Your seller profile was not found. Please complete the seller onboarding process again.');
-      } else if (lastError?.code === '42P01') {
-        throw new Error('Seller profiles table does not exist. Please contact support.');
-      } else if (lastError?.message?.includes('timeout')) {
-        throw new Error('Database query timed out. Please try again - the system may be experiencing high load.');
-      } else {
-        throw new Error('Unable to verify your seller profile. Please try refreshing the page or completing seller onboarding again.');
-      }
-    }
-    
-    console.log('✅ Found seller profile ID:', sellerProfileData.id);
-    return sellerProfileData.id;
-  } catch (error) {
-    console.error('❌ Error in getSellerProfileId:', error);
-    throw error;
+  const validation = await validateSellerProfile(authUserId);
+  
+  if (!validation.isValid) {
+    throw new Error(validation.error || 'Seller profile validation failed');
   }
+  
+  return validation.sellerId;
 };
 
 // Service functions for interacting with plates in Supabase
@@ -223,52 +132,37 @@ export const platesService = {
     }
   },
   
-  // Add a new plate with improved error handling
+  // Add a new plate with improved validation
   addPlate: async (plate: Omit<Plate, 'id' | 'soldCount'>, authUserId: string) => {
     try {
       console.log('🍽️ Starting addPlate process...');
       console.log('👤 Auth user ID:', authUserId);
       console.log('📝 Plate data to add:', plate);
       
-      // Step 1: Get seller profile ID with better error handling
-      console.log('🔍 Step 1: Getting seller profile ID...');
-      let sellerProfileId;
-      try {
-        sellerProfileId = await getSellerProfileId(authUserId);
-        console.log('✅ Step 1 complete. Seller profile ID:', sellerProfileId);
-      } catch (profileError) {
-        console.error('❌ Failed to get seller profile:', profileError);
-        throw profileError; // Re-throw the specific error from getSellerProfileId
+      // Step 1: Validate seller profile and get seller ID
+      console.log('🔍 Step 1: Validating seller profile...');
+      const validation = await validateSellerProfile(authUserId);
+      
+      if (!validation.isValid) {
+        console.error('❌ Seller profile validation failed:', validation.error);
+        throw new Error(validation.error || 'Seller profile validation failed');
       }
+      
+      const sellerProfileId = validation.sellerId;
+      console.log('✅ Step 1 complete. Seller profile ID:', sellerProfileId);
       
       // Step 2: Convert plate data to DB format
       console.log('🔄 Step 2: Converting plate data to DB format...');
       const dbPlate = plateToDbPlate(plate, sellerProfileId);
       console.log('✅ Step 2 complete. DB plate data:', dbPlate);
       
-      // Step 3: Validate required fields
-      console.log('✅ Step 3: Validating required fields...');
-      if (!dbPlate.name || !dbPlate.seller_id || !dbPlate.available_date) {
-        const missingFields = [];
-        if (!dbPlate.name) missingFields.push('name');
-        if (!dbPlate.seller_id) missingFields.push('seller_id');
-        if (!dbPlate.available_date) missingFields.push('available_date');
-        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
-      }
-      console.log('✅ Step 3 complete. All required fields present.');
-      
-      // Step 4: Insert the plate with timeout handling
-      console.log('💾 Step 4: Inserting plate into database...');
-      const { data, error } = await Promise.race([
-        supabase
-          .from('plates')
-          .insert(dbPlate)
-          .select()
-          .single(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Insert operation timed out')), 10000)
-        )
-      ]) as any;
+      // Step 3: Insert the plate
+      console.log('💾 Step 3: Inserting plate into database...');
+      const { data, error } = await supabase
+        .from('plates')
+        .insert(dbPlate)
+        .select()
+        .single();
         
       console.log('📊 Insert operation result:', { data, error });
         
@@ -281,11 +175,11 @@ export const platesService = {
           code: error.code
         });
         
-        // Provide more specific error messages
+        // Provide more specific error messages based on error codes
         if (error.code === '42501') {
-          throw new Error('Permission denied: You may not have the required permissions to add plates. Please check your seller profile setup.');
+          throw new Error('Permission denied: Your seller profile may not be properly set up. Please ensure your business name is completed in seller onboarding.');
         } else if (error.code === '23503') {
-          throw new Error('Invalid seller reference: Your seller profile may not be properly set up.');
+          throw new Error('Invalid seller reference: Your seller profile was not found. Please complete seller onboarding again.');
         } else {
           throw new Error(`Database error: ${error.message}`);
         }
@@ -296,18 +190,17 @@ export const platesService = {
         throw new Error('Insert operation succeeded but no data was returned');
       }
       
-      console.log('✅ Step 4 complete. Successfully added plate to database:', data);
+      console.log('✅ Step 3 complete. Successfully added plate to database:', data);
       
-      // Step 5: Convert and return the result
-      console.log('🔄 Step 5: Converting result back to frontend format...');
+      // Step 4: Convert and return the result
+      console.log('🔄 Step 4: Converting result back to frontend format...');
       const convertedPlate = dbPlateToPlate(data);
-      console.log('✅ Step 5 complete. Final converted plate:', convertedPlate);
+      console.log('✅ Step 4 complete. Final converted plate:', convertedPlate);
       
       console.log('🎉 addPlate process completed successfully!');
       return convertedPlate;
     } catch (error) {
       console.error('💥 FATAL ERROR in addPlate service:', error);
-      console.error('💥 Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       throw error;
     }
   },
