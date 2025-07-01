@@ -89,7 +89,7 @@ const validateSellerProfile = async (authUserId: string): Promise<{ sellerId: st
         return { 
           sellerId: '', 
           isValid: false, 
-          error: 'No seller profile exists. Please complete seller onboarding first.' 
+          error: 'Please complete seller onboarding before adding plates.' 
         };
       }
       
@@ -106,7 +106,7 @@ const validateSellerProfile = async (authUserId: string): Promise<{ sellerId: st
       return { 
         sellerId: '', 
         isValid: false, 
-        error: 'No seller profile found. Please complete seller onboarding.' 
+        error: 'Please complete seller onboarding before adding plates.' 
       };
     }
     
@@ -116,13 +116,13 @@ const validateSellerProfile = async (authUserId: string): Promise<{ sellerId: st
       user_id: sellerProfile.user_id
     });
     
-    // Check if business name is properly set
+    // Check if business name is properly set (indicates completed onboarding)
     if (!sellerProfile.business_name || sellerProfile.business_name.trim() === '') {
-      console.error('❌ Business name is empty or null');
+      console.error('❌ Business name is empty or null - onboarding incomplete');
       return { 
         sellerId: sellerProfile.id, 
         isValid: false, 
-        error: 'Seller profile is incomplete. Please set your business name in seller onboarding.' 
+        error: 'Please complete seller onboarding before adding plates. Your business name is required.' 
       };
     }
     
@@ -165,7 +165,7 @@ export const platesService = {
       const { data, error } = await supabase
         .from('plates')
         .select('*')
-        .eq('seller_id', sellerProfileId) // Now using correct seller profile ID
+        .eq('seller_id', sellerProfileId)
         .order('available_date', { ascending: true });
         
       if (error) {
@@ -192,18 +192,25 @@ export const platesService = {
       console.log('👤 Auth user ID:', authUserId);
       console.log('📝 Plate data to add:', plate);
       
-      // Step 1: Get the seller profile ID (this validates the profile exists and is complete)
-      console.log('🔍 Step 1: Getting seller profile ID...');
-      const sellerProfileId = await getSellerProfileId(authUserId);
-      console.log('✅ Step 1 complete. Seller profile ID:', sellerProfileId);
+      // Step 1: Check if current authenticated user has a seller_profile
+      console.log('🔍 Step 1: Checking if user has seller profile...');
+      const validation = await validateSellerProfile(authUserId);
+      
+      if (!validation.isValid) {
+        console.error('❌ Seller profile validation failed:', validation.error);
+        throw new Error(validation.error || 'Please complete seller onboarding before adding plates.');
+      }
+      
+      const sellerProfileId = validation.sellerId;
+      console.log('✅ Step 1 complete. Found seller profile ID:', sellerProfileId);
       
       // Step 2: Convert plate data to DB format using the seller profile ID
       console.log('🔄 Step 2: Converting plate data to DB format...');
-      const dbPlate = plateToDbPlate(plate, sellerProfileId); // Now using seller profile ID
+      const dbPlate = plateToDbPlate(plate, sellerProfileId);
       console.log('✅ Step 2 complete. DB plate data:', dbPlate);
       
-      // Step 3: Verify the seller profile exists in the database
-      console.log('🔐 Step 3: Verifying seller profile exists...');
+      // Step 3: Verify the seller profile exists in the database (double-check)
+      console.log('🔐 Step 3: Double-checking seller profile exists...');
       const { data: profileCheck, error: profileCheckError } = await supabase
         .from('seller_profiles')
         .select('id, business_name')
@@ -213,8 +220,8 @@ export const platesService = {
       console.log('🔐 Profile verification result:', { data: profileCheck, error: profileCheckError });
       
       if (profileCheckError || !profileCheck) {
-        console.error('❌ Seller profile not found in database');
-        throw new Error('Seller profile not found. Please complete seller onboarding.');
+        console.error('❌ Seller profile not found in database during verification');
+        throw new Error('Please complete seller onboarding before adding plates.');
       }
       
       console.log('✅ Step 3 complete. Seller profile verified:', profileCheck);
@@ -240,9 +247,9 @@ export const platesService = {
         
         // Provide specific error messages based on error codes
         if (error.code === '42501') {
-          throw new Error(`RLS Policy Error: Database security policy is blocking the insert. Please ensure you have completed seller onboarding properly.`);
+          throw new Error('Database security policy is blocking the insert. Please complete seller onboarding and try again.');
         } else if (error.code === '23503') {
-          throw new Error('Foreign key constraint error: Seller profile reference is invalid. Please complete seller onboarding again.');
+          throw new Error('Please complete seller onboarding before adding plates.');
         } else {
           throw new Error(`Database error (${error.code}): ${error.message}`);
         }
@@ -272,7 +279,7 @@ export const platesService = {
   updatePlate: async (plate: Plate, authUserId: string) => {
     try {
       const sellerProfileId = await getSellerProfileId(authUserId);
-      const dbPlate = plateToDbPlate(plate, sellerProfileId); // Now using seller profile ID
+      const dbPlate = plateToDbPlate(plate, sellerProfileId);
       
       const { data, error } = await supabase
         .from('plates')
