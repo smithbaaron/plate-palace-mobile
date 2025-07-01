@@ -81,11 +81,24 @@ const getSellerProfileId = async (authUserId: string): Promise<string> => {
       throw new Error('User authentication mismatch');
     }
     
-    // Now get the seller profile
+    // Now get the seller profile with more detailed debugging
     console.log('🔍 Querying seller_profiles table for user_id:', authUserId);
+    
+    // First, let's see if there are any seller profiles at all
+    const { data: allProfiles, error: allError } = await supabase
+      .from('seller_profiles')
+      .select('id, user_id, business_name')
+      .limit(10);
+    
+    console.log('📊 All seller profiles in database:', allProfiles);
+    if (allError) {
+      console.log('❌ Error fetching all profiles:', allError);
+    }
+    
+    // Now try to get this specific user's profile
     const { data, error } = await supabase
       .from('seller_profiles')
-      .select('id')
+      .select('id, business_name, created_at')
       .eq('user_id', authUserId)
       .single();
       
@@ -102,8 +115,24 @@ const getSellerProfileId = async (authUserId: string): Promise<string> => {
       
       // Handle specific error cases
       if (error.code === 'PGRST116') {
-        // No seller profile found
-        throw new Error('You need to complete seller onboarding first. Please go to the seller onboarding page to set up your seller profile.');
+        // No seller profile found - let's try to create one if needed
+        console.log('❌ No seller profile found. Let me check if we can create one...');
+        
+        // Check if user has completed any onboarding steps
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authUserId)
+          .single();
+          
+        console.log('👤 User profile data:', profileData);
+        
+        if (profileData?.is_onboarded) {
+          console.log('🔄 User appears onboarded but missing seller profile. This might be a data consistency issue.');
+          throw new Error('Your seller profile seems to be missing. Please try completing the seller onboarding process again, or contact support if this persists.');
+        } else {
+          throw new Error('You need to complete seller onboarding first. Please go to the seller onboarding page to set up your seller profile.');
+        }
       } else if (error.code === '42P01') {
         // Table doesn't exist
         throw new Error('Seller profiles table does not exist. Please contact support or check your database setup.');
@@ -117,7 +146,7 @@ const getSellerProfileId = async (authUserId: string): Promise<string> => {
       throw new Error('You need to complete seller onboarding first. Please go to the seller onboarding page to set up your seller profile.');
     }
     
-    console.log('✅ Found seller profile ID:', data.id);
+    console.log('✅ Found seller profile ID:', data.id, 'Business name:', data.business_name);
     return data.id;
   } catch (error) {
     console.error('❌ Error in getSellerProfileId:', error);
