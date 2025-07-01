@@ -10,6 +10,12 @@ export interface User {
   isOnboarded: boolean;
 }
 
+// Helper function to create a timeout promise
+const createTimeout = (ms: number, errorMessage: string) => 
+  new Promise<never>((_, reject) => 
+    setTimeout(() => reject(new Error(errorMessage)), ms)
+  );
+
 // Convert Supabase user to our app user format
 export const formatUser = async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
   if (!supabaseUser) {
@@ -25,62 +31,73 @@ export const formatUser = async (supabaseUser: SupabaseUser | null): Promise<Use
   let isOnboarded = false;
   
   try {
-    // Try to get the profile with a timeout
+    // Try to get the profile with a shorter timeout and fallback gracefully
     console.log("🔍 Checking profiles table...");
-    const profilePromise = supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', supabaseUser.id)
-      .single();
-      
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("Profile query timeout")), 5000)
-    );
-    
-    const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
-      
-    if (data && !error) {
-      username = data.username || username;
-      console.log("✅ Profile found, username:", username);
-    } else if (error && error.code === "PGRST116") {
-      // Profile doesn't exist - this is normal for new users
-      console.log("ℹ️ Profile doesn't exist yet for user:", supabaseUser.id);
-    } else {
-      console.log("⚠️ Profile check error:", error);
+    try {
+      const profilePromise = supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', supabaseUser.id)
+        .single();
+        
+      const { data, error } = await Promise.race([
+        profilePromise, 
+        createTimeout(3000, "Profile query timeout")
+      ]);
+        
+      if (data && !error) {
+        username = data.username || username;
+        console.log("✅ Profile found, username:", username);
+      } else if (error && error.code === "PGRST116") {
+        // Profile doesn't exist - this is normal for new users
+        console.log("ℹ️ Profile doesn't exist yet for user:", supabaseUser.id);
+      } else {
+        console.log("⚠️ Profile check error:", error);
+      }
+    } catch (err: any) {
+      if (err.message === "Profile query timeout") {
+        console.log("⏰ Profile query timed out, using fallback username");
+      } else {
+        console.error("💥 Error checking profile:", err);
+      }
     }
   } catch (err) {
-    console.error("💥 Error checking profile:", err);
-    // Continue with default username
+    console.error("💥 Unexpected error in profile check:", err);
   }
   
-  // Check for seller profile to determine user type with timeout
+  // Check for seller profile to determine user type with shorter timeout
   try {
     console.log("🔍 Checking seller_profiles table...");
-    const sellerPromise = supabase
-      .from('seller_profiles')
-      .select('id')
-      .eq('user_id', supabaseUser.id)
-      .single();
-      
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("Seller profile query timeout")), 5000)
-    );
-    
-    const { data: sellerProfile, error } = await Promise.race([sellerPromise, timeoutPromise]) as any;
-      
-    if (sellerProfile && !error) {
-      userType = 'seller';
-      isOnboarded = true;
-      console.log("✅ Seller profile found, user is onboarded seller");
-    } else {
-      console.log("ℹ️ No seller profile found:", error?.code);
+    try {
+      const sellerPromise = supabase
+        .from('seller_profiles')
+        .select('id')
+        .eq('user_id', supabaseUser.id)
+        .single();
+        
+      const { data: sellerProfile, error } = await Promise.race([
+        sellerPromise,
+        createTimeout(3000, "Seller profile query timeout")
+      ]);
+        
+      if (sellerProfile && !error) {
+        userType = 'seller';
+        isOnboarded = true;
+        console.log("✅ Seller profile found, user is onboarded seller");
+      } else {
+        console.log("ℹ️ No seller profile found:", error?.code);
+      }
+    } catch (err: any) {
+      if (err.message === "Seller profile query timeout") {
+        console.log("⏰ Seller profile query timed out");
+      } else if (err.code !== "42P01") { // Ignore table not existing error
+        console.error("💥 Error checking seller profile:", err);
+      } else {
+        console.log("ℹ️ seller_profiles table doesn't exist yet");
+      }
     }
-  } catch (err: any) {
-    if (err.code !== "42P01") { // Ignore table not existing error
-      console.error("💥 Error checking seller profile:", err);
-    } else {
-      console.log("ℹ️ seller_profiles table doesn't exist yet");
-    }
+  } catch (err) {
+    console.error("💥 Unexpected error in seller profile check:", err);
   }
   
   const formattedUser = {

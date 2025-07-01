@@ -44,24 +44,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log("✅ Session found, formatting user...");
       
-      // Add timeout to prevent infinite loading
-      const formatUserWithTimeout = Promise.race([
-        formatUser(session.user),
-        new Promise<null>((_, reject) => 
-          setTimeout(() => reject(new Error("Timeout formatting user")), 10000)
-        )
-      ]);
-      
-      const formattedUser = await formatUserWithTimeout;
-      console.log("👤 Formatted user:", formattedUser);
-      setCurrentUser(formattedUser);
-      setSupabaseUser(session.user);
-      return !!formattedUser;
-    } catch (error) {
-      console.error("💥 Error checking auth state:", error);
-      // If formatting fails, still set the supabase user to allow access
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
+      // Format user with shorter timeout and better error handling
+      try {
+        const formattedUser = await formatUser(session.user);
+        console.log("👤 Formatted user:", formattedUser);
+        setCurrentUser(formattedUser);
+        setSupabaseUser(session.user);
+        return !!formattedUser;
+      } catch (error: any) {
+        console.error("💥 Error formatting user:", error);
+        // If formatting fails, still set the supabase user to allow access
         console.log("🔧 Using fallback user format");
         const fallbackUser: User = {
           id: session.user.id,
@@ -74,6 +66,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSupabaseUser(session.user);
         return true;
       }
+    } catch (error) {
+      console.error("💥 Error checking auth state:", error);
       return false;
     }
   };
@@ -104,14 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (event === 'SIGNED_IN' && session?.user) {
         try {
-          const formatUserWithTimeout = Promise.race([
-            formatUser(session.user),
-            new Promise<null>((_, reject) => 
-              setTimeout(() => reject(new Error("Timeout formatting user")), 10000)
-            )
-          ]);
-          
-          const formattedUser = await formatUserWithTimeout;
+          const formattedUser = await formatUser(session.user);
           console.log("✅ User signed in:", formattedUser);
           setCurrentUser(formattedUser);
           setSupabaseUser(session.user);
