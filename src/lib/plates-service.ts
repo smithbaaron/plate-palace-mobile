@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 import { Plate } from '@/components/seller/PlateFormTypes';
 import { useAuth } from '@/context/AuthContext';
@@ -48,38 +49,40 @@ export const plateToDbPlate = (plate: Omit<Plate, 'id' | 'soldCount'>, sellerId:
   size: plate.size,
 });
 
-// Helper function to debug and validate seller profile
+// Helper function to validate seller profile - simplified without debug function
 const validateSellerProfile = async (authUserId: string): Promise<{ sellerId: string; isValid: boolean; error?: string }> => {
   console.log('🔍 Validating seller profile for user:', authUserId);
   
   try {
-    // Use the debug function to check seller profile status
-    const { data: debugData, error: debugError } = await supabase
-      .rpc('debug_seller_profile', { user_uuid: authUserId });
+    // Query seller profile directly
+    const { data: sellerProfile, error: profileError } = await supabase
+      .from('seller_profiles')
+      .select('id, business_name, user_id')
+      .eq('user_id', authUserId)
+      .single();
     
-    console.log('🔍 Seller profile debug data:', debugData);
+    console.log('🔍 Seller profile data:', sellerProfile);
     
-    if (debugError) {
-      console.error('❌ Debug function error:', debugError);
-      return { sellerId: '', isValid: false, error: `Debug function failed: ${debugError.message}` };
+    if (profileError) {
+      console.error('❌ Error fetching seller profile:', profileError);
+      
+      if (profileError.code === 'PGRST116') {
+        return { sellerId: '', isValid: false, error: 'No seller profile exists. Please complete seller onboarding.' };
+      }
+      
+      return { sellerId: '', isValid: false, error: `Failed to fetch seller profile: ${profileError.message}` };
     }
     
-    if (!debugData || debugData.length === 0) {
-      return { sellerId: '', isValid: false, error: 'No seller profile data found' };
+    if (!sellerProfile) {
+      return { sellerId: '', isValid: false, error: 'No seller profile found. Please complete seller onboarding.' };
     }
     
-    const profile = debugData[0];
-    
-    if (!profile.has_profile) {
-      return { sellerId: '', isValid: false, error: 'No seller profile exists. Please complete seller onboarding.' };
+    if (!sellerProfile.business_name || sellerProfile.business_name.trim() === '') {
+      return { sellerId: '', isValid: false, error: 'Seller profile is incomplete. Please ensure your business name is set in seller onboarding.' };
     }
     
-    if (!profile.profile_complete) {
-      return { sellerId: '', isValid: false, error: 'Seller profile is incomplete. Please ensure your business name is set.' };
-    }
-    
-    console.log('✅ Seller profile validation successful:', profile.seller_profile_id);
-    return { sellerId: profile.seller_profile_id, isValid: true };
+    console.log('✅ Seller profile validation successful:', sellerProfile.id);
+    return { sellerId: sellerProfile.id, isValid: true };
     
   } catch (error) {
     console.error('❌ Error validating seller profile:', error);
