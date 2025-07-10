@@ -175,24 +175,26 @@ export const useSellerOrders = () => {
       const transformedOrders: Order[] = [];
       
       for (const order of rawOrders) {
-        // Fetch customer name from auth.users metadata first, then fallback to profiles
+        // Fetch customer name from profiles table
         let customerName = 'Unknown Customer';
         try {
-          // First try to get from auth.users user_metadata
-          const { data: authUser } = await supabase
+          console.log('🔍 Fetching customer name for customer_id:', order.customer_id);
+          
+          const { data: customerProfile, error: customerError } = await supabase
             .from('profiles')
             .select('username')
             .eq('id', order.customer_id)
             .single();
             
-          if (authUser?.username) {
-            customerName = authUser.username;
+          if (customerProfile?.username && !customerError) {
+            customerName = customerProfile.username;
+            console.log('✅ Found customer name:', customerName);
           } else {
-            // Fallback: try to get email from auth metadata or use customer ID
+            console.log('⚠️ No customer username found, error:', customerError);
             customerName = `Customer ${order.customer_id.slice(0, 8)}`;
           }
         } catch (err) {
-          console.log('⚠️ Could not fetch customer name for order:', order.id, err);
+          console.log('❌ Error fetching customer name for order:', order.id, err);
           customerName = `Customer ${order.customer_id.slice(0, 8)}`;
         }
 
