@@ -21,6 +21,7 @@ import Profile from "./pages/profile/Profile";
 import DeliverySettings from "./pages/seller/DeliverySettings";
 import SellerCalendar from "./pages/seller/SellerCalendar";
 import CreateBundle from "./pages/seller/CreateBundle";
+import SellerMenuView from "./pages/seller/SellerMenuView";
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -109,6 +110,11 @@ const AppWithProviders = () => {
               <Route path="/profile" element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              } />
+              <Route path="/seller/:sellerId/menu" element={
+                <ProtectedRoute>
+                  <SellerMenuView />
                 </ProtectedRoute>
               } />
               

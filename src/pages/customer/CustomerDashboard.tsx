@@ -336,6 +336,8 @@ const CustomerDashboard = () => {
   };
 
   const handleViewSellerMenu = (sellerId: string, sellerName: string) => {
+    // Navigate to seller's individual plates
+    navigate(`/seller/${sellerId}/menu`);
     notifySuccess("Menu Loaded", `Viewing ${sellerName}'s menu`);
   };
 
