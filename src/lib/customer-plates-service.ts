@@ -102,8 +102,18 @@ export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
       console.log("🔍 All plate keys:", Object.keys(plate));
       
       // Check if seller_profiles data exists
-      if (!plate.seller_profiles || plate.seller_profiles.length === 0) {
+      if (!plate.seller_profiles) {
         console.error("❌ No seller profile found for plate:", plate.id);
+        return null;
+      }
+      
+      // Handle both array and object formats
+      const sellerProfile = Array.isArray(plate.seller_profiles) 
+        ? plate.seller_profiles[0] 
+        : plate.seller_profiles;
+      
+      if (!sellerProfile) {
+        console.error("❌ Empty seller profile for plate:", plate.id);
         return null;
       }
       
@@ -117,9 +127,9 @@ export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
         availableDate: plate.available_date,
         quantity: plate.quantity,
         seller: {
-          id: plate.seller_profiles[0].id,
-          businessName: plate.seller_profiles[0].business_name,
-          bio: plate.seller_profiles[0].bio
+          id: sellerProfile.id,
+          businessName: sellerProfile.business_name,
+          bio: sellerProfile.bio
         }
       };
     }).filter(plate => plate !== null); // Remove null entries
