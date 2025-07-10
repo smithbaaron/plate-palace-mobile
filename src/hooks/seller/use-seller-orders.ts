@@ -2,8 +2,10 @@
 import { useState, useEffect } from 'react';
 import { Order } from '@/types/order';
 import { supabase, checkIfTableExists } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 export const useSellerOrders = () => {
+  const { currentUser } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -128,8 +130,95 @@ export const useSellerOrders = () => {
         return;
       }
 
-      // TODO: Implement actual Supabase query when orders table is ready
-      setOrders([]);
+      // Fetch actual orders for this seller
+      if (!currentUser) {
+        console.log('❌ No current user found');
+        setOrders([]);
+        return;
+      }
+
+      console.log('🔍 Fetching orders for seller:', currentUser.id);
+      
+      const { data: rawOrders, error: ordersError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            id,
+            plate_id,
+            quantity,
+            unit_price,
+            subtotal,
+            plates (
+              id,
+              name
+            )
+          )
+        `)
+        .eq('seller_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+      if (ordersError) {
+        console.error('❌ Error fetching seller orders:', ordersError);
+        throw ordersError;
+      }
+
+      console.log('✅ Raw seller orders from database:', rawOrders);
+
+      if (!rawOrders || rawOrders.length === 0) {
+        console.log('📦 No orders found for seller');
+        setOrders([]);
+        return;
+      }
+
+      // Transform database orders to match Order interface
+      const transformedOrders: Order[] = [];
+      
+      for (const order of rawOrders) {
+        // Fetch customer name separately
+        let customerName = 'Unknown Customer';
+        try {
+          const { data: customerProfile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', order.customer_id)
+            .single();
+            
+          if (customerProfile?.username) {
+            customerName = customerProfile.username;
+          }
+        } catch (err) {
+          console.log('⚠️ Could not fetch customer name for order:', order.id);
+        }
+
+        const transformedOrder: Order = {
+          id: order.id,
+          customerId: order.customer_id,
+          sellerId: order.seller_id,
+          customerName: customerName,
+          sellerName: "Your Store", // This is the seller viewing their own orders
+          items: order.order_items?.map((item: any) => ({
+            id: item.id,
+            plateId: item.plate_id,
+            name: item.plates?.name || 'Unknown Item',
+            price: item.unit_price,
+            quantity: item.quantity
+          })) || [],
+          status: order.status,
+          total: order.total_amount,
+          createdAt: order.created_at,
+          updatedAt: order.updated_at,
+          scheduledFor: order.pickup_time || order.estimated_delivery_time || order.created_at,
+          paymentMethod: "card", // Default since we don't store payment method yet
+          deliveryMethod: order.delivery_type,
+          address: order.delivery_address
+        };
+        
+        transformedOrders.push(transformedOrder);
+      }
+
+      console.log('✅ Transformed seller orders:', transformedOrders);
+      setOrders(transformedOrders);
 
     } catch (err) {
       console.error("Error loading orders:", err);
@@ -141,7 +230,7 @@ export const useSellerOrders = () => {
 
   useEffect(() => {
     loadOrders();
-  }, []);
+  }, [currentUser]);
 
   const stats = calculateStats();
 
