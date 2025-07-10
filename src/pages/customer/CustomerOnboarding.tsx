@@ -12,7 +12,7 @@ import { Search, Check, User } from "lucide-react";
 
 const CustomerOnboarding = () => {
   const { currentUser, isAuthenticated } = useAuth();
-  const { completeOnboarding } = useUserType();
+  const { completeOnboarding, resyncUserTypeData } = useUserType();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -173,6 +173,10 @@ const CustomerOnboarding = () => {
       }
 
       console.log('✅ Customer profile and user type updated successfully');
+      
+      // Refresh the user data in auth context to pick up the new user_type
+      await resyncUserTypeData();
+      console.log('✅ User context refreshed after customer onboarding');
       
       // Mark onboarding as complete in context
       await completeOnboarding();
