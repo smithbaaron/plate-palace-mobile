@@ -1,9 +1,9 @@
 -- Create order_items table
 CREATE TABLE IF NOT EXISTS public.order_items (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    order_id uuid REFERENCES public.orders(id) ON DELETE CASCADE,
-    plate_id uuid REFERENCES public.plates(id) ON DELETE CASCADE,
-    meal_prep_id uuid REFERENCES public.meal_preps(id) ON DELETE CASCADE,
+    order_id uuid NOT NULL,
+    plate_id uuid,
+    meal_prep_id uuid,
     quantity integer NOT NULL DEFAULT 1,
     unit_price numeric(10,2) NOT NULL,
     subtotal numeric(10,2) NOT NULL,
@@ -11,7 +11,10 @@ CREATE TABLE IF NOT EXISTS public.order_items (
     CONSTRAINT order_items_item_check CHECK (
         (plate_id IS NOT NULL AND meal_prep_id IS NULL) OR 
         (plate_id IS NULL AND meal_prep_id IS NOT NULL)
-    )
+    ),
+    CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_items_plate FOREIGN KEY (plate_id) REFERENCES public.plates(id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_items_meal_prep FOREIGN KEY (meal_prep_id) REFERENCES public.meal_preps(id) ON DELETE CASCADE
 );
 
 -- Enable RLS

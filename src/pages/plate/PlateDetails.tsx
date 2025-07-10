@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
 import { ArrowLeft, Clock, User, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { createOrder } from "@/lib/orders-service";
+import { useAuth } from "@/context/AuthContext";
 
 // Mock plate data as fallback
 const MOCK_PLATE = {
@@ -17,6 +19,7 @@ const MOCK_PLATE = {
   price: 12.99,
   seller: "Taste of Home",
   sellerUsername: "tasteofhome",
+  seller_id: "mock-seller-id",
   image: "https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
   ingredients: "Pasta, chicken, heavy cream, parmesan cheese, butter, garlic, salt, pepper, parsley",
   availableDate: "2025-05-20",
@@ -29,11 +32,13 @@ const PlateDetails = () => {
   const { id } = useParams<{id: string}>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentUser } = useAuth();
   const [selectedSize, setSelectedSize] = React.useState("Medium");
   const [quantity, setQuantity] = React.useState(1);
   const [plate, setPlate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isOrdering, setIsOrdering] = useState(false);
   
   useEffect(() => {
     const fetchPlate = async () => {
@@ -88,6 +93,7 @@ const PlateDetails = () => {
           price: data.price,
           seller: sellerProfile?.business_name || "Unknown Seller",
           sellerUsername: sellerProfile?.business_name?.toLowerCase().replace(/\s+/g, '') || "unknown",
+          seller_id: data.seller_id,
           image: data.image_url || "https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
           ingredients: "Check with seller for ingredients",
           availableDate: data.available_date,
@@ -115,11 +121,63 @@ const PlateDetails = () => {
     navigate(-1);
   };
   
-  const handleAddToCart = () => {
-    toast({
-      title: "Added to order!",
-      description: `${quantity} ${selectedSize} ${currentPlate.name} added to your order.`,
-    });
+  const handleAddToCart = async () => {
+    if (!currentUser) {
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to place an order.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!plate) {
+      toast({
+        title: "Error",
+        description: "Plate information not available.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsOrdering(true);
+    try {
+      const unitPrice = sizePrice[selectedSize as keyof typeof sizePrice];
+      const totalAmount = unitPrice * quantity;
+
+      await createOrder({
+        customerId: currentUser.id,
+        sellerId: plate.seller_id || currentPlate.seller_id,
+        items: [{
+          plateId: plate.id,
+          quantity: quantity,
+          unitPrice: unitPrice,
+        }],
+        totalAmount: totalAmount,
+        deliveryType: 'pickup', // Default to pickup
+        notes: `Size: ${selectedSize}`,
+      });
+
+      toast({
+        title: "Order placed!",
+        description: `${quantity} ${selectedSize} ${currentPlate.name} ordered successfully.`,
+      });
+
+      // Navigate to orders page after successful order
+      setTimeout(() => {
+        navigate('/customer/orders');
+      }, 1500);
+
+    } catch (error) {
+      console.error('❌ Error creating order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to place order. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsOrdering(false);
+    }
   };
   
   const sizePrice = {
@@ -285,8 +343,16 @@ const PlateDetails = () => {
                   className="w-full bg-nextplate-red hover:bg-red-600"
                   size="lg"
                   onClick={handleAddToCart}
+                  disabled={isOrdering}
                 >
-                  Add to Order
+                  {isOrdering ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Placing Order...
+                    </>
+                  ) : (
+                    "Add to Order"
+                  )}
                 </Button>
               </div>
             </div>
