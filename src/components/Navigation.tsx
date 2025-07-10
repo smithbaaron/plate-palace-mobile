@@ -11,11 +11,11 @@ import MobileNavigation from "@/components/navigation/MobileNavigation";
 import MobileBottomNavigation from "@/components/navigation/MobileBottomNavigation";
 
 const Navigation = () => {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, currentUser } = useAuth();
   const { userType } = useUserType();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(3); // Mock unread notification count
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   
   const toggleMenu = () => setIsOpen(!isOpen);
   
@@ -24,12 +24,29 @@ const Navigation = () => {
     setIsOpen(false);
   }, [location.pathname]);
 
-  // Simulate fetching notifications
+  // Fetch real notification count
   useEffect(() => {
-    // In a real app, this would fetch from an API
-    // For now we're just using the mock data
-    // This would be replaced with an actual data fetch
-  }, []);
+    if (currentUser?.id) {
+      fetchUnreadNotificationCount();
+    }
+  }, [currentUser?.id]);
+
+  const fetchUnreadNotificationCount = async () => {
+    try {
+      // TODO: Implement actual unread count fetching from database
+      // const { count } = await supabase
+      //   .from('notifications')
+      //   .select('*', { count: 'exact', head: true })
+      //   .eq('user_id', currentUser.id)
+      //   .eq('is_read', false);
+      
+      // For now, set to 0 since we don't have notifications yet
+      setUnreadNotifications(0);
+    } catch (error) {
+      console.error('Error fetching notification count:', error);
+      setUnreadNotifications(0);
+    }
+  };
   
   // Determine dashboard URL based on user type
   const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
