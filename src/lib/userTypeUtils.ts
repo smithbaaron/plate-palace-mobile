@@ -9,34 +9,55 @@ export const getUserTypeData = async (userId: string | undefined) => {
   try {
     console.log("Fetching user type data for:", userId);
     
+    // Check if tables exist first to avoid 406 errors
+    const tablesExist = await checkTablesExist();
+    if (!tablesExist) {
+      console.log("Database tables not yet created - user will complete onboarding to set up profile");
+      return { userType: null, isOnboarded: false };
+    }
+    
     let userType: UserType = null;
     let isOnboarded = false;
     
-    // Check if user has a seller profile - handle table not existing gracefully
+    // Check if user has a seller profile
     try {
       const { data: sellerProfile, error } = await supabase
         .from('seller_profiles')
-        .select('id')
+        .select('id, business_name')
         .eq('user_id', userId)
         .single();
         
       if (sellerProfile && !error) {
         userType = 'seller';
-        isOnboarded = true;
-      } else if (error && error.code === "42P01") {
-        // Table doesn't exist, that's okay - we'll handle it later
-        console.log("seller_profiles table doesn't exist yet");
+        // Only consider onboarded if they have filled out basic info
+        isOnboarded = !!(sellerProfile.business_name && sellerProfile.business_name.trim());
+      } else if (error && error.code !== "PGRST116") {
+        // PGRST116 is "not found" which is expected, other errors are concerning
+        console.error("Error checking seller profile:", error);
       }
     } catch (err: any) {
-      if (err.code === "42P01") {
-        console.log("seller_profiles table doesn't exist yet");
-      } else {
-        console.error("Error checking seller profile:", err);
-      }
+      console.error("Error checking seller profile:", err);
     }
     
-    // For now, if no seller profile and no customer profile checking available,
-    // we'll determine user type during onboarding
+    // Check profiles table for user type if no seller profile found
+    if (!userType) {
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('user_type, is_onboarded')
+          .eq('id', userId)
+          .single();
+          
+        if (profile && !error) {
+          userType = profile.user_type as UserType;
+          isOnboarded = profile.is_onboarded || false;
+        } else if (error && error.code !== "PGRST116") {
+          console.error("Error checking profile:", error);
+        }
+      } catch (err: any) {
+        console.error("Error checking profile:", err);
+      }
+    }
     
     return { 
       userType, 
@@ -45,6 +66,28 @@ export const getUserTypeData = async (userId: string | undefined) => {
   } catch (err) {
     console.error("Unexpected error in getUserTypeData:", err);
     return { userType: null, isOnboarded: false };
+  }
+};
+
+// Helper function to check if required tables exist
+const checkTablesExist = async (): Promise<boolean> => {
+  try {
+    // Try a simple query that won't cause 406 if tables don't exist
+    const { error: sellerError } = await supabase
+      .from('seller_profiles')
+      .select('count')
+      .limit(0);
+      
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .select('count')
+      .limit(0);
+    
+    // If both tables exist (no "relation does not exist" errors)
+    return !sellerError?.message?.includes('relation') && !profileError?.message?.includes('relation');
+  } catch (err: any) {
+    // If we get a 406 or relation doesn't exist error, tables aren't set up
+    return false;
   }
 };
 

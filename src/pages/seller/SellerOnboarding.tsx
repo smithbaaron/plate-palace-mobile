@@ -9,6 +9,7 @@ import DeliveryOptionsStep from "./onboarding/DeliveryOptionsStep";
 import FinalStep from "./onboarding/FinalStep";
 import { useSellerProfile } from "./onboarding/hooks/useSellerProfile";
 import { useOnboardingHandlers } from "./onboarding/hooks/useOnboardingHandlers";
+import DatabaseSetupBanner from "@/components/DatabaseSetupBanner";
 
 const SellerOnboarding = () => {
   const { isAuthenticated } = useAuth();
@@ -84,6 +85,7 @@ const SellerOnboarding = () => {
       
       <div className="pt-24 pb-20 px-4">
         <div className="max-w-2xl mx-auto">
+          <DatabaseSetupBanner />
           {/* Progress steps */}
           <OnboardingSteps currentStep={step} />
           
