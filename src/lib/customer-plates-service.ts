@@ -30,11 +30,12 @@ export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
   try {
     console.log("🔍 Fetching plates from database...");
     
-    // Define start of today instead of current exact time
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const todayDate = startOfToday.toISOString();
-    console.log("📅 Start of today for filtering:", todayDate);
+    // Define start of yesterday to show plates from yesterday onwards
+    const startOfYesterday = new Date();
+    startOfYesterday.setDate(startOfYesterday.getDate() - 1); // Go back 1 day
+    startOfYesterday.setHours(0, 0, 0, 0); // Set to midnight
+    const yesterdayDate = startOfYesterday.toISOString();
+    console.log("📅 Start of yesterday for filtering:", yesterdayDate);
     
     // First, let's check ALL plates without filters to see what's in the database
     const { data: allPlates, error: allPlatesError } = await supabase
@@ -55,7 +56,7 @@ export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
         });
         console.log(`📊 Plate ${index + 1} filter check:`, {
           quantityCheck: `${plate.quantity} > 0 = ${plate.quantity > 0}`,
-          availableDateCheck: `${plate.available_date} >= ${todayDate} = ${plate.available_date >= todayDate}`
+          availableDateCheck: `${plate.available_date} >= ${yesterdayDate} = ${plate.available_date >= yesterdayDate}`
         });
       });
     }
@@ -83,7 +84,7 @@ export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
         )
       `)
       .gt('quantity', 0) // Only show plates with available quantity
-      .gte('available_date', todayDate) // Only show plates from today onwards
+      .gte('available_date', yesterdayDate) // Only show plates from yesterday onwards
       .order('available_date', { ascending: true });
     
     console.log("🍽️ Plates after applying filters (quantity > 0, available_date >= now):", data);
@@ -203,11 +204,12 @@ export const getSellerPlates = async (sellerId: string): Promise<CustomerPlate[]
     
     // Let's examine each plate in detail
     if (allSellerPlates && allSellerPlates.length > 0) {
-      // Define start of today instead of current exact time  
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-      const todayDate = startOfToday.toISOString();
-      console.log("📅 Start of today for filtering:", todayDate);
+      // Define start of yesterday to show plates from yesterday onwards
+      const startOfYesterday = new Date();
+      startOfYesterday.setDate(startOfYesterday.getDate() - 1); // Go back 1 day
+      startOfYesterday.setHours(0, 0, 0, 0); // Set to midnight
+      const yesterdayDate = startOfYesterday.toISOString();
+      console.log("📅 Start of yesterday for filtering:", yesterdayDate);
       
       allSellerPlates.forEach((plate, index) => {
         console.log(`🔍 Seller Plate ${index + 1} details:`, {
@@ -219,7 +221,7 @@ export const getSellerPlates = async (sellerId: string): Promise<CustomerPlate[]
         });
         console.log(`📊 Seller Plate ${index + 1} filter check:`, {
           quantityCheck: `${plate.quantity} > 0 = ${plate.quantity > 0}`,
-          availableDateCheck: `${plate.available_date} >= ${todayDate} = ${plate.available_date >= todayDate}`
+          availableDateCheck: `${plate.available_date} >= ${yesterdayDate} = ${plate.available_date >= yesterdayDate}`
         });
       });
     }
@@ -228,10 +230,11 @@ export const getSellerPlates = async (sellerId: string): Promise<CustomerPlate[]
       console.error("❌ Error fetching all seller plates:", allError);
     }
     
-    // Define start of today for the actual query
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const todayDate = startOfToday.toISOString();
+    // Define start of yesterday for the actual query
+    const startOfYesterday = new Date();
+    startOfYesterday.setDate(startOfYesterday.getDate() - 1); // Go back 1 day
+    startOfYesterday.setHours(0, 0, 0, 0); // Set to midnight
+    const yesterdayDate = startOfYesterday.toISOString();
     
     const { data, error } = await supabase
       .from('plates')
@@ -253,7 +256,7 @@ export const getSellerPlates = async (sellerId: string): Promise<CustomerPlate[]
       `)
       .eq('seller_id', sellerId)
       .gt('quantity', 0)
-      .gte('available_date', todayDate)
+      .gte('available_date', yesterdayDate)
       .order('available_date', { ascending: true });
 
     if (error) {
