@@ -185,7 +185,6 @@ const CustomerOnboarding = () => {
           .insert({
             id: currentUser.id,
             username: currentUser.username || currentUser.email || 'customer',
-            email: currentUser.email,
             user_type: 'customer',
             is_onboarded: true,
             created_at: new Date().toISOString(),
