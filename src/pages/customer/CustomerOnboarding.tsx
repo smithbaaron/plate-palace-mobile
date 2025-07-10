@@ -211,27 +211,33 @@ const CustomerOnboarding = () => {
               <div className="animate-fade-in">
                 <h2 className="text-2xl font-bold mb-6 flex items-center">
                   <Search className="mr-2 text-nextplate-red" />
-                  Find Your Favorite Food Sellers
+                  Discover Amazing Food Sellers
                 </h2>
                 
                 <div className="space-y-6">
                   <p className="text-gray-300">
-                    Search for food sellers by username or store name to add them to your favorites.
+                    Explore local home chefs and food sellers in your area. Follow your favorites to get notified about new dishes!
                   </p>
                   
                   <div>
                     <Input
                       value={sellerSearch}
                       onChange={(e) => setSellerSearch(e.target.value)}
-                      placeholder="Search by username or store name"
+                      placeholder="Search by business name or cuisine type..."
                       className="bg-black border-nextplate-lightgray text-white"
                     />
                   </div>
                   
                   <div className="mt-4">
                     <h3 className="font-medium mb-3">
-                      {sellerSearch ? "Search Results" : "Popular Sellers"}
+                      {sellerSearch ? "Search Results" : "Available Sellers Near You"}
                     </h3>
+                    
+                    {!sellerSearch && (
+                      <p className="text-sm text-gray-400 mb-3">
+                        Browse all food sellers or use the search above to find specific ones
+                      </p>
+                    )}
                     
                     <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                       {filteredSellers.map(seller => (
@@ -262,16 +268,22 @@ const CustomerOnboarding = () => {
                         </div>
                       ))}
                       
-                      {filteredSellers.length === 0 && (
+                      {filteredSellers.length === 0 && sellerSearch && (
                         <div className="text-center py-6 text-gray-400">
                           No sellers found matching "{sellerSearch}"
+                        </div>
+                      )}
+                      
+                      {filteredSellers.length === 0 && !sellerSearch && (
+                        <div className="text-center py-6 text-gray-400">
+                          No sellers available yet. Be the first to discover them!
                         </div>
                       )}
                     </div>
                     
                     {selectedSellers.length > 0 && (
                       <div className="mt-4 text-sm text-nextplate-red">
-                        {selectedSellers.length} {selectedSellers.length === 1 ? "seller" : "sellers"} added to your favorites
+                        ⭐ {selectedSellers.length} {selectedSellers.length === 1 ? "seller" : "sellers"} added to your favorites
                       </div>
                     )}
                   </div>
@@ -282,7 +294,7 @@ const CustomerOnboarding = () => {
                     onClick={handleNextStep}
                     className="bg-nextplate-red hover:bg-red-600"
                   >
-                    {selectedSellers.length > 0 ? "Continue" : "Skip for now"}
+                    {selectedSellers.length > 0 ? `Continue with ${selectedSellers.length} favorites` : "Continue without favorites"}
                   </Button>
                 </div>
               </div>
