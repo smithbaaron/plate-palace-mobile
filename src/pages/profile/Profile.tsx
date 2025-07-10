@@ -78,7 +78,7 @@ const Profile = () => {
                 </div>
                 <div>
                   <p className="text-gray-400">Account Type</p>
-                  <p className="text-white text-lg capitalize">{userType || "Not Set"}</p>
+                  <p className="text-white text-lg capitalize">{userType || "Customer"}</p>
                 </div>
               </CardContent>
             </Card>
