@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
-import { Search, Package, User, MapPin, Heart, Clock, Calendar } from "lucide-react";
+import { Search, Package, User, MapPin, Heart, Clock, Calendar, Truck, History } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
 
-// Mock data for plates
+// Mock data for plates with delivery/pickup options
 const MOCK_PLATES = [
   {
     id: "plate1",
@@ -20,7 +20,17 @@ const MOCK_PLATES = [
     seller: "Taste of Home",
     sellerUsername: "tasteofhome",
     location: "Downtown",
-    image: "https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+    image: "https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+    deliveryOptions: {
+      available: true,
+      fee: 2.99,
+      estimatedTime: "30-45 mins"
+    },
+    pickupOptions: {
+      available: true,
+      estimatedTime: "15-20 mins",
+      address: "123 Main St, Downtown"
+    }
   },
   {
     id: "plate2",
@@ -30,7 +40,17 @@ const MOCK_PLATES = [
     seller: "Healthy Meals",
     sellerUsername: "healthymeals",
     location: "Midtown",
-    image: "https://images.unsplash.com/photo-1580554530778-ca36943938b2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+    image: "https://images.unsplash.com/photo-1580554530778-ca36943938b2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+    deliveryOptions: {
+      available: true,
+      fee: 3.99,
+      estimatedTime: "25-35 mins"
+    },
+    pickupOptions: {
+      available: true,
+      estimatedTime: "10-15 mins",
+      address: "456 Oak Ave, Midtown"
+    }
   },
   {
     id: "plate3",
@@ -40,11 +60,21 @@ const MOCK_PLATES = [
     seller: "Spice Kitchen",
     sellerUsername: "spicekitchen",
     location: "Uptown",
-    image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+    image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+    deliveryOptions: {
+      available: false,
+      fee: 0,
+      estimatedTime: "N/A"
+    },
+    pickupOptions: {
+      available: true,
+      estimatedTime: "20-25 mins",
+      address: "789 Pine St, Uptown"
+    }
   }
 ];
 
-// Mock data for sellers
+// Mock data for sellers with delivery options
 const MOCK_SELLERS = [
   {
     id: "seller1",
@@ -54,7 +84,17 @@ const MOCK_SELLERS = [
     location: "Downtown",
     rating: 4.8,
     plateCount: 12,
-    image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80"
+    image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80",
+    deliveryOptions: {
+      available: true,
+      radius: "5 miles",
+      fee: 2.99
+    },
+    pickupOptions: {
+      available: true,
+      address: "123 Main St, Downtown",
+      hours: "11:00 AM - 9:00 PM"
+    }
   },
   {
     id: "seller2",
@@ -64,7 +104,17 @@ const MOCK_SELLERS = [
     location: "Midtown",
     rating: 4.9,
     plateCount: 8,
-    image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80"
+    image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80",
+    deliveryOptions: {
+      available: true,
+      radius: "10 miles",
+      fee: 3.99
+    },
+    pickupOptions: {
+      available: true,
+      address: "456 Oak Ave, Midtown",
+      hours: "10:00 AM - 8:00 PM"
+    }
   },
   {
     id: "seller3",
@@ -74,11 +124,21 @@ const MOCK_SELLERS = [
     location: "Uptown", 
     rating: 4.7,
     plateCount: 15,
-    image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80"
+    image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80",
+    deliveryOptions: {
+      available: false,
+      radius: "0 miles",
+      fee: 0
+    },
+    pickupOptions: {
+      available: true,
+      address: "789 Pine St, Uptown",
+      hours: "12:00 PM - 10:00 PM"
+    }
   }
 ];
 
-// Mock data for meal preps
+// Mock data for meal preps with delivery/pickup options
 const MOCK_MEAL_PREPS = [
   {
     id: "prep1",
@@ -88,7 +148,17 @@ const MOCK_MEAL_PREPS = [
     seller: "Healthy Meals",
     sellerUsername: "healthymeals",
     mealCount: 10,
-    image: "https://images.unsplash.com/photo-1611599537845-1c7aca0091c0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+    image: "https://images.unsplash.com/photo-1611599537845-1c7aca0091c0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+    deliveryOptions: {
+      available: true,
+      fee: 4.99,
+      estimatedTime: "1-2 days"
+    },
+    pickupOptions: {
+      available: true,
+      estimatedTime: "Same day",
+      address: "456 Oak Ave, Midtown"
+    }
   },
   {
     id: "prep2",
@@ -98,11 +168,21 @@ const MOCK_MEAL_PREPS = [
     seller: "Taste of Home",
     sellerUsername: "tasteofhome",
     mealCount: 6,
-    image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+    image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+    deliveryOptions: {
+      available: true,
+      fee: 2.99,
+      estimatedTime: "1-2 days"
+    },
+    pickupOptions: {
+      available: true,
+      estimatedTime: "Same day",
+      address: "123 Main St, Downtown"
+    }
   }
 ];
 
-// Mock data for purchased items
+// Mock data for purchased items (current and past)
 const MOCK_PURCHASED_PLATES = [
   {
     id: "purchased1",
@@ -111,8 +191,9 @@ const MOCK_PURCHASED_PLATES = [
     seller: "Taste of Home",
     price: 12.99,
     quantity: 2,
-    purchasedAt: "2025-06-08T10:30:00Z",
+    purchasedAt: "2025-07-10T10:30:00Z",
     status: "ready",
+    deliveryMethod: "pickup",
     image: "https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
   },
   {
@@ -122,9 +203,22 @@ const MOCK_PURCHASED_PLATES = [
     seller: "Healthy Meals",
     price: 14.99,
     quantity: 1,
-    purchasedAt: "2025-06-08T12:15:00Z",
-    status: "confirmed",
+    purchasedAt: "2025-07-09T12:15:00Z",
+    status: "delivered",
+    deliveryMethod: "delivery",
     image: "https://images.unsplash.com/photo-1580554530778-ca36943938b2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+  },
+  {
+    id: "purchased3",
+    plateId: "plate3",
+    name: "Butter Chicken",
+    seller: "Spice Kitchen",
+    price: 13.99,
+    quantity: 1,
+    purchasedAt: "2025-07-08T15:30:00Z",
+    status: "delivered",
+    deliveryMethod: "pickup",
+    image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
   }
 ];
 
@@ -136,9 +230,24 @@ const MOCK_PURCHASED_MEAL_PREPS = [
     seller: "Healthy Meals",
     price: 59.99,
     mealCount: 10,
-    purchasedAt: "2025-06-07T14:20:00Z",
-    deliveryDate: "2025-06-09",
+    purchasedAt: "2025-07-09T14:20:00Z",
+    deliveryDate: "2025-07-11",
+    status: "confirmed",
+    deliveryMethod: "delivery",
     image: "https://images.unsplash.com/photo-1611599537845-1c7aca0091c0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+  },
+  {
+    id: "purchased_prep2",
+    prepId: "prep2",
+    name: "3-Day Vegetarian Package",
+    seller: "Taste of Home",
+    price: 34.99,
+    mealCount: 6,
+    purchasedAt: "2025-07-05T10:00:00Z",
+    deliveryDate: "2025-07-06",
+    status: "delivered",
+    deliveryMethod: "pickup",
+    image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
   }
 ];
 
@@ -257,6 +366,9 @@ const CustomerDashboard = () => {
               </TabsTrigger>
               <TabsTrigger value="mealpreps" className="flex-1 text-lg py-3">
                 Meal Prep Packages
+              </TabsTrigger>
+              <TabsTrigger value="history" className="flex-1 text-lg py-3">
+                Order History
               </TabsTrigger>
             </TabsList>
 
@@ -465,6 +577,20 @@ const CustomerDashboard = () => {
                             ⭐ {seller.rating} • {seller.plateCount} plates
                           </div>
                         </div>
+                        <div className="space-y-2 mb-4">
+                          {seller.deliveryOptions.available && (
+                            <div className="flex items-center text-xs text-gray-400">
+                              <Truck size={12} className="mr-1 text-green-500" />
+                              Delivery: ${seller.deliveryOptions.fee} • {seller.deliveryOptions.radius}
+                            </div>
+                          )}
+                          {seller.pickupOptions.available && (
+                            <div className="flex items-center text-xs text-gray-400">
+                              <MapPin size={12} className="mr-1 text-blue-500" />
+                              Pickup: {seller.pickupOptions.hours}
+                            </div>
+                          )}
+                        </div>
                         <div className="flex gap-2">
                           <Button 
                             className="flex-1 bg-nextplate-red hover:bg-red-600"
@@ -531,6 +657,20 @@ const CustomerDashboard = () => {
                         <p className="text-sm text-gray-300 mb-3 line-clamp-2">
                           {plate.description}
                         </p>
+                        <div className="space-y-2 mb-3">
+                          {plate.deliveryOptions.available && (
+                            <div className="flex items-center text-xs text-gray-400">
+                              <Truck size={12} className="mr-1 text-green-500" />
+                              Delivery: ${plate.deliveryOptions.fee} • {plate.deliveryOptions.estimatedTime}
+                            </div>
+                          )}
+                          {plate.pickupOptions.available && (
+                            <div className="flex items-center text-xs text-gray-400">
+                              <Clock size={12} className="mr-1 text-blue-500" />
+                              Pickup: {plate.pickupOptions.estimatedTime}
+                            </div>
+                          )}
+                        </div>
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-lg text-nextplate-red">${plate.price}</span>
                           <Button 
@@ -584,6 +724,20 @@ const CustomerDashboard = () => {
                           <p className="text-sm text-gray-300 mb-4">
                             {prep.description}
                           </p>
+                          <div className="space-y-2 mb-4">
+                            {prep.deliveryOptions.available && (
+                              <div className="flex items-center text-xs text-gray-400">
+                                <Truck size={12} className="mr-1 text-green-500" />
+                                Delivery: ${prep.deliveryOptions.fee} • {prep.deliveryOptions.estimatedTime}
+                              </div>
+                            )}
+                            {prep.pickupOptions.available && (
+                              <div className="flex items-center text-xs text-gray-400">
+                                <Clock size={12} className="mr-1 text-blue-500" />
+                                Pickup: {prep.pickupOptions.estimatedTime}
+                              </div>
+                            )}
+                          </div>
                           <div className="flex items-center justify-between mt-4">
                             <div>
                               <p className="font-bold text-lg text-nextplate-red">${prep.price}</p>
@@ -609,6 +763,127 @@ const CustomerDashboard = () => {
                   </p>
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="history" className="animate-fade-in">
+              <div className="space-y-8">
+                {/* Order History Plates */}
+                <div>
+                  <h2 className="text-2xl font-bold mb-4 flex items-center">
+                    <History className="mr-2 text-nextplate-red" />
+                    Plate Orders
+                  </h2>
+                  {MOCK_PURCHASED_PLATES.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {MOCK_PURCHASED_PLATES.map(item => (
+                        <Card key={item.id} className="bg-nextplate-darkgray border-gray-800">
+                          <CardContent className="p-4">
+                            <div className="flex items-center space-x-4">
+                              <img 
+                                src={item.image} 
+                                alt={item.name}
+                                className="w-16 h-16 rounded-lg object-cover"
+                              />
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-sm">{item.name}</h3>
+                                <p className="text-xs text-gray-400">by {item.seller}</p>
+                                <p className="text-xs text-gray-400">
+                                  {new Date(item.purchasedAt).toLocaleDateString()} • Qty: {item.quantity}
+                                </p>
+                                <div className="flex items-center justify-between mt-2">
+                                  <span className="text-sm font-bold text-nextplate-red">
+                                    ${(item.price * item.quantity).toFixed(2)}
+                                  </span>
+                                  <div className="flex items-center space-x-2">
+                                    <Badge className={`${getStatusBadgeColor(item.status)} text-xs`}>
+                                      {item.status}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      {item.deliveryMethod}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <Card className="bg-nextplate-darkgray border-gray-800">
+                      <CardContent className="p-8 text-center">
+                        <Package size={48} className="mx-auto text-gray-500 mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No plate orders yet</h3>
+                        <p className="text-gray-400 mb-4">Start ordering delicious plates!</p>
+                        <Button 
+                          className="bg-nextplate-red hover:bg-red-600"
+                          onClick={() => setActiveTab("plates")}
+                        >
+                          Browse Plates
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Meal Prep History */}
+                <div>
+                  <h2 className="text-2xl font-bold mb-4 flex items-center">
+                    <Package className="mr-2 text-nextplate-red" />
+                    Meal Prep Orders
+                  </h2>
+                  {MOCK_PURCHASED_MEAL_PREPS.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {MOCK_PURCHASED_MEAL_PREPS.map(prep => (
+                        <Card key={prep.id} className="bg-nextplate-darkgray border-gray-800">
+                          <CardContent className="p-6">
+                            <div className="flex items-center space-x-4">
+                              <img 
+                                src={prep.image} 
+                                alt={prep.name}
+                                className="w-20 h-20 rounded-lg object-cover"
+                              />
+                              <div className="flex-1">
+                                <h3 className="font-semibold mb-1">{prep.name}</h3>
+                                <p className="text-sm text-gray-400 mb-2">by {prep.seller}</p>
+                                <p className="text-sm text-gray-400 mb-2">
+                                  Ordered: {new Date(prep.purchasedAt).toLocaleDateString()}
+                                </p>
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <span className="font-bold text-nextplate-red">${prep.price}</span>
+                                    <span className="text-sm text-gray-400 ml-2">• {prep.mealCount} meals</span>
+                                  </div>
+                                  <div className="text-right">
+                                    <Badge className={`${getStatusBadgeColor(prep.status)} text-xs mb-1`}>
+                                      {prep.status}
+                                    </Badge>
+                                    <p className="text-xs text-gray-400">{prep.deliveryMethod}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <Card className="bg-nextplate-darkgray border-gray-800">
+                      <CardContent className="p-8 text-center">
+                        <Package size={48} className="mx-auto text-gray-500 mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No meal prep orders yet</h3>
+                        <p className="text-gray-400 mb-4">Try our convenient meal prep packages!</p>
+                        <Button 
+                          className="bg-nextplate-red hover:bg-red-600"
+                          onClick={() => setActiveTab("mealpreps")}
+                        >
+                          Browse Meal Preps
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
         </div>
