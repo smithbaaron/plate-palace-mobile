@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Search, Package, User, MapPin, Heart, Clock, Calendar, Truck, History } from "lucide-react";
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
+import { getAvailablePlates, getAvailableSellers } from "@/lib/customer-plates-service";
 
 // Mock data for plates with delivery/pickup options
 const MOCK_PLATES = [
@@ -258,27 +259,58 @@ const CustomerDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
   const [favoriteSellers, setFavoriteSellers] = useState<string[]>(MOCK_FAVORITE_SELLERS);
+  const [realSellers, setRealSellers] = useState<any[]>([]);
+  const [realPlates, setRealPlates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { notifyInfo, notifySuccess } = useNotifications();
+
+  // Fetch real data from database
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        console.log("🔄 Fetching real sellers and plates data...");
+        const [sellersData, platesData] = await Promise.all([
+          getAvailableSellers(),
+          getAvailablePlates()
+        ]);
+        
+        console.log("📊 Fetched sellers:", sellersData);
+        console.log("🍽️ Fetched plates:", platesData);
+        
+        setRealSellers(sellersData);
+        setRealPlates(platesData);
+        setLoading(false);
+      } catch (error) {
+        console.error("❌ Error fetching data:", error);
+        // Fallback to mock data if real data fails
+        setRealSellers(MOCK_SELLERS);
+        setRealPlates(MOCK_PLATES);
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
   
+  // Use real data, fallback to mock if empty
+  const sellersToUse = realSellers.length > 0 ? realSellers : MOCK_SELLERS;
+  const platesToUse = realPlates.length > 0 ? realPlates : MOCK_PLATES;
+
   // Filter items based on search
   const filteredSellers = searchQuery
-    ? MOCK_SELLERS.filter(seller => 
-        seller.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        seller.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        seller.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        seller.location.toLowerCase().includes(searchQuery.toLowerCase())
+    ? sellersToUse.filter(seller => 
+        (seller.businessName || seller.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (seller.bio || seller.description || '').toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : MOCK_SELLERS;
+    : sellersToUse;
 
   const filteredPlates = searchQuery
-    ? MOCK_PLATES.filter(plate => 
+    ? platesToUse.filter(plate => 
         plate.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        plate.seller.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        plate.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        plate.location.toLowerCase().includes(searchQuery.toLowerCase())
+        (plate.seller?.businessName || plate.seller || '').toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : MOCK_PLATES;
+    : platesToUse;
     
   const filteredMealPreps = searchQuery
     ? MOCK_MEAL_PREPS.filter(prep => 
@@ -289,7 +321,7 @@ const CustomerDashboard = () => {
     : MOCK_MEAL_PREPS;
 
   // Get favorite sellers data
-  const favoriteSellersList = MOCK_SELLERS.filter(seller => 
+  const favoriteSellersList = sellersToUse.filter(seller => 
     favoriteSellers.includes(seller.id)
   );
 
@@ -553,48 +585,48 @@ const CustomerDashboard = () => {
                     >
                       <div className="h-48 relative">
                         <img 
-                          src={seller.image} 
-                          alt={seller.name}
+                          src={seller.image || "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80"} 
+                          alt={seller.businessName || seller.name}
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 gradient-overlay flex items-end p-4">
                           <div>
-                            <h3 className="text-xl font-bold mb-1">{seller.name}</h3>
+                            <h3 className="text-xl font-bold mb-1">{seller.businessName || seller.name}</h3>
                             <p className="text-sm text-gray-300 flex items-center">
                               <MapPin size={14} className="mr-1" />
-                              {seller.location}
+                              {seller.location || "Local"}
                             </p>
                           </div>
                         </div>
                       </div>
                       <div className="p-6">
-                        <p className="text-sm text-gray-300 mb-1">@{seller.username}</p>
+                        <p className="text-sm text-gray-300 mb-1">📞 {seller.phoneNumber || "Contact via app"}</p>
                         <p className="text-sm text-gray-300 mb-4 line-clamp-2">
-                          {seller.description}
+                          {seller.bio || seller.description}
                         </p>
                         <div className="flex items-center justify-between mb-4">
                           <div className="text-sm text-gray-400">
-                            ⭐ {seller.rating} • {seller.plateCount} plates
+                            ⭐ {seller.rating || 4.5} • {seller.plateCount || 0} plates
                           </div>
                         </div>
                         <div className="space-y-2 mb-4">
-                          {seller.deliveryOptions.available && (
+                          {(seller.deliveryOptions?.available || seller.offersDelivery) && (
                             <div className="flex items-center text-xs text-gray-400">
                               <Truck size={12} className="mr-1 text-green-500" />
-                              Delivery: ${seller.deliveryOptions.fee} • {seller.deliveryOptions.radius}
+                              Delivery available
                             </div>
                           )}
-                          {seller.pickupOptions.available && (
+                          {(seller.pickupOptions?.available || seller.offersPickup) && (
                             <div className="flex items-center text-xs text-gray-400">
                               <MapPin size={12} className="mr-1 text-blue-500" />
-                              Pickup: {seller.pickupOptions.hours}
+                              Pickup available
                             </div>
                           )}
                         </div>
                         <div className="flex gap-2">
                           <Button 
                             className="flex-1 bg-nextplate-red hover:bg-red-600"
-                            onClick={() => handleViewSellerMenu(seller.id, seller.name)}
+                            onClick={() => handleViewSellerMenu(seller.id, seller.businessName || seller.name)}
                           >
                             View Menu
                           </Button>
@@ -605,7 +637,7 @@ const CustomerDashboard = () => {
                                 ? 'bg-nextplate-red text-white' 
                                 : 'text-nextplate-red hover:bg-nextplate-red hover:text-white'
                             }`}
-                            onClick={() => handleToggleFavorite(seller.id, seller.name)}
+                            onClick={() => handleToggleFavorite(seller.id, seller.businessName || seller.name)}
                           >
                             <Heart fill={favoriteSellers.includes(seller.id) ? "currentColor" : "none"} size={16} />
                           </Button>
@@ -638,38 +670,29 @@ const CustomerDashboard = () => {
                     >
                       <div className="h-48 relative">
                         <img 
-                          src={plate.image} 
+                          src={plate.imageUrl || "https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"} 
                           alt={plate.name}
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 gradient-overlay flex items-end p-4">
                           <div>
                             <h3 className="text-xl font-bold mb-1">{plate.name}</h3>
-                            <p className="text-sm text-gray-300">by {plate.seller}</p>
-                            <p className="text-xs text-gray-400 flex items-center mt-1">
-                              <MapPin size={12} className="mr-1" />
-                              {plate.location}
+                            <p className="text-sm text-gray-300">by {plate.seller?.businessName || plate.seller}</p>
+                            <p className="text-xs text-gray-400">
+                              Available: {plate.quantity} • {plate.size}
                             </p>
                           </div>
                         </div>
                       </div>
                       <div className="p-4">
                         <p className="text-sm text-gray-300 mb-3 line-clamp-2">
-                          {plate.description}
+                          {plate.nutritionalInfo || "Delicious homemade meal"}
                         </p>
                         <div className="space-y-2 mb-3">
-                          {plate.deliveryOptions.available && (
-                            <div className="flex items-center text-xs text-gray-400">
-                              <Truck size={12} className="mr-1 text-green-500" />
-                              Delivery: ${plate.deliveryOptions.fee} • {plate.deliveryOptions.estimatedTime}
-                            </div>
-                          )}
-                          {plate.pickupOptions.available && (
-                            <div className="flex items-center text-xs text-gray-400">
-                              <Clock size={12} className="mr-1 text-blue-500" />
-                              Pickup: {plate.pickupOptions.estimatedTime}
-                            </div>
-                          )}
+                          <div className="flex items-center text-xs text-gray-400">
+                            <Calendar size={12} className="mr-1 text-blue-500" />
+                            Available: {new Date(plate.availableDate).toLocaleDateString()}
+                          </div>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-lg text-nextplate-red">${plate.price}</span>
