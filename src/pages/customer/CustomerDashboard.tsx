@@ -413,44 +413,42 @@ const CustomerDashboard = () => {
                 </h2>
                 {favoriteSellersList.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {favoriteSellersList.map(seller => (
-                      <Card key={seller.id} className="bg-nextplate-darkgray border-gray-800 hover:ring-2 hover:ring-nextplate-red transition-all">
-                        <CardHeader className="pb-2">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg">{seller.name}</CardTitle>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-nextplate-red hover:bg-nextplate-red hover:text-white"
-                              onClick={() => handleToggleFavorite(seller.id, seller.name)}
-                            >
-                              <Heart fill="currentColor" size={16} />
-                            </Button>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-center space-x-4">
-                            <img 
-                              src={seller.image} 
-                              alt={seller.name}
-                              className="w-16 h-16 rounded-lg object-cover"
-                            />
-                            <div className="flex-1">
-                              <p className="text-sm text-gray-300 mb-2">{seller.description}</p>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-400">⭐ {seller.rating}</span>
-                                <Button 
-                                  size="sm"
-                                  className="bg-nextplate-red hover:bg-red-600"
-                                  onClick={() => handleViewSellerMenu(seller.id, seller.name)}
-                                >
-                                  View Menu
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                     {favoriteSellersList.map(seller => (
+                       <Card key={seller.id} className="bg-nextplate-darkgray border-gray-800 hover:ring-2 hover:ring-nextplate-red transition-all">
+                         <CardHeader className="pb-2">
+                           <div className="flex items-center justify-between">
+                             <CardTitle className="text-lg">{seller.businessName || seller.name}</CardTitle>
+                             <Button
+                               size="sm"
+                               variant="ghost"
+                               className="text-nextplate-red hover:bg-nextplate-red hover:text-white"
+                               onClick={() => handleToggleFavorite(seller.id, seller.businessName || seller.name)}
+                             >
+                               <Heart fill="currentColor" size={16} />
+                             </Button>
+                           </div>
+                         </CardHeader>
+                         <CardContent>
+                           <div className="flex items-center space-x-4">
+                             <div className="w-16 h-16 rounded-lg bg-nextplate-red/20 flex items-center justify-center">
+                               <User size={24} className="text-nextplate-red" />
+                             </div>
+                             <div className="flex-1">
+                               <p className="text-sm text-gray-300 mb-2">{seller.bio || seller.description || "Great local chef"}</p>
+                               <div className="flex items-center justify-between">
+                                 <span className="text-sm text-gray-400">⭐ {seller.rating || "4.5"}</span>
+                                 <Button 
+                                   size="sm"
+                                   className="bg-nextplate-red hover:bg-red-600"
+                                   onClick={() => handleViewSellerMenu(seller.id, seller.businessName || seller.name)}
+                                 >
+                                   View Menu
+                                 </Button>
+                               </div>
+                             </div>
+                           </div>
+                         </CardContent>
+                       </Card>
                     ))}
                   </div>
                 ) : (
