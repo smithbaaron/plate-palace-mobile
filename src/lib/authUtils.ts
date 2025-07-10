@@ -99,6 +99,43 @@ export const formatUser = async (supabaseUser: SupabaseUser | null): Promise<Use
   } catch (err) {
     console.error("💥 Unexpected error in seller profile check:", err);
   }
+
+  // Check for customer profile if no seller profile found
+  if (!userType) {
+    try {
+      console.log("🔍 Checking customer_profiles table...");
+      try {
+        const customerPromise = supabase
+          .from('customer_profiles')
+          .select('id')
+          .eq('user_id', supabaseUser.id)
+          .single();
+          
+        const { data: customerProfile, error } = await Promise.race([
+          customerPromise,
+          createTimeout(3000, "Customer profile query timeout")
+        ]);
+          
+        if (customerProfile && !error) {
+          userType = 'customer';
+          isOnboarded = true;
+          console.log("✅ Customer profile found, user is onboarded customer");
+        } else {
+          console.log("ℹ️ No customer profile found:", error?.code);
+        }
+      } catch (err: any) {
+        if (err.message === "Customer profile query timeout") {
+          console.log("⏰ Customer profile query timed out");
+        } else if (err.code !== "42P01") { // Ignore table not existing error
+          console.error("💥 Error checking customer profile:", err);
+        } else {
+          console.log("ℹ️ customer_profiles table doesn't exist yet");
+        }
+      }
+    } catch (err) {
+      console.error("💥 Unexpected error in customer profile check:", err);
+    }
+  }
   
   const formattedUser = {
     id: supabaseUser.id,
