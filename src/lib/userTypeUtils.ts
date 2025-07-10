@@ -7,12 +7,13 @@ export const getUserTypeData = async (userId: string | undefined) => {
   if (!userId) return { userType: null, isOnboarded: false };
   
   try {
-    console.log("Fetching user type data for:", userId);
+    console.log("🔍 Fetching user type data for userId:", userId);
     
     // Check if required tables exist for the app functionality
     const tablesExist = await checkRequiredTables();
+    console.log("📊 Required tables exist:", tablesExist);
     if (!tablesExist) {
-      console.log("Required database tables not found - user needs to complete setup");
+      console.log("❌ Required database tables not found - user needs to complete setup");
       return { userType: null, isOnboarded: false };
     }
     
@@ -21,11 +22,14 @@ export const getUserTypeData = async (userId: string | undefined) => {
     
     // PRIORITY 1: Check seller_profiles table first (actual seller profile takes priority)
     try {
+      console.log("🔍 Checking seller_profiles table for userId:", userId);
       const { data: sellerProfile, error } = await supabase
         .from('seller_profiles')
         .select('id, business_name')
         .eq('user_id', userId)
         .single();
+        
+      console.log("📊 Seller profile query result:", { data: sellerProfile, error });
         
       if (sellerProfile && !error) {
         userType = 'seller';
@@ -40,19 +44,24 @@ export const getUserTypeData = async (userId: string | undefined) => {
         return { userType, isOnboarded };
       } else if (error && error.code !== "PGRST116") {
         // PGRST116 is "not found" which is expected, other errors are concerning
-        console.error("Error checking seller profile:", error);
+        console.error("❌ Error checking seller profile:", error);
+      } else if (error?.code === "PGRST116") {
+        console.log("ℹ️ No seller profile found (expected if not a seller)");
       }
     } catch (err: any) {
-      console.error("Error checking seller profile:", err);
+      console.error("❌ Exception checking seller profile:", err);
     }
     
     // PRIORITY 2: Check customer_profiles table
     try {
+      console.log("🔍 Checking customer_profiles table for userId:", userId);
       const { data: customerProfile, error } = await supabase
         .from('customer_profiles')
         .select('id')
         .eq('user_id', userId)
         .single();
+        
+      console.log("📊 Customer profile query result:", { data: customerProfile, error });
         
       if (customerProfile && !error) {
         userType = 'customer';
@@ -60,19 +69,24 @@ export const getUserTypeData = async (userId: string | undefined) => {
         console.log('✅ Found customer profile - user is a customer:', { userType, isOnboarded });
         return { userType, isOnboarded };
       } else if (error && error.code !== "PGRST116") {
-        console.error("Error checking customer profile:", error);
+        console.error("❌ Error checking customer profile:", error);
+      } else if (error?.code === "PGRST116") {
+        console.log("ℹ️ No customer profile found (expected if not a customer)");
       }
     } catch (err: any) {
-      console.error("Error checking customer profile:", err);
+      console.error("❌ Exception checking customer profile:", err);
     }
     
     // FALLBACK: Check profiles table for explicit user_type setting
     try {
+      console.log("🔍 Checking profiles table for userId:", userId);
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('user_type, is_onboarded')
         .eq('id', userId)
         .single();
+        
+      console.log("📊 Profile query result:", { data: profile, error });
         
       if (profile && !error && profile.user_type) {
         userType = profile.user_type as UserType;
@@ -80,12 +94,15 @@ export const getUserTypeData = async (userId: string | undefined) => {
         console.log('✅ Found explicit user type in profiles table:', { userType, isOnboarded });
         return { userType, isOnboarded };
       } else if (error && error.code !== "PGRST116") {
-        console.error("Error checking profile:", error);
+        console.error("❌ Error checking profile:", error);
+      } else if (error?.code === "PGRST116") {
+        console.log("ℹ️ No profile found in profiles table");
       }
     } catch (err: any) {
-      console.error("Error checking profile:", err);
+      console.error("❌ Exception checking profile:", err);
     }
     
+    console.log("🔍 Final user type detection result:", { userType, isOnboarded });
     return { 
       userType, 
       isOnboarded 
