@@ -97,10 +97,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={`/${userType}/onboarding`} replace />;
   }
   
-  // Default redirect for users without type or role (prefer seller)
-  if (!userType && !userRole && !isOnOnboardingPage && !isOnboarded) {
-    console.log('✅ Default redirect to seller onboarding');
-    return <Navigate to="/seller/onboarding" replace />;
+  // Default redirect for users without type or role - but not for shared routes like profile
+  if (!userType && !userRole && !isOnOnboardingPage && !isOnboarded && requiredUserType) {
+    console.log('✅ Default redirect to required type onboarding:', requiredUserType);
+    return <Navigate to={`/${requiredUserType}/onboarding`} replace />;
   }
   
   console.log('✅ Allowing access to protected content');
