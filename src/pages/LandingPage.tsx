@@ -1,5 +1,5 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -9,9 +9,27 @@ import { Package, Calendar, Bell } from "lucide-react";
 const LandingPage = () => {
   const { isAuthenticated } = useAuth();
   const { userType } = useUserType();
+  const navigate = useNavigate();
   
-  // Determine dashboard URL based on user type
-  const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
+  // Redirect authenticated customers to their dashboard
+  useEffect(() => {
+    if (isAuthenticated && userType) {
+      const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
+      navigate(dashboardUrl, { replace: true });
+    }
+  }, [isAuthenticated, userType, navigate]);
+  
+  // If user is authenticated, show loading while redirecting
+  if (isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nextplate-orange mx-auto mb-4"></div>
+          <div>Redirecting to dashboard...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -31,26 +49,16 @@ const LandingPage = () => {
             The platform for independent food sellers to connect with hungry customers
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            {isAuthenticated ? (
-              <Link to={dashboardUrl}>
-                <Button className="bg-nextplate-orange hover:bg-orange-600 text-white text-lg px-8 py-6">
-                  Go to Dashboard
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Link to="/auth?type=seller">
-                  <Button className="bg-nextplate-orange hover:bg-orange-600 text-white text-lg px-8 py-6">
-                    I'm a Seller
-                  </Button>
-                </Link>
-                <Link to="/auth?type=customer">
-                  <Button className="bg-nextplate-red hover:bg-red-600 text-white text-lg px-8 py-6">
-                    I'm a Customer
-                  </Button>
-                </Link>
-              </>
-            )}
+            <Link to="/auth?type=seller">
+              <Button className="bg-nextplate-orange hover:bg-orange-600 text-white text-lg px-8 py-6">
+                I'm a Seller
+              </Button>
+            </Link>
+            <Link to="/auth?type=customer">
+              <Button className="bg-nextplate-red hover:bg-red-600 text-white text-lg px-8 py-6">
+                I'm a Customer
+              </Button>
+            </Link>
           </div>
         </section>
         
