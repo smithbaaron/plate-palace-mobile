@@ -97,21 +97,31 @@ export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
     console.log("🍽️ Raw plates data from database:", data);
 
     // Transform the data to match our CustomerPlate type
-    const plates: CustomerPlate[] = (data || []).map(plate => ({
-      id: plate.id,
-      name: plate.name,
-      price: plate.price,
-      imageUrl: plate.image_url,
-      size: plate.size,
-      nutritionalInfo: plate.nutritional_info,
-      availableDate: plate.available_date,
-      quantity: plate.quantity,
-      seller: {
-        id: plate.seller_profiles[0].id,
-        businessName: plate.seller_profiles[0].business_name,
-        bio: plate.seller_profiles[0].bio
+    const plates: CustomerPlate[] = (data || []).map(plate => {
+      console.log("🔍 Processing plate:", plate);
+      
+      // Check if seller_profiles data exists
+      if (!plate.seller_profiles || plate.seller_profiles.length === 0) {
+        console.error("❌ No seller profile found for plate:", plate.id);
+        return null;
       }
-    }));
+      
+      return {
+        id: plate.id,
+        name: plate.name,
+        price: plate.price,
+        imageUrl: plate.image_url,
+        size: plate.size,
+        nutritionalInfo: plate.nutritional_info,
+        availableDate: plate.available_date,
+        quantity: plate.quantity,
+        seller: {
+          id: plate.seller_profiles[0].id,
+          businessName: plate.seller_profiles[0].business_name,
+          bio: plate.seller_profiles[0].bio
+        }
+      };
+    }).filter(plate => plate !== null); // Remove null entries
 
     return plates;
   } catch (error) {
