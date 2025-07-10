@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React from "react";
+import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -8,27 +8,17 @@ import { Package, Calendar, Bell } from "lucide-react";
 
 const LandingPage = () => {
   const { isAuthenticated } = useAuth();
-  const { userType } = useUserType();
-  const navigate = useNavigate();
+  const { userType, isOnboarded } = useUserType();
   
-  // Redirect authenticated customers to their dashboard
-  useEffect(() => {
-    if (isAuthenticated && userType) {
-      const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
-      navigate(dashboardUrl, { replace: true });
-    }
-  }, [isAuthenticated, userType, navigate]);
+  // Redirect authenticated users directly - no loading state needed
+  if (isAuthenticated && userType && isOnboarded) {
+    const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
+    return <Navigate to={dashboardUrl} replace />;
+  }
   
-  // If user is authenticated, show loading while redirecting
-  if (isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nextplate-orange mx-auto mb-4"></div>
-          <div>Redirecting to dashboard...</div>
-        </div>
-      </div>
-    );
+  // If authenticated but not onboarded, redirect to onboarding
+  if (isAuthenticated && userType && !isOnboarded) {
+    return <Navigate to={`/${userType}/onboarding`} replace />;
   }
 
   return (
