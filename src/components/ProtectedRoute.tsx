@@ -43,7 +43,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     isOnboarded,
     isOnOnboardingPage,
     requiredUserType,
-    currentPath: location.pathname
+    currentPath: location.pathname,
+    supabaseUserMetadata: supabaseUser?.user_metadata,
+    supabaseAppMetadata: supabaseUser?.app_metadata
   });
 
   // If onboarded user is on onboarding page, redirect to dashboard
