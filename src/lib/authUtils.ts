@@ -84,6 +84,16 @@ export const formatUser = async (supabaseUser: SupabaseUser | null): Promise<Use
         userType = 'seller';
         isOnboarded = true;
         console.log("✅ Seller profile found, user is onboarded seller");
+        // Return early since we found seller profile
+        const formattedUser = {
+          id: supabaseUser.id,
+          email: supabaseUser.email || '',
+          username: username,
+          userType: userType,
+          isOnboarded: isOnboarded,
+        };
+        console.log("✅ User formatted as seller:", formattedUser);
+        return formattedUser;
       } else {
         console.log("ℹ️ No seller profile found:", error?.code);
       }
