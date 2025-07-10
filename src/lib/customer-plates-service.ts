@@ -88,6 +88,18 @@ export const getAvailableSellers = async (): Promise<CustomerSeller[]> => {
   try {
     console.log("🔍 Fetching seller profiles from database...");
     
+    // Let's first check what's in the table
+    const { data: allData, error: countError } = await supabase
+      .from('seller_profiles')
+      .select('*');
+    
+    console.log("📊 ALL seller_profiles in database:", allData);
+    console.log("📊 Count of seller profiles:", allData?.length || 0);
+    
+    if (countError) {
+      console.error("❌ Error checking seller_profiles:", countError);
+    }
+    
     const { data, error } = await supabase
       .from('seller_profiles')
       .select(`
