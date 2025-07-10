@@ -1,65 +1,170 @@
-
 import { supabase } from './supabase';
-import { Plate } from '@/components/seller/AddSinglePlateForm';
-import { dbPlateToPlate } from './plates-service';
 
-// Service functions for customer interactions with plates
-export const customerPlatesService = {
-  // Get all available plates (for today and future)
-  getAvailablePlates: async () => {
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const { data, error } = await supabase
-        .from('plates')
-        .select('*, profiles:seller_id(username)')
-        .gte('available_date', today.toISOString())
-        .gt('quantity', 0) // Only show plates with available quantity
-        .order('available_date', { ascending: true });
-        
-      if (error) throw error;
-      
-      // Convert DB plates to frontend plates with seller info
-      return data.map(plate => {
-        const frontendPlate = dbPlateToPlate(plate);
-        return {
-          ...frontendPlate,
-          seller: plate.profiles?.username || 'Unknown Seller',
-          sellerUsername: plate.profiles?.username || 'unknown'
-        };
-      });
-    } catch (error) {
+export type CustomerPlate = {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string | null;
+  size: string;
+  nutritionalInfo?: string;
+  availableDate: string;
+  quantity: number;
+  seller: {
+    id: string;
+    businessName: string;
+    bio?: string;
+  };
+};
+
+export type CustomerSeller = {
+  id: string;
+  businessName: string;
+  bio?: string;
+  phoneNumber?: string;
+  plateCount: number;
+  rating: number; // This would come from reviews in the future
+};
+
+// Fetch all available plates with seller information
+export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('plates')
+      .select(`
+        id,
+        name,
+        price,
+        image_url,
+        size,
+        nutritional_info,
+        available_date,
+        quantity,
+        seller_id,
+        seller_profiles!inner (
+          id,
+          business_name,
+          bio
+        )
+      `)
+      .gt('quantity', 0) // Only show plates with available quantity
+      .gte('available_date', new Date().toISOString()) // Only show current/future plates
+      .order('available_date', { ascending: true });
+
+    if (error) {
       console.error('Error fetching available plates:', error);
       throw error;
     }
-  },
-  
-  // Get a specific plate by ID
-  getPlateById: async (plateId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('plates')
-        .select('*, profiles:seller_id(username)')
-        .eq('id', plateId)
-        .single();
-        
-      if (error) throw error;
-      
-      if (!data) {
-        throw new Error('Plate not found');
+
+    // Transform the data to match our CustomerPlate type
+    const plates: CustomerPlate[] = (data || []).map(plate => ({
+      id: plate.id,
+      name: plate.name,
+      price: plate.price,
+      imageUrl: plate.image_url,
+      size: plate.size,
+      nutritionalInfo: plate.nutritional_info,
+      availableDate: plate.available_date,
+      quantity: plate.quantity,
+      seller: {
+        id: plate.seller_profiles[0].id,
+        businessName: plate.seller_profiles[0].business_name,
+        bio: plate.seller_profiles[0].bio
       }
-      
-      // Convert DB plate to frontend plate with seller info
-      const frontendPlate = dbPlateToPlate(data);
-      return {
-        ...frontendPlate,
-        seller: data.profiles?.username || 'Unknown Seller',
-        sellerUsername: data.profiles?.username || 'unknown'
-      };
-    } catch (error) {
-      console.error('Error fetching plate by ID:', error);
+    }));
+
+    return plates;
+  } catch (error) {
+    console.error('Error in getAvailablePlates:', error);
+    return [];
+  }
+};
+
+// Fetch all sellers with their plate counts
+export const getAvailableSellers = async (): Promise<CustomerSeller[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('seller_profiles')
+      .select(`
+        id,
+        business_name,
+        bio,
+        phone_number,
+        plates!inner (id)
+      `)
+      .order('business_name');
+
+    if (error) {
+      console.error('Error fetching available sellers:', error);
       throw error;
     }
+
+    // Transform the data to match our CustomerSeller type
+    const sellers: CustomerSeller[] = (data || []).map(seller => ({
+      id: seller.id,
+      businessName: seller.business_name,
+      bio: seller.bio,
+      phoneNumber: seller.phone_number,
+      plateCount: seller.plates?.length || 0,
+      rating: 4.5 // Default rating - this would come from reviews in the future
+    }));
+
+    return sellers;
+  } catch (error) {
+    console.error('Error in getAvailableSellers:', error);
+    return [];
+  }
+};
+
+// Fetch plates from a specific seller
+export const getSellerPlates = async (sellerId: string): Promise<CustomerPlate[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('plates')
+      .select(`
+        id,
+        name,
+        price,
+        image_url,
+        size,
+        nutritional_info,
+        available_date,
+        quantity,
+        seller_id,
+        seller_profiles!inner (
+          id,
+          business_name,
+          bio
+        )
+      `)
+      .eq('seller_id', sellerId)
+      .gt('quantity', 0)
+      .gte('available_date', new Date().toISOString())
+      .order('available_date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching seller plates:', error);
+      throw error;
+    }
+
+    const plates: CustomerPlate[] = (data || []).map(plate => ({
+      id: plate.id,
+      name: plate.name,
+      price: plate.price,
+      imageUrl: plate.image_url,
+      size: plate.size,
+      nutritionalInfo: plate.nutritional_info,
+      availableDate: plate.available_date,
+      quantity: plate.quantity,
+      seller: {
+        id: plate.seller_profiles[0].id,
+        businessName: plate.seller_profiles[0].business_name,
+        bio: plate.seller_profiles[0].bio
+      }
+    }));
+
+    return plates;
+  } catch (error) {
+    console.error('Error in getSellerPlates:', error);
+    return [];
   }
 };

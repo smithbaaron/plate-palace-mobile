@@ -10,14 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
 import { Search, Check, User } from "lucide-react";
 
-// Mock seller data
-const MOCK_SELLERS = [
-  { id: "seller1", username: "tasteofhome", name: "Taste of Home", bio: "Homestyle comfort food with a modern twist" },
-  { id: "seller2", username: "healthymeals", name: "Healthy Meals", bio: "Nutritious meal prep packages for busy professionals" },
-  { id: "seller3", username: "spicekitchen", name: "Spice Kitchen", bio: "Authentic Indian and Pakistani cuisine" },
-  { id: "seller4", username: "pastaparadise", name: "Pasta Paradise", bio: "Fresh handmade pasta and Italian classics" },
-];
-
 const CustomerOnboarding = () => {
   const { currentUser, isAuthenticated } = useAuth();
   const { completeOnboarding } = useUserType();
@@ -28,8 +20,10 @@ const CustomerOnboarding = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sellerSearch, setSellerSearch] = useState("");
   const [selectedSellers, setSelectedSellers] = useState<string[]>([]);
+  // Real seller data from database
+  const [realSellers, setRealSellers] = useState<any[]>([]);
   
-  // Load existing customer preferences if available
+  // Load existing customer preferences and real sellers
   useEffect(() => {
     const loadCustomerProfile = async () => {
       if (currentUser?.id) {
@@ -52,8 +46,36 @@ const CustomerOnboarding = () => {
       }
     };
     
+    const loadRealSellers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('seller_profiles')
+          .select('id, business_name, bio, user_id')
+          .order('business_name');
+          
+        if (data && !error) {
+          // Transform data to match expected format
+          const formattedSellers = data.map(seller => ({
+            id: seller.id,
+            username: seller.business_name.toLowerCase().replace(/[^a-z0-9]/g, ''),
+            name: seller.business_name,
+            bio: seller.bio || `Delicious food from ${seller.business_name}`
+          }));
+          setRealSellers(formattedSellers);
+        } else {
+          console.error("Error loading sellers:", error);
+          // Fall back to empty array
+          setRealSellers([]);
+        }
+      } catch (err) {
+        console.error("Error loading sellers:", err);
+        setRealSellers([]);
+      }
+    };
+    
     if (isAuthenticated) {
       loadCustomerProfile();
+      loadRealSellers();
     }
   }, [currentUser, isAuthenticated]);
   
@@ -157,7 +179,7 @@ const CustomerOnboarding = () => {
   };
   
   // Filter sellers based on search term
-  const filteredSellers = MOCK_SELLERS.filter(seller => 
+  const filteredSellers = realSellers.filter(seller => 
     seller.username.toLowerCase().includes(sellerSearch.toLowerCase()) ||
     seller.name.toLowerCase().includes(sellerSearch.toLowerCase())
   );
