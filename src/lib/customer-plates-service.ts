@@ -28,6 +28,8 @@ export type CustomerSeller = {
 // Fetch all available plates with seller information
 export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
   try {
+    console.log("🔍 Fetching plates from database...");
+    
     const { data, error } = await supabase
       .from('plates')
       .select(`
@@ -51,9 +53,11 @@ export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
       .order('available_date', { ascending: true });
 
     if (error) {
-      console.error('Error fetching available plates:', error);
+      console.error('❌ Error fetching available plates:', error);
       throw error;
     }
+
+    console.log("🍽️ Raw plates data from database:", data);
 
     // Transform the data to match our CustomerPlate type
     const plates: CustomerPlate[] = (data || []).map(plate => ({
@@ -82,6 +86,8 @@ export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
 // Fetch all sellers with their plate counts
 export const getAvailableSellers = async (): Promise<CustomerSeller[]> => {
   try {
+    console.log("🔍 Fetching seller profiles from database...");
+    
     const { data, error } = await supabase
       .from('seller_profiles')
       .select(`
@@ -89,28 +95,34 @@ export const getAvailableSellers = async (): Promise<CustomerSeller[]> => {
         business_name,
         bio,
         phone_number,
-        plates!inner (id)
+        plates (id)
       `)
       .order('business_name');
 
     if (error) {
-      console.error('Error fetching available sellers:', error);
+      console.error('❌ Error fetching available sellers:', error);
       throw error;
     }
 
-    // Transform the data to match our CustomerSeller type
-    const sellers: CustomerSeller[] = (data || []).map(seller => ({
-      id: seller.id,
-      businessName: seller.business_name,
-      bio: seller.bio,
-      phoneNumber: seller.phone_number,
-      plateCount: seller.plates?.length || 0,
-      rating: 4.5 // Default rating - this would come from reviews in the future
-    }));
+    console.log("📊 Raw seller data from database:", data);
 
+    // Transform the data to match our CustomerSeller type
+    const sellers: CustomerSeller[] = (data || []).map(seller => {
+      console.log(`🏪 Processing seller: ${seller.business_name}`, seller);
+      return {
+        id: seller.id,
+        businessName: seller.business_name,
+        bio: seller.bio,
+        phoneNumber: seller.phone_number,
+        plateCount: seller.plates?.length || 0,
+        rating: 4.5 // Default rating - this would come from reviews in the future
+      };
+    });
+
+    console.log("✅ Transformed sellers:", sellers);
     return sellers;
   } catch (error) {
-    console.error('Error in getAvailableSellers:', error);
+    console.error('❌ Error in getAvailableSellers:', error);
     return [];
   }
 };
