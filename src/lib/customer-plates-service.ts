@@ -30,6 +30,10 @@ export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
   try {
     console.log("🔍 Fetching plates from database...");
     
+    // Define current date first
+    const currentDate = new Date().toISOString();
+    console.log("📅 Current date for filtering:", currentDate);
+    
     // First, let's check ALL plates without filters to see what's in the database
     const { data: allPlates, error: allPlatesError } = await supabase
       .from('plates')
@@ -37,13 +41,26 @@ export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
     
     console.log("🍽️ ALL plates in database (no filters):", allPlates);
     
+    // Let's examine each plate in detail
+    if (allPlates && allPlates.length > 0) {
+      allPlates.forEach((plate, index) => {
+        console.log(`🔍 Plate ${index + 1} details:`, {
+          id: plate.id,
+          name: plate.name,
+          quantity: plate.quantity,
+          available_date: plate.available_date,
+          seller_id: plate.seller_id
+        });
+        console.log(`📊 Plate ${index + 1} filter check:`, {
+          quantityCheck: `${plate.quantity} > 0 = ${plate.quantity > 0}`,
+          availableDateCheck: `${plate.available_date} >= ${currentDate} = ${plate.available_date >= currentDate}`
+        });
+      });
+    }
+    
     if (allPlatesError) {
       console.error("❌ Error fetching all plates:", allPlatesError);
     }
-    
-    // Now let's check with our filters
-    const currentDate = new Date().toISOString();
-    console.log("📅 Current date for filtering:", currentDate);
     
     const { data, error } = await supabase
       .from('plates')
