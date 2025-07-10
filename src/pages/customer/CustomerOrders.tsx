@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
+import { useAuth } from "@/context/AuthContext";
+import { getCustomerOrders } from "@/lib/orders-service";
 import { 
   Calendar, 
   Package, 
@@ -29,98 +31,33 @@ import {
 import { Order, OrderStatus } from "@/types/order";
 import { format } from "date-fns";
 
-// Mock data - would be replaced with actual API call
-const MOCK_ORDERS: Order[] = [
-  {
-    id: "ORD-001",
-    customerId: "cust1",
-    sellerId: "seller1",
-    customerName: "Jane Smith",
-    sellerName: "Mama's Kitchen",
-    items: [
-      {
-        id: "item1",
-        plateId: "plate1",
-        name: "Chicken Alfredo Pasta",
-        price: 12.99,
-        quantity: 2,
-      },
-      {
-        id: "item2",
-        plateId: "plate2",
-        name: "Garden Salad",
-        price: 6.99,
-        quantity: 1,
-      }
-    ],
-    status: "pending",
-    total: 32.97,
-    createdAt: "2025-05-17T14:30:00Z",
-    updatedAt: "2025-05-17T14:30:00Z",
-    scheduledFor: "2025-05-18T18:00:00Z",
-    paymentMethod: "card",
-    deliveryMethod: "pickup",
-  },
-  {
-    id: "ORD-002",
-    customerId: "cust1",
-    sellerId: "seller2",
-    customerName: "Jane Smith",
-    sellerName: "Healthy Eats",
-    items: [
-      {
-        id: "item3",
-        plateId: "plate3",
-        name: "Beef Stir Fry",
-        price: 14.99,
-        quantity: 1,
-      }
-    ],
-    status: "confirmed",
-    total: 14.99,
-    createdAt: "2025-05-17T10:15:00Z",
-    updatedAt: "2025-05-17T10:20:00Z",
-    scheduledFor: "2025-05-18T12:30:00Z",
-    paymentMethod: "app",
-    deliveryMethod: "delivery",
-    address: "123 Main St, Apt 4B, Cityville"
-  },
-  {
-    id: "ORD-003",
-    customerId: "cust1",
-    sellerId: "seller3",
-    customerName: "Jane Smith",
-    sellerName: "Spice Kingdom",
-    items: [
-      {
-        id: "item4",
-        plateId: "plate4",
-        name: "Butter Chicken with Naan",
-        price: 15.99,
-        quantity: 1,
-      },
-      {
-        id: "item5",
-        plateId: "plate5",
-        name: "Vegetable Samosas",
-        price: 5.99,
-        quantity: 2,
-      }
-    ],
-    status: "delivered",
-    total: 27.97,
-    createdAt: "2025-05-16T16:45:00Z",
-    updatedAt: "2025-05-17T09:30:00Z",
-    scheduledFor: "2025-05-17T17:15:00Z",
-    paymentMethod: "cash",
-    deliveryMethod: "pickup",
-  }
-];
+// Real orders will be fetched from the database
 
 const CustomerOrders: React.FC = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!currentUser) return;
+      
+      try {
+        setLoading(true);
+        const customerOrders = await getCustomerOrders(currentUser.id);
+        setOrders(customerOrders);
+      } catch (error) {
+        console.error('❌ Failed to fetch orders:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [currentUser]);
 
   const getStatusBadgeColor = (status: OrderStatus) => {
     switch(status) {
@@ -133,7 +70,7 @@ const CustomerOrders: React.FC = () => {
   };
   
   const filterOrders = () => {
-    return MOCK_ORDERS.filter(order => {
+    return orders.filter(order => {
       // Search filter
       const matchesSearch = searchQuery === "" || 
         order.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -176,6 +113,24 @@ const CustomerOrders: React.FC = () => {
     // Otherwise return formatted date
     return `${format(date, "MMM d")} at ${format(date, "h:mm a")}`;
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white pb-16">
+        <Navigation />
+        <div className="pt-20 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-center py-16">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+                <p className="text-gray-400">Loading your orders...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white pb-16">
