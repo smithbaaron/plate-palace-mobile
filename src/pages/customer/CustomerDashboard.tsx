@@ -194,7 +194,7 @@ const MOCK_FAVORITE_SELLERS = ["seller1", "seller2"];
 const CustomerDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
-  const [favoriteSellers, setFavoriteSellers] = useState<string[]>(MOCK_FAVORITE_SELLERS);
+  const [favoriteSellers, setFavoriteSellers] = useState<string[]>([]);
   const [realSellers, setRealSellers] = useState<any[]>([]);
   const [realPlates, setRealPlates] = useState<any[]>([]);
   const [realOrders, setRealOrders] = useState<Order[]>([]);
