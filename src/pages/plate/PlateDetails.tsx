@@ -20,6 +20,7 @@ const MOCK_PLATE = {
   seller: "Taste of Home",
   sellerUsername: "tasteofhome",
   seller_id: "mock-seller-id",
+  seller_user_id: "mock-seller-user-id",
   image: "https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
   ingredients: "Pasta, chicken, heavy cream, parmesan cheese, butter, garlic, salt, pepper, parsley",
   availableDate: "2025-05-20",
@@ -65,6 +66,7 @@ const PlateDetails = () => {
             seller_id,
             seller_profiles!inner (
               id,
+              user_id,
               business_name,
               bio
             )
@@ -94,6 +96,7 @@ const PlateDetails = () => {
           seller: sellerProfile?.business_name || "Unknown Seller",
           sellerUsername: sellerProfile?.business_name?.toLowerCase().replace(/\s+/g, '') || "unknown",
           seller_id: data.seller_id,
+          seller_user_id: sellerProfile?.user_id, // Add the actual user_id
           image: data.image_url || "https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
           ingredients: "Check with seller for ingredients",
           availableDate: data.available_date,
@@ -145,9 +148,17 @@ const PlateDetails = () => {
       const unitPrice = sizePrice[selectedSize as keyof typeof sizePrice];
       const totalAmount = unitPrice * quantity;
 
+      console.log('🔍 Order creation data:', {
+        customerId: currentUser.id,
+        sellerId: plate.seller_user_id,
+        plateId: plate.id,
+        sellerProfileId: plate.seller_id,
+        actualSellerUserId: plate.seller_user_id
+      });
+
       await createOrder({
         customerId: currentUser.id,
-        sellerId: plate.seller_id || currentPlate.seller_id,
+        sellerId: plate.seller_user_id || currentPlate.seller_user_id || currentUser.id, // Use the actual user_id
         items: [{
           plateId: plate.id,
           quantity: quantity,
