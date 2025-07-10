@@ -158,18 +158,44 @@ const CustomerOnboarding = () => {
       }
 
       // Update user profile to set user_type to 'customer' and mark as onboarded
-      const { error: profileError } = await supabase
+      console.log('🔧 Updating user profile with customer type...');
+      const { data: updateResult, error: profileError } = await supabase
         .from('profiles')
         .update({
           user_type: 'customer',
           is_onboarded: true,
           updated_at: new Date().toISOString()
         })
-        .eq('id', currentUser.id);
+        .eq('id', currentUser.id)
+        .select();
+
+      console.log('📊 Profile update result:', { data: updateResult, error: profileError });
 
       if (profileError) {
         console.error('Error updating user profile:', profileError);
         throw new Error(`Failed to update profile: ${profileError.message}`);
+      }
+
+      if (!updateResult || updateResult.length === 0) {
+        console.error('❌ No profile record found to update - creating new profile');
+        
+        // Try to insert a new profile record
+        const { data: insertResult, error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: currentUser.id,
+            user_type: 'customer',
+            is_onboarded: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select();
+          
+        console.log('📊 Profile insert result:', { data: insertResult, error: insertError });
+        
+        if (insertError) {
+          throw new Error(`Failed to create profile: ${insertError.message}`);
+        }
       }
 
       console.log('✅ Customer profile and user type updated successfully');
