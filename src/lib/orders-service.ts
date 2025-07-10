@@ -19,9 +19,6 @@ export const getCustomerOrders = async (customerId: string): Promise<Order[]> =>
             id,
             name
           )
-        ),
-        seller_profiles!orders_seller_id_fkey (
-          business_name
         )
       `)
       .eq('customer_id', customerId)
@@ -40,7 +37,25 @@ export const getCustomerOrders = async (customerId: string): Promise<Order[]> =>
     }
 
     // Transform database orders to match Order interface
-    const transformedOrders: Order[] = orders.map(order => {
+    const transformedOrders: Order[] = [];
+    
+    for (const order of orders) {
+      // Fetch seller profile separately since we can't join directly
+      let sellerName = 'Unknown Seller';
+      try {
+        const { data: sellerProfile } = await supabase
+          .from('seller_profiles')
+          .select('business_name')
+          .eq('user_id', order.seller_id)
+          .single();
+        
+        if (sellerProfile) {
+          sellerName = sellerProfile.business_name;
+        }
+      } catch (error) {
+        console.warn('Could not fetch seller profile:', error);
+      }
+      
       const items = (order.order_items || []).map(item => ({
         id: item.id,
         plateId: item.plate_id,
@@ -49,12 +64,12 @@ export const getCustomerOrders = async (customerId: string): Promise<Order[]> =>
         quantity: item.quantity,
       }));
 
-      return {
+      transformedOrders.push({
         id: order.id,
         customerId: order.customer_id,
         sellerId: order.seller_id,
         customerName: 'Customer', // We don't have this in the database yet
-        sellerName: order.seller_profiles?.business_name || 'Unknown Seller',
+        sellerName,
         items,
         status: order.status as any, // Map database status to our enum
         total: parseFloat(order.total_amount),
@@ -64,8 +79,8 @@ export const getCustomerOrders = async (customerId: string): Promise<Order[]> =>
         paymentMethod: 'card', // Default for now
         deliveryMethod: order.delivery_type as 'pickup' | 'delivery',
         address: order.delivery_address,
-      };
-    });
+      });
+    }
 
     console.log('✅ Transformed orders:', transformedOrders);
     return transformedOrders;
