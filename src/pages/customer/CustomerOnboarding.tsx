@@ -156,8 +156,25 @@ const CustomerOnboarding = () => {
       if (error) {
         throw new Error(error.message);
       }
+
+      // Update user profile to set user_type to 'customer' and mark as onboarded
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          user_type: 'customer',
+          is_onboarded: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentUser.id);
+
+      if (profileError) {
+        console.error('Error updating user profile:', profileError);
+        throw new Error(`Failed to update profile: ${profileError.message}`);
+      }
+
+      console.log('✅ Customer profile and user type updated successfully');
       
-      // Mark onboarding as complete
+      // Mark onboarding as complete in context
       await completeOnboarding();
       
       toast({
