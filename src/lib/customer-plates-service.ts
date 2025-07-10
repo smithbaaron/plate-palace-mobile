@@ -96,9 +96,10 @@ export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
 
     console.log("🍽️ Raw plates data from database:", data);
 
-    // Transform the data to match our CustomerPlate type
     const plates: CustomerPlate[] = (data || []).map(plate => {
       console.log("🔍 Processing plate:", plate);
+      console.log("🔍 Plate seller_profiles field:", plate.seller_profiles);
+      console.log("🔍 All plate keys:", Object.keys(plate));
       
       // Check if seller_profiles data exists
       if (!plate.seller_profiles || plate.seller_profiles.length === 0) {
