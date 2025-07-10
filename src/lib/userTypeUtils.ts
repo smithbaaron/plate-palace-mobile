@@ -9,10 +9,10 @@ export const getUserTypeData = async (userId: string | undefined) => {
   try {
     console.log("Fetching user type data for:", userId);
     
-    // Check if tables exist first to avoid 406 errors
-    const tablesExist = await checkTablesExist();
-    if (!tablesExist) {
-      console.log("Database tables not yet created - user will complete onboarding to set up profile");
+    // Quick connection test to avoid failed fetch errors
+    const connectionTest = await testSupabaseConnection();
+    if (!connectionTest) {
+      console.log("Supabase not properly connected - skipping database queries");
       return { userType: null, isOnboarded: false };
     }
     
@@ -69,24 +69,14 @@ export const getUserTypeData = async (userId: string | undefined) => {
   }
 };
 
-// Helper function to check if required tables exist
-const checkTablesExist = async (): Promise<boolean> => {
+// Test if Supabase is properly connected
+const testSupabaseConnection = async (): Promise<boolean> => {
   try {
-    // Try a simple query that won't cause 406 if tables don't exist
-    const { error: sellerError } = await supabase
-      .from('seller_profiles')
-      .select('count')
-      .limit(0);
-      
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .select('count')
-      .limit(0);
-    
-    // If both tables exist (no "relation does not exist" errors)
-    return !sellerError?.message?.includes('relation') && !profileError?.message?.includes('relation');
+    // Simple health check - try to access auth
+    const { data, error } = await supabase.auth.getSession();
+    return !error;
   } catch (err: any) {
-    // If we get a 406 or relation doesn't exist error, tables aren't set up
+    console.log("Supabase connection test failed:", err.message);
     return false;
   }
 };
