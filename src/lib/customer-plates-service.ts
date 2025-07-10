@@ -88,7 +88,7 @@ export const getAvailableSellers = async (): Promise<CustomerSeller[]> => {
   try {
     console.log("🔍 Fetching seller profiles from database...");
     
-    // Let's first check what's in the table
+    // Let's first check what's in the table with detailed error info
     const { data: allData, error: countError } = await supabase
       .from('seller_profiles')
       .select('*');
@@ -98,6 +98,19 @@ export const getAvailableSellers = async (): Promise<CustomerSeller[]> => {
     
     if (countError) {
       console.error("❌ Error checking seller_profiles:", countError);
+      console.error("❌ Error details:", countError.details);
+      console.error("❌ Error hint:", countError.hint);
+      console.error("❌ Error code:", countError.code);
+    }
+    
+    // Test a simple count query
+    const { count, error: countOnlyError } = await supabase
+      .from('seller_profiles')
+      .select('*', { count: 'exact', head: true });
+    
+    console.log("📊 Direct count query result:", count);
+    if (countOnlyError) {
+      console.error("❌ Count query error:", countOnlyError);
     }
     
     const { data, error } = await supabase
