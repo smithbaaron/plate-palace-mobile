@@ -9,10 +9,10 @@ export const getUserTypeData = async (userId: string | undefined) => {
   try {
     console.log("Fetching user type data for:", userId);
     
-    // Quick connection test to avoid failed fetch errors
-    const connectionTest = await testSupabaseConnection();
-    if (!connectionTest) {
-      console.log("Supabase not properly connected - skipping database queries");
+    // Check if required tables exist for the app functionality
+    const tablesExist = await checkRequiredTables();
+    if (!tablesExist) {
+      console.log("Required database tables not found - user needs to complete setup");
       return { userType: null, isOnboarded: false };
     }
     
@@ -69,14 +69,29 @@ export const getUserTypeData = async (userId: string | undefined) => {
   }
 };
 
-// Test if Supabase is properly connected
-const testSupabaseConnection = async (): Promise<boolean> => {
+// Check if required tables exist for the seller/customer functionality
+const checkRequiredTables = async (): Promise<boolean> => {
   try {
-    // Simple health check - try to access auth
-    const { data, error } = await supabase.auth.getSession();
-    return !error;
+    // Test seller_profiles table
+    const { error: sellerError } = await supabase
+      .from('seller_profiles')
+      .select('id')
+      .limit(0);
+      
+    // Test profiles table  
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .select('id')
+      .limit(0);
+    
+    // If we get table doesn't exist errors, return false
+    if (sellerError?.code === "42P01" || profileError?.code === "42P01") {
+      return false;
+    }
+    
+    return true;
   } catch (err: any) {
-    console.log("Supabase connection test failed:", err.message);
+    console.log("Error checking required tables:", err.message);
     return false;
   }
 };
