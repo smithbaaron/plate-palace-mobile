@@ -19,7 +19,49 @@ export const getUserTypeData = async (userId: string | undefined) => {
     let userType: UserType = null;
     let isOnboarded = false;
     
-    // First check profiles table for explicit user_type setting (this takes priority)
+    // PRIORITY 1: Check seller_profiles table first (actual seller profile takes priority)
+    try {
+      const { data: sellerProfile, error } = await supabase
+        .from('seller_profiles')
+        .select('id, business_name')
+        .eq('user_id', userId)
+        .single();
+        
+      if (sellerProfile && !error) {
+        userType = 'seller';
+        // Only consider onboarded if they have filled out basic info
+        isOnboarded = !!(sellerProfile.business_name && sellerProfile.business_name.trim());
+        console.log('✅ Found seller profile - user is a seller:', { userType, isOnboarded });
+        return { userType, isOnboarded };
+      } else if (error && error.code !== "PGRST116") {
+        // PGRST116 is "not found" which is expected, other errors are concerning
+        console.error("Error checking seller profile:", error);
+      }
+    } catch (err: any) {
+      console.error("Error checking seller profile:", err);
+    }
+    
+    // PRIORITY 2: Check customer_profiles table
+    try {
+      const { data: customerProfile, error } = await supabase
+        .from('customer_profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+        
+      if (customerProfile && !error) {
+        userType = 'customer';
+        isOnboarded = true;
+        console.log('✅ Found customer profile - user is a customer:', { userType, isOnboarded });
+        return { userType, isOnboarded };
+      } else if (error && error.code !== "PGRST116") {
+        console.error("Error checking customer profile:", error);
+      }
+    } catch (err: any) {
+      console.error("Error checking customer profile:", err);
+    }
+    
+    // FALLBACK: Check profiles table for explicit user_type setting
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -37,28 +79,6 @@ export const getUserTypeData = async (userId: string | undefined) => {
       }
     } catch (err: any) {
       console.error("Error checking profile:", err);
-    }
-    
-    // Fallback: If no explicit user_type is set, infer from existing profiles
-    // Check if user has a seller profile
-    try {
-      const { data: sellerProfile, error } = await supabase
-        .from('seller_profiles')
-        .select('id, business_name')
-        .eq('user_id', userId)
-        .single();
-        
-      if (sellerProfile && !error) {
-        userType = 'seller';
-        // Only consider onboarded if they have filled out basic info
-        isOnboarded = !!(sellerProfile.business_name && sellerProfile.business_name.trim());
-        console.log('✅ Inferred seller type from seller_profiles table:', { userType, isOnboarded });
-      } else if (error && error.code !== "PGRST116") {
-        // PGRST116 is "not found" which is expected, other errors are concerning
-        console.error("Error checking seller profile:", error);
-      }
-    } catch (err: any) {
-      console.error("Error checking seller profile:", err);
     }
     
     return { 
