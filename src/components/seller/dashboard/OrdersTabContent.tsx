@@ -20,110 +20,18 @@ import { Order, OrderStatus } from "@/types/order";
 import { useNotifications } from "@/hooks/use-notifications";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-
-// Mock data - would be replaced with actual API call
-const MOCK_ORDERS: Order[] = [
-  {
-    id: "ORD-001",
-    customerId: "cust1",
-    sellerId: "seller1",
-    customerName: "Jane Smith",
-    sellerName: "Your Store",
-    items: [
-      {
-        id: "item1",
-        plateId: "plate1",
-        name: "Chicken Alfredo Pasta",
-        price: 12.99,
-        quantity: 2,
-      },
-      {
-        id: "item2",
-        plateId: "plate2",
-        name: "Garden Salad",
-        price: 6.99,
-        quantity: 1,
-      }
-    ],
-    status: "pending",
-    total: 32.97,
-    createdAt: "2025-05-17T14:30:00Z",
-    updatedAt: "2025-05-17T14:30:00Z",
-    scheduledFor: "2025-05-18T18:00:00Z",
-    paymentMethod: "card",
-    deliveryMethod: "pickup",
-  },
-  {
-    id: "ORD-002",
-    customerId: "cust2",
-    sellerId: "seller1",
-    customerName: "Alex Johnson",
-    sellerName: "Your Store",
-    items: [
-      {
-        id: "item3",
-        plateId: "plate3",
-        name: "Beef Stir Fry",
-        price: 14.99,
-        quantity: 1,
-      }
-    ],
-    status: "confirmed",
-    total: 14.99,
-    createdAt: "2025-05-17T10:15:00Z",
-    updatedAt: "2025-05-17T10:20:00Z",
-    scheduledFor: "2025-05-18T12:30:00Z",
-    paymentMethod: "app",
-    deliveryMethod: "delivery",
-    address: "123 Main St, Apt 4B, Cityville"
-  },
-  {
-    id: "ORD-003",
-    customerId: "cust3",
-    sellerId: "seller1",
-    customerName: "Sam Taylor",
-    sellerName: "Your Store",
-    items: [
-      {
-        id: "item4",
-        plateId: "plate1",
-        name: "Chicken Alfredo Pasta",
-        price: 12.99,
-        quantity: 3,
-      }
-    ],
-    status: "ready",
-    total: 38.97,
-    createdAt: "2025-05-16T16:45:00Z",
-    updatedAt: "2025-05-17T09:30:00Z",
-    scheduledFor: "2025-05-18T17:15:00Z",
-    paymentMethod: "cash",
-    deliveryMethod: "pickup",
-  }
-];
+import { useAuth } from "@/context/AuthContext";
+import { useSellerOrders } from "@/hooks/seller/use-seller-orders";
 
 const OrdersTabContent: React.FC = () => {
   const { notifyInfo } = useNotifications();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { currentUser } = useAuth();
+  const { orders, isLoading, error, loadOrders } = useSellerOrders();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus[]>([]);
   const [paymentFilter, setPaymentFilter] = useState<string[]>([]);
   const [deliveryFilter, setDeliveryFilter] = useState<string[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-
-  // Simulate loading orders
-  useEffect(() => {
-    const loadOrders = async () => {
-      setIsLoading(true);
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setOrders(MOCK_ORDERS);
-      setIsLoading(false);
-    };
-
-    loadOrders();
-  }, []);
 
   const filterOrders = () => {
     return orders.filter(order => {
@@ -151,13 +59,10 @@ const OrdersTabContent: React.FC = () => {
   const filteredOrders = filterOrders();
 
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-    const updatedOrders = orders.map(order => 
-      order.id === orderId 
-        ? { ...order, status: newStatus, updatedAt: new Date().toISOString() } 
-        : order
-    );
-    setOrders(updatedOrders);
-    notifyInfo("Order Updated", `Order ${orderId} status changed to ${newStatus}`);
+    // TODO: Implement backend API call to update order status
+    notifyInfo("Status Update", `Order ${orderId} status would be updated to ${newStatus}`);
+    // For now, just reload the orders to get fresh data
+    loadOrders();
   };
 
   const getStatusBadgeColor = (status: OrderStatus) => {
