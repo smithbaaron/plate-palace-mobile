@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -8,17 +8,11 @@ import { Package, Calendar, Bell } from "lucide-react";
 
 const LandingPage = () => {
   const { isAuthenticated } = useAuth();
-  const { userType, isOnboarded } = useUserType();
+  const { userType } = useUserType();
   
-  // Redirect authenticated users directly - no loading state needed
-  if (isAuthenticated && userType && isOnboarded) {
-    const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
-    return <Navigate to={dashboardUrl} replace />;
-  }
-  
-  // If authenticated but not onboarded, redirect to onboarding
-  if (isAuthenticated && userType && !isOnboarded) {
-    return <Navigate to={`/${userType}/onboarding`} replace />;
+  // Don't show landing page to authenticated users at all
+  if (isAuthenticated) {
+    return null;
   }
 
   return (
