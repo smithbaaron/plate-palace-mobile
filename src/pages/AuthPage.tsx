@@ -56,9 +56,9 @@ const AuthPage = () => {
       return;
     }
     
-    // Priority 4: Default to seller onboarding
-    console.log("🔄 No specific user data, defaulting to seller onboarding");
-    navigate("/seller/onboarding", { replace: true });
+    // Priority 4: Default to the type specified in URL params
+    console.log(`🔄 No specific user data, defaulting to ${defaultType} onboarding`);
+    navigate(`/${defaultType}/onboarding`, { replace: true });
     
   }, [isAuthenticated, userType, isOnboarded, loading, supabaseUser, navigate]);
   
