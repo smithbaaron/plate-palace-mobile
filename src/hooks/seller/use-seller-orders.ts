@@ -180,17 +180,17 @@ export const useSellerOrders = () => {
         try {
           console.log('🔍 Fetching customer name for customer_id:', order.customer_id);
           
-          const { data: customerProfile, error: customerError } = await supabase
+          const { data: customerProfiles, error: customerError } = await supabase
             .from('profiles')
             .select('username')
-            .eq('id', order.customer_id)
-            .single();
+            .eq('id', order.customer_id);
             
-          if (customerProfile?.username && !customerError) {
-            customerName = customerProfile.username;
+          if (customerProfiles && customerProfiles.length > 0 && customerProfiles[0].username && !customerError) {
+            customerName = customerProfiles[0].username;
             console.log('✅ Found customer name:', customerName);
           } else {
             console.log('⚠️ No customer username found, error:', customerError);
+            console.log('⚠️ Customer profiles data:', customerProfiles);
             customerName = `Customer ${order.customer_id.slice(0, 8)}`;
           }
         } catch (err) {
