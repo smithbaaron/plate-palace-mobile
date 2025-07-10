@@ -29,9 +29,14 @@ export const getUserTypeData = async (userId: string | undefined) => {
         
       if (sellerProfile && !error) {
         userType = 'seller';
-        // Only consider onboarded if they have filled out basic info
-        isOnboarded = !!(sellerProfile.business_name && sellerProfile.business_name.trim());
-        console.log('✅ Found seller profile - user is a seller:', { userType, isOnboarded });
+        // If seller profile exists with any business name, consider them onboarded
+        isOnboarded = true; // Since they have a seller profile, they're considered onboarded
+        console.log('✅ Found seller profile - user is a seller:', { 
+          userType, 
+          isOnboarded, 
+          businessName: sellerProfile.business_name,
+          profileId: sellerProfile.id
+        });
         return { userType, isOnboarded };
       } else if (error && error.code !== "PGRST116") {
         // PGRST116 is "not found" which is expected, other errors are concerning
