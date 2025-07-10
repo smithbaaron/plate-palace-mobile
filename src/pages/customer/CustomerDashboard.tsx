@@ -10,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getAvailablePlates, getAvailableSellers } from "@/lib/customer-plates-service";
+import { getCustomerOrders } from "@/lib/orders-service";
+import { Order } from "@/types/order";
+import { useAuth } from "@/context/AuthContext";
 
 // Mock data for plates with delivery/pickup options
 const MOCK_PLATES = [
@@ -183,74 +186,7 @@ const MOCK_MEAL_PREPS = [
   }
 ];
 
-// Mock data for purchased items (current and past)
-const MOCK_PURCHASED_PLATES = [
-  {
-    id: "purchased1",
-    plateId: "plate1",
-    name: "Chicken Alfredo Pasta",
-    seller: "Taste of Home",
-    price: 12.99,
-    quantity: 2,
-    purchasedAt: "2025-07-10T10:30:00Z",
-    status: "ready",
-    deliveryMethod: "pickup",
-    image: "https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
-  },
-  {
-    id: "purchased2",
-    plateId: "plate2",
-    name: "Teriyaki Salmon Bowl",
-    seller: "Healthy Meals",
-    price: 14.99,
-    quantity: 1,
-    purchasedAt: "2025-07-09T12:15:00Z",
-    status: "delivered",
-    deliveryMethod: "delivery",
-    image: "https://images.unsplash.com/photo-1580554530778-ca36943938b2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
-  },
-  {
-    id: "purchased3",
-    plateId: "plate3",
-    name: "Butter Chicken",
-    seller: "Spice Kitchen",
-    price: 13.99,
-    quantity: 1,
-    purchasedAt: "2025-07-08T15:30:00Z",
-    status: "delivered",
-    deliveryMethod: "pickup",
-    image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
-  }
-];
-
-const MOCK_PURCHASED_MEAL_PREPS = [
-  {
-    id: "purchased_prep1",
-    prepId: "prep1",
-    name: "5-Day Keto Package",
-    seller: "Healthy Meals",
-    price: 59.99,
-    mealCount: 10,
-    purchasedAt: "2025-07-09T14:20:00Z",
-    deliveryDate: "2025-07-11",
-    status: "confirmed",
-    deliveryMethod: "delivery",
-    image: "https://images.unsplash.com/photo-1611599537845-1c7aca0091c0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
-  },
-  {
-    id: "purchased_prep2",
-    prepId: "prep2",
-    name: "3-Day Vegetarian Package",
-    seller: "Taste of Home",
-    price: 34.99,
-    mealCount: 6,
-    purchasedAt: "2025-07-05T10:00:00Z",
-    deliveryDate: "2025-07-06",
-    status: "delivered",
-    deliveryMethod: "pickup",
-    image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
-  }
-];
+// Real orders will be fetched from the database
 
 // Mock favorite sellers (would come from user preferences)
 const MOCK_FAVORITE_SELLERS = ["seller1", "seller2"];
@@ -261,15 +197,19 @@ const CustomerDashboard = () => {
   const [favoriteSellers, setFavoriteSellers] = useState<string[]>(MOCK_FAVORITE_SELLERS);
   const [realSellers, setRealSellers] = useState<any[]>([]);
   const [realPlates, setRealPlates] = useState<any[]>([]);
+  const [realOrders, setRealOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { notifyInfo, notifySuccess } = useNotifications();
+  const { currentUser } = useAuth();
 
   // Fetch real data from database
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log("🔄 Fetching real sellers and plates data...");
+        console.log("🔄 Fetching real sellers, plates, and orders data...");
+        
+        // Fetch sellers and plates first
         const [sellersData, platesData] = await Promise.all([
           getAvailableSellers(),
           getAvailablePlates()
@@ -280,18 +220,27 @@ const CustomerDashboard = () => {
         
         setRealSellers(sellersData);
         setRealPlates(platesData);
+        
+        // Fetch orders if user is available
+        if (currentUser) {
+          const ordersData = await getCustomerOrders(currentUser.id);
+          console.log("📦 Fetched orders:", ordersData);
+          setRealOrders(ordersData);
+        }
+        
         setLoading(false);
       } catch (error) {
         console.error("❌ Error fetching data:", error);
         // Fallback to mock data if real data fails
         setRealSellers(MOCK_SELLERS);
         setRealPlates(MOCK_PLATES);
+        setRealOrders([]);
         setLoading(false);
       }
     };
     
     fetchData();
-  }, []);
+  }, [currentUser]);
   
   // Use real data, fallback to mock if empty
   const sellersToUse = realSellers.length > 0 ? realSellers : MOCK_SELLERS;
@@ -325,10 +274,10 @@ const CustomerDashboard = () => {
     favoriteSellers.includes(seller.id)
   );
 
-  // Get today's purchases
+  // Get today's orders from real data
   const today = new Date().toDateString();
-  const todaysPurchasedPlates = MOCK_PURCHASED_PLATES.filter(item => 
-    new Date(item.purchasedAt).toDateString() === today
+  const todaysOrders = realOrders.filter(order => 
+    new Date(order.createdAt).toDateString() === today
   );
   
   const handleOrderPlate = (plateId: string, plateName: string) => {
@@ -413,32 +362,30 @@ const CustomerDashboard = () => {
                   <Calendar className="mr-2 text-nextplate-red" />
                   Today's Orders
                 </h2>
-                {todaysPurchasedPlates.length > 0 ? (
+                {todaysOrders.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {todaysPurchasedPlates.map(item => (
-                      <Card key={item.id} className="bg-nextplate-darkgray border-gray-800">
-                        <CardContent className="p-4">
-                          <div className="flex items-center space-x-4">
-                            <img 
-                              src={item.image} 
-                              alt={item.name}
-                              className="w-16 h-16 rounded-lg object-cover"
-                            />
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-sm">{item.name}</h3>
-                              <p className="text-xs text-gray-400">by {item.seller}</p>
-                              <div className="flex items-center justify-between mt-2">
-                                <span className="text-sm font-bold text-nextplate-red">
-                                  ${(item.price * item.quantity).toFixed(2)}
-                                </span>
-                                <Badge className={`${getStatusBadgeColor(item.status)} text-xs`}>
-                                  {item.status}
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                     {todaysOrders.map(order => (
+                       <Card key={order.id} className="bg-nextplate-darkgray border-gray-800">
+                         <CardContent className="p-4">
+                           <div className="flex items-center space-x-4">
+                             <div className="w-16 h-16 rounded-lg bg-nextplate-red/20 flex items-center justify-center">
+                               <Package size={24} className="text-nextplate-red" />
+                             </div>
+                             <div className="flex-1">
+                               <h3 className="font-semibold text-sm">{order.items[0]?.name || "Order"}</h3>
+                               <p className="text-xs text-gray-400">by {order.sellerName}</p>
+                               <div className="flex items-center justify-between mt-2">
+                                 <span className="text-sm font-bold text-nextplate-red">
+                                   ${order.total.toFixed(2)}
+                                 </span>
+                                 <Badge className={`${getStatusBadgeColor(order.status)} text-xs`}>
+                                   {order.status}
+                                 </Badge>
+                               </div>
+                             </div>
+                           </div>
+                         </CardContent>
+                       </Card>
                     ))}
                   </div>
                 ) : (
@@ -529,28 +476,26 @@ const CustomerDashboard = () => {
                   <Package className="mr-2 text-nextplate-red" />
                   Recent Meal Preps
                 </h2>
-                {MOCK_PURCHASED_MEAL_PREPS.length > 0 ? (
+                {realOrders.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {MOCK_PURCHASED_MEAL_PREPS.map(prep => (
-                      <Card key={prep.id} className="bg-nextplate-darkgray border-gray-800">
+                    {realOrders.slice(0, 3).map(order => (
+                      <Card key={order.id} className="bg-nextplate-darkgray border-gray-800">
                         <CardContent className="p-6">
                           <div className="flex items-center space-x-4">
-                            <img 
-                              src={prep.image} 
-                              alt={prep.name}
-                              className="w-20 h-20 rounded-lg object-cover"
-                            />
+                            <div className="w-20 h-20 rounded-lg bg-nextplate-red/20 flex items-center justify-center">
+                              <Package size={28} className="text-nextplate-red" />
+                            </div>
                             <div className="flex-1">
-                              <h3 className="font-semibold mb-1">{prep.name}</h3>
-                              <p className="text-sm text-gray-400 mb-2">by {prep.seller}</p>
+                              <h3 className="font-semibold mb-1">Recent Order</h3>
+                              <p className="text-sm text-gray-400 mb-2">by {order.sellerName}</p>
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <span className="font-bold text-nextplate-red">${prep.price}</span>
-                                  <span className="text-sm text-gray-400 ml-2">• {prep.mealCount} meals</span>
+                                  <span className="font-bold text-nextplate-red">${order.total.toFixed(2)}</span>
+                                  <span className="text-sm text-gray-400 ml-2">• {order.items.length} items</span>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-sm text-gray-400">Delivery</p>
-                                  <p className="text-sm font-medium">{prep.deliveryDate}</p>
+                                  <p className="text-sm text-gray-400">Recent Order</p>
+                                  <p className="text-sm font-medium">{new Date(order.createdAt).toLocaleDateString()}</p>
                                 </div>
                               </div>
                             </div>
@@ -798,33 +743,31 @@ const CustomerDashboard = () => {
                     <History className="mr-2 text-nextplate-red" />
                     Plate Orders
                   </h2>
-                  {MOCK_PURCHASED_PLATES.length > 0 ? (
+                  {realOrders.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {MOCK_PURCHASED_PLATES.map(item => (
-                        <Card key={item.id} className="bg-nextplate-darkgray border-gray-800">
+                      {realOrders.map(order => (
+                        <Card key={order.id} className="bg-nextplate-darkgray border-gray-800">
                           <CardContent className="p-4">
                             <div className="flex items-center space-x-4">
-                              <img 
-                                src={item.image} 
-                                alt={item.name}
-                                className="w-16 h-16 rounded-lg object-cover"
-                              />
+                              <div className="w-16 h-16 rounded-lg bg-nextplate-red/20 flex items-center justify-center">
+                                <Package size={24} className="text-nextplate-red" />
+                              </div>
                               <div className="flex-1">
-                                <h3 className="font-semibold text-sm">{item.name}</h3>
-                                <p className="text-xs text-gray-400">by {item.seller}</p>
+                                <h3 className="font-semibold text-sm">{order.items[0]?.name || "Order"}</h3>
+                                <p className="text-xs text-gray-400">by {order.sellerName}</p>
                                 <p className="text-xs text-gray-400">
-                                  {new Date(item.purchasedAt).toLocaleDateString()} • Qty: {item.quantity}
+                                  {new Date(order.createdAt).toLocaleDateString()} • {order.items.length} items
                                 </p>
                                 <div className="flex items-center justify-between mt-2">
                                   <span className="text-sm font-bold text-nextplate-red">
-                                    ${(item.price * item.quantity).toFixed(2)}
+                                    ${order.total.toFixed(2)}
                                   </span>
                                   <div className="flex items-center space-x-2">
-                                    <Badge className={`${getStatusBadgeColor(item.status)} text-xs`}>
-                                      {item.status}
+                                    <Badge className={`${getStatusBadgeColor(order.status)} text-xs`}>
+                                      {order.status}
                                     </Badge>
                                     <Badge variant="outline" className="text-xs">
-                                      {item.deliveryMethod}
+                                      {order.deliveryMethod}
                                     </Badge>
                                   </div>
                                 </div>
@@ -838,8 +781,8 @@ const CustomerDashboard = () => {
                     <Card className="bg-nextplate-darkgray border-gray-800">
                       <CardContent className="p-8 text-center">
                         <Package size={48} className="mx-auto text-gray-500 mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">No plate orders yet</h3>
-                        <p className="text-gray-400 mb-4">Start ordering delicious plates!</p>
+                        <h3 className="text-lg font-semibold mb-2">No orders yet</h3>
+                        <p className="text-gray-400 mb-4">Start ordering delicious meals!</p>
                         <Button 
                           className="bg-nextplate-red hover:bg-red-600"
                           onClick={() => setActiveTab("plates")}
@@ -851,62 +794,17 @@ const CustomerDashboard = () => {
                   )}
                 </div>
 
-                {/* Meal Prep History */}
-                <div>
-                  <h2 className="text-2xl font-bold mb-4 flex items-center">
-                    <Package className="mr-2 text-nextplate-red" />
-                    Meal Prep Orders
-                  </h2>
-                  {MOCK_PURCHASED_MEAL_PREPS.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {MOCK_PURCHASED_MEAL_PREPS.map(prep => (
-                        <Card key={prep.id} className="bg-nextplate-darkgray border-gray-800">
-                          <CardContent className="p-6">
-                            <div className="flex items-center space-x-4">
-                              <img 
-                                src={prep.image} 
-                                alt={prep.name}
-                                className="w-20 h-20 rounded-lg object-cover"
-                              />
-                              <div className="flex-1">
-                                <h3 className="font-semibold mb-1">{prep.name}</h3>
-                                <p className="text-sm text-gray-400 mb-2">by {prep.seller}</p>
-                                <p className="text-sm text-gray-400 mb-2">
-                                  Ordered: {new Date(prep.purchasedAt).toLocaleDateString()}
-                                </p>
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <span className="font-bold text-nextplate-red">${prep.price}</span>
-                                    <span className="text-sm text-gray-400 ml-2">• {prep.mealCount} meals</span>
-                                  </div>
-                                  <div className="text-right">
-                                    <Badge className={`${getStatusBadgeColor(prep.status)} text-xs mb-1`}>
-                                      {prep.status}
-                                    </Badge>
-                                    <p className="text-xs text-gray-400">{prep.deliveryMethod}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <Card className="bg-nextplate-darkgray border-gray-800">
-                      <CardContent className="p-8 text-center">
-                        <Package size={48} className="mx-auto text-gray-500 mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">No meal prep orders yet</h3>
-                        <p className="text-gray-400 mb-4">Try our convenient meal prep packages!</p>
-                        <Button 
-                          className="bg-nextplate-red hover:bg-red-600"
-                          onClick={() => setActiveTab("mealpreps")}
-                        >
-                          Browse Meal Preps
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  )}
+                {/* View All Orders Link */}
+                <div className="text-center">
+                  <Button 
+                    variant="outline" 
+                    className="border-nextplate-red text-nextplate-red hover:bg-nextplate-red hover:text-white"
+                    asChild
+                  >
+                    <Link to="/customer/orders">
+                      View All Orders
+                    </Link>
+                  </Button>
                 </div>
               </div>
             </TabsContent>
