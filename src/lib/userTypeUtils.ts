@@ -19,6 +19,27 @@ export const getUserTypeData = async (userId: string | undefined) => {
     let userType: UserType = null;
     let isOnboarded = false;
     
+    // First check profiles table for explicit user_type setting (this takes priority)
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('user_type, is_onboarded')
+        .eq('id', userId)
+        .single();
+        
+      if (profile && !error && profile.user_type) {
+        userType = profile.user_type as UserType;
+        isOnboarded = profile.is_onboarded || false;
+        console.log('✅ Found explicit user type in profiles table:', { userType, isOnboarded });
+        return { userType, isOnboarded };
+      } else if (error && error.code !== "PGRST116") {
+        console.error("Error checking profile:", error);
+      }
+    } catch (err: any) {
+      console.error("Error checking profile:", err);
+    }
+    
+    // Fallback: If no explicit user_type is set, infer from existing profiles
     // Check if user has a seller profile
     try {
       const { data: sellerProfile, error } = await supabase
@@ -31,32 +52,13 @@ export const getUserTypeData = async (userId: string | undefined) => {
         userType = 'seller';
         // Only consider onboarded if they have filled out basic info
         isOnboarded = !!(sellerProfile.business_name && sellerProfile.business_name.trim());
+        console.log('✅ Inferred seller type from seller_profiles table:', { userType, isOnboarded });
       } else if (error && error.code !== "PGRST116") {
         // PGRST116 is "not found" which is expected, other errors are concerning
         console.error("Error checking seller profile:", error);
       }
     } catch (err: any) {
       console.error("Error checking seller profile:", err);
-    }
-    
-    // Check profiles table for user type if no seller profile found
-    if (!userType) {
-      try {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('user_type, is_onboarded')
-          .eq('id', userId)
-          .single();
-          
-        if (profile && !error) {
-          userType = profile.user_type as UserType;
-          isOnboarded = profile.is_onboarded || false;
-        } else if (error && error.code !== "PGRST116") {
-          console.error("Error checking profile:", error);
-        }
-      } catch (err: any) {
-        console.error("Error checking profile:", err);
-      }
     }
     
     return { 
