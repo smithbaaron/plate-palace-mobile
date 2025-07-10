@@ -189,6 +189,39 @@ export const getAvailableSellers = async (): Promise<CustomerSeller[]> => {
 // Fetch plates from a specific seller
 export const getSellerPlates = async (sellerId: string): Promise<CustomerPlate[]> => {
   try {
+    console.log(`🔍 Fetching plates for seller: ${sellerId}`);
+    
+    // First, let's check ALL plates for this seller without filters
+    const { data: allSellerPlates, error: allError } = await supabase
+      .from('plates')
+      .select('*')
+      .eq('seller_id', sellerId);
+    
+    console.log(`🍽️ ALL plates for seller ${sellerId} (no filters):`, allSellerPlates);
+    
+    // Let's examine each plate in detail
+    if (allSellerPlates && allSellerPlates.length > 0) {
+      const currentDate = new Date().toISOString();
+      console.log("📅 Current date for filtering:", currentDate);
+      
+      allSellerPlates.forEach((plate, index) => {
+        console.log(`🔍 Seller Plate ${index + 1} details:`, {
+          id: plate.id,
+          name: plate.name,
+          quantity: plate.quantity,
+          available_date: plate.available_date,
+          seller_id: plate.seller_id
+        });
+        console.log(`📊 Seller Plate ${index + 1} filter check:`, {
+          quantityCheck: `${plate.quantity} > 0 = ${plate.quantity > 0}`,
+          availableDateCheck: `${plate.available_date} >= ${currentDate} = ${plate.available_date >= currentDate}`
+        });
+      });
+    }
+    
+    if (allError) {
+      console.error("❌ Error fetching all seller plates:", allError);
+    }
     const { data, error } = await supabase
       .from('plates')
       .select(`
