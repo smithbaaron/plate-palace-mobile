@@ -24,7 +24,7 @@ const LandingPage = () => {
         <section className="max-w-7xl mx-auto text-center mb-20">
           <div className="flex justify-center mb-6">
             <img 
-              src="/lovable-uploads/7b3638b5-87a3-48c9-b506-2a97a7586b84.png" 
+              src="/lovable-uploads/dabcde3c-2ce5-46ff-bb33-e32bacb4fb8b.png" 
               alt="BestPlate Logo"
               className="h-40 md:h-48"
             />
@@ -156,7 +156,7 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-center mb-4">
             <img 
-              src="/lovable-uploads/7b3638b5-87a3-48c9-b506-2a97a7586b84.png" 
+              src="/lovable-uploads/dabcde3c-2ce5-46ff-bb33-e32bacb4fb8b.png" 
               alt="BestPlate Logo" 
               className="h-10"
             />

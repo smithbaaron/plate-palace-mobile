@@ -6,7 +6,7 @@ const NavigationLogo = () => {
     <div className="flex items-center">
       <Link to="/" className="flex items-center">
         <img 
-          src="/lovable-uploads/7b3638b5-87a3-48c9-b506-2a97a7586b84.png" 
+          src="/lovable-uploads/dabcde3c-2ce5-46ff-bb33-e32bacb4fb8b.png" 
           alt="BestPlate Logo" 
           className="h-12"
         />
