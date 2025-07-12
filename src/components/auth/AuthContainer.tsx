@@ -32,7 +32,7 @@ const AuthContainer: React.FC<AuthContainerProps> = ({
         Back to Home
       </button>
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold mb-1">Welcome to NextPlate</h2>
+        <h2 className="text-2xl font-bold mb-1">Welcome to BestPlate</h2>
         <p className="text-gray-400">
           Sign in or create an account as a{" "}
           <span className={defaultType === "seller" ? "text-nextplate-orange" : "text-nextplate-red"}>

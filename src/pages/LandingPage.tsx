@@ -25,7 +25,7 @@ const LandingPage = () => {
           <div className="flex justify-center mb-6">
             <img 
               src="/lovable-uploads/7b3638b5-87a3-48c9-b506-2a97a7586b84.png" 
-              alt="NextPlate Logo" 
+              alt="BestPlate Logo"
               className="h-40 md:h-48"
             />
           </div>
@@ -157,7 +157,7 @@ const LandingPage = () => {
           <div className="flex justify-center mb-4">
             <img 
               src="/lovable-uploads/7b3638b5-87a3-48c9-b506-2a97a7586b84.png" 
-              alt="NextPlate Logo" 
+              alt="BestPlate Logo" 
               className="h-10"
             />
           </div>
