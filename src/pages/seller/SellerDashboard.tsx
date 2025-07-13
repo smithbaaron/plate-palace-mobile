@@ -37,7 +37,7 @@ const SellerDashboard = () => {
   } = useSellerPlates();
   
   const handleCreateMealPrep = () => {
-    notifyInfo("Coming soon!", "This feature will be available in the next update.");
+    window.location.href = "/seller/create-bundle";
   };
 
   // Only show loading for tabs that depend on plates data

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 
 // Import the types and components we've extracted
 import { PlateFormValues, formSchema, Plate } from "./PlateFormTypes";
@@ -159,6 +160,17 @@ const AddSinglePlateForm: React.FC<AddSinglePlateFormProps> = ({
         toast({
           title: "Success!",
           description: `${data.name} has been added to your menu.`,
+          action: (
+            <ToastAction 
+              altText="Create meal prep package"
+              onClick={() => {
+                window.location.href = "/seller/create-bundle";
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              Create Meal Prep
+            </ToastAction>
+          )
         });
       }
     } catch (error) {
