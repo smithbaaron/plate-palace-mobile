@@ -23,7 +23,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     navigate("/seller/create-bundle");
   };
 
-  const canCreateMealPrep = mealPrepPlatesCount >= 2;
+  const canCreateMealPrep = mealPrepPlatesCount >= 1;
 
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
