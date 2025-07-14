@@ -103,28 +103,31 @@ export const useSellerCustomers = () => {
           // Get unique customer IDs
           const customerIds = [...new Set(orders.map(order => order.customer_id))];
           
-          // Since we can't directly access auth.users, let's use a workaround
-          // Try to get email from order metadata or use a more realistic approach
-          const { data: profiles, error: profilesError } = await supabase
-            .from('profiles')
-            .select('id, username')
-            .in('id', customerIds);
+          // Get customer profiles with their real information
+          const { data: customerProfiles, error: customerProfilesError } = await supabase
+            .from('customer_profiles')
+            .select('user_id, full_name, email, phone, followed_sellers')
+            .in('user_id', customerIds);
 
-          console.log('🔍 Customer profiles data:', profiles);
+          console.log('🔍 Customer profiles with real data:', customerProfiles);
           console.log('🔍 Customer IDs to lookup:', customerIds);
 
-          if (profilesError) {
-            console.error('❌ Error fetching profiles:', profilesError);
+          if (customerProfilesError) {
+            console.error('❌ Error fetching customer profiles:', customerProfilesError);
+            // Fallback to basic profiles if customer_profiles fails
+            const { data: basicProfiles } = await supabase
+              .from('profiles')
+              .select('id, username')
+              .in('id', customerIds);
+            console.log('🔍 Fallback to basic profiles:', basicProfiles);
           }
 
-          // Process orders with available customer data
+          // Process orders with real customer data from customer_profiles
           orders.forEach(order => {
             const customerId = order.customer_id;
-            const profile = profiles?.find(p => p.id === customerId);
-            // For now, we'll show the username as name and generate email from username
-            // In a real app, you'd want to store customer details in a separate customer table
-            const customerName = profile?.username || `Customer ${customerId.slice(0, 8)}`;
-            const customerEmail = profile?.username ? `${profile.username}@example.com` : `customer${customerId.slice(0, 8)}@example.com`;
+            const customerProfile = customerProfiles?.find(cp => cp.user_id === customerId);
+            const customerName = customerProfile?.full_name || `Customer ${customerId.slice(0, 8)}`;
+            const customerEmail = customerProfile?.email || `customer${customerId.slice(0, 8)}@example.com`;
             
             if (customersFromOrders.has(customerId)) {
               const existing = customersFromOrders.get(customerId)!;
@@ -154,24 +157,16 @@ export const useSellerCustomers = () => {
       if (customerProfilesTableExists) {
         const { data: followers, error: followersError } = await supabase
           .from('customer_profiles')
-          .select('user_id, followed_sellers')
+          .select('user_id, followed_sellers, full_name, email, phone')
           .contains('followed_sellers', [currentUser.id]);
 
         if (followersError) {
           console.error('❌ Error fetching followers:', followersError);
         } else if (followers) {
-          // Get follower profile data separately
-          const followerIds = followers.map(f => f.user_id);
-          const { data: followerProfiles } = await supabase
-            .from('profiles')
-            .select('id, username, user_type')
-            .in('id', followerIds);
-
           followers.forEach(follower => {
             const customerId = follower.user_id;
-            const profile = followerProfiles?.find(p => p.id === customerId);
-            const customerName = profile?.username || 'Customer';
-            const customerEmail = `${profile?.username || customerId.slice(0, 8)}@example.com`;
+            const customerName = follower.full_name || `Customer ${customerId.slice(0, 8)}`;
+            const customerEmail = follower.email || `customer${customerId.slice(0, 8)}@example.com`;
             
             if (customersFromOrders.has(customerId)) {
               customersFromOrders.get(customerId)!.isFollowing = true;

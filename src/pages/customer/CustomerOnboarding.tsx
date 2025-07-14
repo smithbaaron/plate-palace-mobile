@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
+import CustomerProfileForm from "@/components/customer/CustomerProfileForm";
 import { Search, Check, User } from "lucide-react";
 
 const CustomerOnboarding = () => {
@@ -20,6 +21,7 @@ const CustomerOnboarding = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sellerSearch, setSellerSearch] = useState("");
   const [selectedSellers, setSelectedSellers] = useState<string[]>([]);
+  const [profileCompleted, setProfileCompleted] = useState(false);
   // Real seller data from database
   const [realSellers, setRealSellers] = useState<any[]>([]);
   
@@ -244,11 +246,17 @@ const CustomerOnboarding = () => {
               <div className={`h-8 w-8 rounded-full ${step >= 1 ? "bg-nextplate-red" : "bg-gray-700"} mx-auto mb-2 flex-center`}>
                 <span className="text-white">1</span>
               </div>
-              <span className="text-sm">Find Sellers</span>
+              <span className="text-sm">Profile Info</span>
             </div>
             <div className={`flex-1 text-center ${step >= 2 ? "text-nextplate-red" : "text-gray-500"}`}>
               <div className={`h-8 w-8 rounded-full ${step >= 2 ? "bg-nextplate-red" : "bg-gray-700"} mx-auto mb-2 flex-center`}>
                 <span className="text-white">2</span>
+              </div>
+              <span className="text-sm">Find Sellers</span>
+            </div>
+            <div className={`flex-1 text-center ${step >= 3 ? "text-nextplate-red" : "text-gray-500"}`}>
+              <div className={`h-8 w-8 rounded-full ${step >= 3 ? "bg-nextplate-red" : "bg-gray-700"} mx-auto mb-2 flex-center`}>
+                <span className="text-white">3</span>
               </div>
               <span className="text-sm">Complete</span>
             </div>
@@ -256,6 +264,32 @@ const CustomerOnboarding = () => {
           
           <div className="bg-nextplate-darkgray rounded-xl p-6 shadow-xl">
             {step === 1 && (
+              <div className="animate-fade-in">
+                <h2 className="text-2xl font-bold mb-6 text-center">
+                  Tell us about yourself
+                </h2>
+                <p className="text-gray-300 text-center mb-6">
+                  Help us personalize your NextPlate experience
+                </p>
+                
+                <CustomerProfileForm 
+                  onComplete={() => setProfileCompleted(true)}
+                  isOnboarding={true}
+                />
+                
+                <div className="mt-8 text-center">
+                  <Button
+                    onClick={handleNextStep}
+                    className="bg-nextplate-red hover:bg-red-600"
+                    disabled={!profileCompleted}
+                  >
+                    Continue to Discover Sellers
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            {step === 2 && (
               <div className="animate-fade-in">
                 <h2 className="text-2xl font-bold mb-6 flex items-center">
                   <Search className="mr-2 text-nextplate-red" />
@@ -337,7 +371,14 @@ const CustomerOnboarding = () => {
                   </div>
                 </div>
                 
-                <div className="mt-8 flex justify-end">
+                <div className="mt-8 flex justify-between">
+                  <Button
+                    onClick={handlePreviousStep}
+                    variant="outline"
+                    className="border-nextplate-lightgray text-white hover:bg-nextplate-lightgray"
+                  >
+                    Back
+                  </Button>
                   <Button
                     onClick={handleNextStep}
                     className="bg-nextplate-red hover:bg-red-600"
@@ -348,7 +389,7 @@ const CustomerOnboarding = () => {
               </div>
             )}
             
-            {step === 2 && (
+            {step === 3 && (
               <div className="animate-fade-in">
                 <h2 className="text-2xl font-bold mb-6 flex items-center">
                   <Check className="mr-2 text-nextplate-red" />
