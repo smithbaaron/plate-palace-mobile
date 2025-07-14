@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getAvailablePlates, getAvailableSellers } from "@/lib/customer-plates-service";
+import { bundleService } from "@/lib/bundles-service";
 import { getCustomerOrders } from "@/lib/orders-service";
 import { Order } from "@/types/order";
 import { useAuth } from "@/context/AuthContext";
@@ -197,6 +198,7 @@ const CustomerDashboard = () => {
   const [favoriteSellers, setFavoriteSellers] = useState<string[]>([]);
   const [realSellers, setRealSellers] = useState<any[]>([]);
   const [realPlates, setRealPlates] = useState<any[]>([]);
+  const [realBundles, setRealBundles] = useState<any[]>([]);
   const [realOrders, setRealOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -209,17 +211,20 @@ const CustomerDashboard = () => {
       try {
         console.log("🔄 Fetching real sellers, plates, and orders data...");
         
-        // Fetch sellers and plates first
-        const [sellersData, platesData] = await Promise.all([
+        // Fetch sellers, plates, and bundles first
+        const [sellersData, platesData, bundlesData] = await Promise.all([
           getAvailableSellers(),
-          getAvailablePlates()
+          getAvailablePlates(),
+          bundleService.getAvailableBundles()
         ]);
         
         console.log("📊 Fetched sellers:", sellersData);
         console.log("🍽️ Fetched plates:", platesData);
+        console.log("📦 Fetched bundles:", bundlesData);
         
         setRealSellers(sellersData);
         setRealPlates(platesData);
+        setRealBundles(bundlesData);
         
         // Fetch orders if user is available
         if (currentUser) {
@@ -234,6 +239,7 @@ const CustomerDashboard = () => {
         // Fallback to mock data if real data fails
         setRealSellers(MOCK_SELLERS);
         setRealPlates(MOCK_PLATES);
+        setRealBundles([]);
         setRealOrders([]);
         setLoading(false);
       }
@@ -245,6 +251,7 @@ const CustomerDashboard = () => {
   // Use real data, fallback to mock if empty
   const sellersToUse = realSellers.length > 0 ? realSellers : MOCK_SELLERS;
   const platesToUse = realPlates.length > 0 ? realPlates : MOCK_PLATES;
+  const bundlesToUse = realBundles.length > 0 ? realBundles : MOCK_MEAL_PREPS;
 
   // Filter items based on search
   const filteredSellers = searchQuery
@@ -259,15 +266,14 @@ const CustomerDashboard = () => {
         plate.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (plate.seller?.businessName || plate.seller || '').toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : platesToUse;
-    
+     : platesToUse;
+     
   const filteredMealPreps = searchQuery
-    ? MOCK_MEAL_PREPS.filter(prep => 
-        prep.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prep.seller.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prep.description.toLowerCase().includes(searchQuery.toLowerCase())
+    ? bundlesToUse.filter(prep => 
+        (prep.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (prep.seller_profiles?.[0]?.business_name || prep.seller || '').toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : MOCK_MEAL_PREPS;
+    : bundlesToUse;
 
   // Get favorite sellers data
   const favoriteSellersList = sellersToUse.filter(seller => 
@@ -680,37 +686,33 @@ const CustomerDashboard = () => {
                     >
                       <div className="flex flex-col md:flex-row">
                         <div className="md:w-1/3 h-40 md:h-auto relative">
-                          <img 
-                            src={prep.image} 
-                            alt={prep.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="p-6 md:w-2/3">
-                          <h3 className="text-xl font-bold mb-1">{prep.name}</h3>
-                          <p className="text-sm text-gray-300 mb-1">by {prep.seller}</p>
-                          <p className="text-sm text-gray-300 mb-4">
-                            {prep.description}
-                          </p>
-                          <div className="space-y-2 mb-4">
-                            {prep.deliveryOptions.available && (
-                              <div className="flex items-center text-xs text-gray-400">
-                                <Truck size={12} className="mr-1 text-green-500" />
-                                Delivery: ${prep.deliveryOptions.fee} • {prep.deliveryOptions.estimatedTime}
-                              </div>
-                            )}
-                            {prep.pickupOptions.available && (
-                              <div className="flex items-center text-xs text-gray-400">
-                                <Clock size={12} className="mr-1 text-blue-500" />
-                                Pickup: {prep.pickupOptions.estimatedTime}
-                              </div>
-                            )}
-                          </div>
+                           <img 
+                             src={prep.bundle_plates?.[0]?.plates?.image_url || "https://images.unsplash.com/photo-1611599537845-1c7aca0091c0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"} 
+                             alt={prep.name}
+                             className="w-full h-full object-cover"
+                           />
+                         </div>
+                         <div className="p-6 md:w-2/3">
+                           <h3 className="text-xl font-bold mb-1">{prep.name}</h3>
+                           <p className="text-sm text-gray-300 mb-1">by {prep.seller_profiles?.[0]?.business_name || prep.seller}</p>
+                           <p className="text-sm text-gray-300 mb-4">
+                             {prep.plate_count} plates • {prep.availability_scope} package
+                           </p>
+                           <div className="space-y-2 mb-4">
+                             <div className="flex items-center text-xs text-gray-400">
+                               <Calendar size={12} className="mr-1 text-blue-500" />
+                               Available: {new Date(prep.available_date).toLocaleDateString()}
+                             </div>
+                             <div className="flex items-center text-xs text-gray-400">
+                               <Package size={12} className="mr-1 text-green-500" />
+                               {prep.bundle_plates?.length || prep.plate_count} plates included
+                             </div>
+                           </div>
                           <div className="flex items-center justify-between mt-4">
-                            <div>
-                              <p className="font-bold text-lg text-nextplate-red">${prep.price}</p>
-                              <p className="text-sm text-gray-400">{prep.mealCount} meals</p>
-                            </div>
+                             <div>
+                               <p className="font-bold text-lg text-nextplate-red">${prep.price}</p>
+                               <p className="text-sm text-gray-400">{prep.plate_count} plates</p>
+                             </div>
                             <Button className="bg-nextplate-red hover:bg-red-600">
                               Order Package
                             </Button>

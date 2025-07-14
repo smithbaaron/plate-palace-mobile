@@ -102,6 +102,33 @@ export const bundleService = {
     return data as Bundle[];
   },
 
+  async getAvailableBundles() {
+    // Get all bundles that are available to customers (public browsing)
+    const { data, error } = await supabase
+      .from('bundles')
+      .select(`
+        *,
+        bundle_plates (
+          plate_id,
+          plates (
+            id,
+            name,
+            price,
+            size,
+            image_url
+          )
+        ),
+        seller_profiles!inner (
+          business_name,
+          user_id
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data as (Bundle & { seller_profiles: { business_name: string; user_id: string }[] })[];
+  },
+
   async deleteBundle(bundleId: string) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
