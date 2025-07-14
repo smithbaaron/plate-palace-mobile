@@ -47,12 +47,16 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
       console.log("Resyncing user type data for user:", currentUser.id);
       const userData = await fetchUserTypeData(currentUser.id);
       
+      console.log("🔄 UserTypeContext - Fetched user data:", userData);
+      
       if (userData) {
-        console.log("Synced user type data:", userData);
+        console.log("✅ UserTypeContext - Setting user data:", userData);
         setUserTypeState(userData.userType);
         setIsOnboarded(userData.isOnboarded);
       } else {
-        console.log("No user type data found during resync");
+        console.log("❌ UserTypeContext - No user type data found during resync");
+        setUserTypeState(null);
+        setIsOnboarded(false);
       }
     } catch (error) {
       console.error("Error syncing user type data:", error);
