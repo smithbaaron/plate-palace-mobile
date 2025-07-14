@@ -66,6 +66,18 @@ const CreateBundle = () => {
     },
   });
 
+  // Force reset form when component mounts to ensure fresh values
+  React.useEffect(() => {
+    form.reset({
+      name: "",
+      plateCount: 1,
+      price: 0,
+      availableDate: new Date(new Date().setHours(0, 0, 0, 0)),
+      availabilityScope: "day",
+      selectedPlateIds: [],
+    });
+  }, []);
+
   // Function to refresh plates data
   const refreshPlatesData = async () => {
     try {
