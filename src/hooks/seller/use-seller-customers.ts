@@ -103,10 +103,11 @@ export const useSellerCustomers = () => {
           // Get unique customer IDs
           const customerIds = [...new Set(orders.map(order => order.customer_id))];
           
-          // Fetch customer profiles separately - using correct column names
+          // Since we can't directly access auth.users, let's use a workaround
+          // Try to get email from order metadata or use a more realistic approach
           const { data: profiles, error: profilesError } = await supabase
             .from('profiles')
-            .select('id, username, user_type')
+            .select('id, username')
             .in('id', customerIds);
 
           console.log('🔍 Customer profiles data:', profiles);
@@ -116,12 +117,14 @@ export const useSellerCustomers = () => {
             console.error('❌ Error fetching profiles:', profilesError);
           }
 
-          // Process orders with profile data
+          // Process orders with available customer data
           orders.forEach(order => {
             const customerId = order.customer_id;
             const profile = profiles?.find(p => p.id === customerId);
-            const customerName = profile?.username || 'Customer';
-            const customerEmail = `${profile?.username || customerId.slice(0, 8)}@example.com`; // Since email isn't stored
+            // For now, we'll show the username as name and generate email from username
+            // In a real app, you'd want to store customer details in a separate customer table
+            const customerName = profile?.username || `Customer ${customerId.slice(0, 8)}`;
+            const customerEmail = profile?.username ? `${profile.username}@example.com` : `customer${customerId.slice(0, 8)}@example.com`;
             
             if (customersFromOrders.has(customerId)) {
               const existing = customersFromOrders.get(customerId)!;
