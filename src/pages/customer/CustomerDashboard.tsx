@@ -218,9 +218,13 @@ const CustomerDashboard = () => {
           bundleService.getAvailableBundles()
         ]);
         
-        console.log("📊 Fetched sellers:", sellersData);
-        console.log("🍽️ Fetched plates:", platesData);
-        console.log("📦 Fetched bundles:", bundlesData);
+        console.log("📊 CustomerDashboard - Fetched sellers:", sellersData);
+        console.log("🍽️ CustomerDashboard - Fetched plates:", platesData);
+        console.log("📦 CustomerDashboard - Fetched bundles:", bundlesData);
+        
+        console.log("📊 CustomerDashboard - Sellers length:", sellersData.length);
+        console.log("🍽️ CustomerDashboard - Plates length:", platesData.length);
+        console.log("📦 CustomerDashboard - Bundles length:", bundlesData.length);
         
         setRealSellers(sellersData);
         setRealPlates(platesData);
@@ -252,6 +256,10 @@ const CustomerDashboard = () => {
   const sellersToUse = realSellers.length > 0 ? realSellers : MOCK_SELLERS;
   const platesToUse = realPlates.length > 0 ? realPlates : MOCK_PLATES;
   const bundlesToUse = realBundles.length > 0 ? realBundles : MOCK_MEAL_PREPS;
+
+  console.log("🏪 CustomerDashboard - Using sellers:", sellersToUse.length > 0 ? "REAL DATA" : "MOCK DATA");
+  console.log("🍽️ CustomerDashboard - Using plates:", platesToUse.length > 0 ? "REAL DATA" : "MOCK DATA");
+  console.log("📦 CustomerDashboard - Using bundles:", bundlesToUse.length > 0 ? "REAL DATA" : "MOCK DATA");
 
   // Filter items based on search
   const filteredSellers = searchQuery
