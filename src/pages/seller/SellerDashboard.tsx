@@ -11,6 +11,7 @@ import MenuTabContent from "@/components/seller/dashboard/MenuTabContent";
 import OrdersTabContent from "@/components/seller/dashboard/OrdersTabContent";
 import ScheduleTabContent from "@/components/seller/dashboard/ScheduleTabContent";
 import CustomersTabContent from "@/components/seller/dashboard/CustomersTabContent";
+import BundlesTabContent from "@/components/seller/dashboard/BundlesTabContent";
 import DashboardStats from "@/components/seller/dashboard/DashboardStats";
 import LoadingState from "@/components/seller/dashboard/LoadingState";
 import DatabaseSetupRequired from "@/components/seller/dashboard/DatabaseSetupRequired";
@@ -74,6 +75,7 @@ const SellerDashboard = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full bg-nextplate-darkgray mb-6">
               <TabsTrigger value="menu" className="flex-1">Menu</TabsTrigger>
+              <TabsTrigger value="bundles" className="flex-1">Bundles</TabsTrigger>
               <TabsTrigger value="orders" className="flex-1">Orders</TabsTrigger>
               <TabsTrigger value="schedule" className="flex-1">Schedule</TabsTrigger>
               <TabsTrigger value="customers" className="flex-1">Customers</TabsTrigger>
@@ -92,6 +94,11 @@ const SellerDashboard = () => {
                   mealPrepPlatesCount={mealPrepPlates.length}
                 />
               )}
+            </TabsContent>
+            
+            
+            <TabsContent value="bundles" className="animate-fade-in">
+              <BundlesTabContent />
             </TabsContent>
             
             <TabsContent value="orders" className="animate-fade-in">

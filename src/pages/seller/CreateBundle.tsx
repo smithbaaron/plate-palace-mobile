@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { usePlates } from "@/lib/plates-service";
 import { useAuth } from "@/context/AuthContext";
 import { BundleFormValues, Plate } from "@/components/seller/PlateFormTypes";
+import { bundleService } from "@/lib/bundles-service";
 import AddSinglePlateForm from "@/components/seller/AddSinglePlateForm";
 
 const bundleSchema = z.object({
@@ -74,9 +75,9 @@ const CreateBundle = () => {
       
       setAllPlates(plates); // Store all plates for duplication
       
-      // Filter plates that are available for bundles and currently available
+      // Filter plates that are available for bundles (regular plates, not already bundled)
       const bundlePlates = plates.filter(plate => {
-        const isEligible = plate.isBundle && plate.isAvailable;
+        const isEligible = !plate.isBundle && plate.isAvailable;
         console.log(`Plate ${plate.name} - isBundle: ${plate.isBundle}, isAvailable: ${plate.isAvailable}, eligible: ${isEligible}`);
         return isEligible;
       });
@@ -132,8 +133,8 @@ const CreateBundle = () => {
       await refreshPlatesData();
       
       toast({
-        title: "Plate Added",
-        description: `${savedPlate.name} has been added to your menu and is available for bundles.`,
+        title: "Plate Added to Bundle Options",
+        description: `${savedPlate.name} has been created and is now available for selection in your bundle.`,
       });
     } catch (error) {
       console.error("Error adding plate:", error);
@@ -155,7 +156,7 @@ const CreateBundle = () => {
         name: `${plateToClone.name} (Copy)`,
         availableDate: new Date(new Date().setHours(0, 0, 0, 0)), // Set to today
         soldCount: 0,
-        isBundle: true, // Ensure it's available for bundles
+        isBundle: false, // Keep as regular plate, not bundle
         isAvailable: true,
       };
       
@@ -181,11 +182,18 @@ const CreateBundle = () => {
 
     setIsLoading(true);
     try {
-      // Here you would implement the bundle creation logic
-      // For now, we'll just show a success message
+      await bundleService.createBundle({
+        name: data.name,
+        plateCount: data.plateCount,
+        price: data.price,
+        availableDate: data.availableDate,
+        availabilityScope: data.availabilityScope,
+        selectedPlateIds: data.selectedPlateIds,
+      });
+
       toast({
-        title: "Bundle Created!",
-        description: `${data.name} has been created successfully.`,
+        title: "Bundle Created Successfully!",
+        description: `${data.name} with ${data.plateCount} plates for $${data.price.toFixed(2)} has been created.`,
       });
       
       navigate("/seller/dashboard");
