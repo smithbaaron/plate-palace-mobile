@@ -345,6 +345,7 @@ const CustomerDashboard = () => {
       // Refresh orders data to show the updated status
       const updatedOrders = await getCustomerOrders(currentUser.id);
       setRealOrders(updatedOrders);
+      console.log("🔄 Orders refreshed after cancellation:", updatedOrders.length, "orders");
     } catch (error: any) {
       console.error("❌ Error cancelling order:", error);
       notifyInfo("Cancel Failed", error.message || "Failed to cancel order. Please try again.");
@@ -846,6 +847,12 @@ const CustomerDashboard = () => {
                                     >
                                       Cancel Order
                                     </Button>
+                                  </div>
+                                )}
+                                {/* Show cancellation info for cancelled orders */}
+                                {order.status === 'cancelled' && (
+                                  <div className="mt-2 text-xs text-red-400">
+                                    ❌ Order was cancelled on {new Date(order.updatedAt).toLocaleDateString()}
                                   </div>
                                 )}
                               </div>
