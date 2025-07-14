@@ -11,6 +11,7 @@ export type CustomerPlate = {
   quantity: number;
   seller: {
     id: string;
+    user_id: string;
     businessName: string;
     bio?: string;
   };
@@ -79,6 +80,7 @@ export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
         seller_id,
         seller_profiles!inner (
           id,
+          user_id,
           business_name,
           bio
         )
@@ -128,6 +130,7 @@ export const getAvailablePlates = async (): Promise<CustomerPlate[]> => {
         quantity: plate.quantity,
         seller: {
           id: sellerProfile.id,
+          user_id: sellerProfile.user_id,
           businessName: sellerProfile.business_name,
           bio: sellerProfile.bio
         }
@@ -271,6 +274,7 @@ export const getSellerPlates = async (sellerId: string): Promise<CustomerPlate[]
         seller_id,
         seller_profiles!inner (
           id,
+          user_id,
           business_name,
           bio
         )
@@ -296,6 +300,7 @@ export const getSellerPlates = async (sellerId: string): Promise<CustomerPlate[]
       quantity: plate.quantity,
       seller: {
         id: plate.seller_profiles[0].id,
+        user_id: plate.seller_profiles[0].user_id,
         businessName: plate.seller_profiles[0].business_name,
         bio: plate.seller_profiles[0].bio
       }

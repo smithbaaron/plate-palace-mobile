@@ -752,7 +752,7 @@ const CustomerDashboard = () => {
                             className="bg-nextplate-red hover:bg-red-600"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleOrderPlate(plate.id, plate.name, plate.price, plate.seller?.id);
+                              handleOrderPlate(plate.id, plate.name, plate.price, plate.seller?.user_id);
                             }}
                           >
                             Order Now
