@@ -209,18 +209,17 @@ const CreateBundle = () => {
       });
       
       navigate("/seller/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating bundle:", error);
-      console.error("Error details:", JSON.stringify(error, null, 2));
+      console.error("Error message:", error?.message);
+      console.error("Error code:", error?.code);
+      console.error("Error details:", error?.details);
       
-      // Check if it's a Supabase error with more details
-      if (error && typeof error === 'object' && 'message' in error) {
-        console.error("Error message:", error.message);
-      }
+      const errorMessage = error?.message || 'Unknown error occurred';
       
       toast({
         title: "Error",
-        description: `Failed to create bundle: ${error?.message || 'Unknown error'}. Please try again.`,
+        description: `Failed to create bundle: ${errorMessage}. Please try again.`,
         variant: "destructive",
       });
     } finally {

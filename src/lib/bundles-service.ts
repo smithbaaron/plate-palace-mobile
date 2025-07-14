@@ -35,6 +35,8 @@ export const bundleService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
+    console.log("Creating bundle with data:", bundleData);
+
     // Create the bundle
     const { data: bundle, error: bundleError } = await supabase
       .from('bundles')
@@ -49,7 +51,10 @@ export const bundleService = {
       .select()
       .single();
 
-    if (bundleError) throw bundleError;
+    if (bundleError) {
+      console.error("Bundle creation error:", bundleError);
+      throw new Error(`Failed to create bundle: ${bundleError.message || bundleError.details || 'Unknown database error'}`);
+    }
 
     // Create bundle_plates relationships
     const bundlePlatesData = bundleData.selectedPlateIds.map(plateId => ({
@@ -62,9 +67,10 @@ export const bundleService = {
       .insert(bundlePlatesData);
 
     if (bundlePlatesError) {
+      console.error("Bundle plates creation error:", bundlePlatesError);
       // Cleanup: delete the bundle if plate relationships failed
       await supabase.from('bundles').delete().eq('id', bundle.id);
-      throw bundlePlatesError;
+      throw new Error(`Failed to create bundle plates: ${bundlePlatesError.message || bundlePlatesError.details || 'Unknown database error'}`);
     }
 
     return bundle;
