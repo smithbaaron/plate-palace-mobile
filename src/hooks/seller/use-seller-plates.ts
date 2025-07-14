@@ -48,15 +48,15 @@ export const useSellerPlates = () => {
     return plateDate.getTime() > today.getTime();
   });
 
-  // Find plates available for meal prep bundles
+  // Find plates available for meal prep bundles (non-bundle plates that can be used to create meal preps)
   const mealPrepPlates = plates.filter(plate => {
     console.log('Filtering meal prep plates:', {
       plateName: plate.name,
       isBundle: plate.isBundle,
       isAvailable: plate.isAvailable,
-      eligible: plate.isBundle && plate.isAvailable
+      eligible: !plate.isBundle && plate.isAvailable
     });
-    return plate.isBundle && plate.isAvailable;
+    return !plate.isBundle && plate.isAvailable;
   });
 
   // Group plates by date - include both today's and future plates
