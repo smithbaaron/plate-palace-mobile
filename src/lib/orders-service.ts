@@ -160,21 +160,29 @@ export const cancelOrder = async (orderId: string, customerId: string) => {
     console.log('🚫 Cancelling order:', orderId, 'for customer:', customerId);
     
     // First check if the order belongs to the customer and can be cancelled
-    const { data: existingOrder, error: fetchError } = await supabase
+    const { data: orders, error: fetchError } = await supabase
       .from('orders')
       .select('id, customer_id, status')
       .eq('id', orderId)
-      .eq('customer_id', customerId)
-      .single();
+      .eq('customer_id', customerId);
 
     if (fetchError) {
       console.error('❌ Error fetching order:', fetchError);
       throw fetchError;
     }
 
-    if (!existingOrder) {
+    console.log('🔍 Found orders for cancellation check:', orders);
+
+    if (!orders || orders.length === 0) {
       throw new Error('Order not found or does not belong to this customer');
     }
+
+    if (orders.length > 1) {
+      console.error('⚠️ Multiple orders found with same ID:', orders);
+      throw new Error('Multiple orders found - this should not happen');
+    }
+
+    const existingOrder = orders[0];
 
     // Check if order can be cancelled (only allow cancellation for pending/confirmed orders)
     if (!['pending', 'confirmed'].includes(existingOrder.status)) {
