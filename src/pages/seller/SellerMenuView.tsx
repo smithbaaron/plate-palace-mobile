@@ -8,16 +8,20 @@ import { Badge } from "@/components/ui/badge";
 import { getAvailablePlates, getAvailableSellers } from "@/lib/customer-plates-service";
 import { bundleService } from "@/lib/bundles-service";
 import { supabase } from "@/lib/supabase";
+import { createOrder } from "@/lib/orders-service";
+import { useAuth } from "@/context/AuthContext";
 import { useNotifications } from "@/hooks/use-notifications";
 
 const SellerMenuView = () => {
   const { sellerId } = useParams();
   const navigate = useNavigate();
-  const { notifyInfo } = useNotifications();
+  const { notifyInfo, notifySuccess } = useNotifications();
+  const { currentUser } = useAuth();
   
   const [seller, setSeller] = useState<any>(null);
   const [plates, setPlates] = useState<any[]>([]);
   const [bundles, setBundles] = useState<any[]>([]);
+  const [sellerUserId, setSellerUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,6 +43,7 @@ const SellerMenuView = () => {
         }
         
         const sellerUserId = sellerProfile?.user_id;
+        setSellerUserId(sellerUserId);
         console.log("🔑 Found seller user_id:", sellerUserId, "for profile ID:", sellerId);
         
         const [sellersData, platesData, bundlesData] = await Promise.all([
@@ -77,8 +82,33 @@ const SellerMenuView = () => {
     }
   }, [sellerId]);
 
-  const handleOrderPlate = (plateId: string, plateName: string) => {
-    notifyInfo("Order Placed", `Your order for ${plateName} has been placed! 🍽️`);
+  const handleOrderPlate = async (plateId: string, plateName: string, platePrice: number, sellerId: string) => {
+    if (!currentUser) {
+      notifyInfo("Login Required", "Please log in to place an order");
+      return;
+    }
+
+    try {
+      console.log("🛒 Creating order for plate:", { plateId, plateName, platePrice, sellerId });
+      
+      await createOrder({
+        customerId: currentUser.id,
+        sellerId: sellerId,
+        items: [{
+          plateId: plateId,
+          quantity: 1,
+          unitPrice: platePrice
+        }],
+        totalAmount: platePrice,
+        deliveryType: 'pickup', // Default to pickup for now
+        notes: `Order for ${plateName}`
+      });
+
+      notifySuccess("Order Placed", `Your order for ${plateName} has been placed successfully! 🍽️`);
+    } catch (error) {
+      console.error("❌ Error creating order:", error);
+      notifyInfo("Order Failed", "Failed to place order. Please try again.");
+    }
   };
 
   if (loading) {
@@ -312,7 +342,7 @@ const SellerMenuView = () => {
                           <Button 
                             size="sm" 
                             className="bg-nextplate-red hover:bg-red-600"
-                            onClick={() => handleOrderPlate(plate.id, plate.name)}
+                            onClick={() => handleOrderPlate(plate.id, plate.name, plate.price, sellerUserId)}
                           >
                             Order
                           </Button>

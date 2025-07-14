@@ -11,7 +11,7 @@ import { Plus } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getAvailablePlates, getAvailableSellers } from "@/lib/customer-plates-service";
 import { bundleService } from "@/lib/bundles-service";
-import { getCustomerOrders } from "@/lib/orders-service";
+import { getCustomerOrders, createOrder } from "@/lib/orders-service";
 import { Order } from "@/types/order";
 import { useAuth } from "@/context/AuthContext";
 
@@ -294,8 +294,39 @@ const CustomerDashboard = () => {
     new Date(order.createdAt).toDateString() === today
   );
   
-  const handleOrderPlate = (plateId: string, plateName: string) => {
-    notifyInfo("Order Placed", `Your order for ${plateName} has been placed! 🍽️`);
+  const handleOrderPlate = async (plateId: string, plateName: string, platePrice: number, sellerId: string) => {
+    if (!currentUser) {
+      notifyInfo("Login Required", "Please log in to place an order");
+      return;
+    }
+
+    try {
+      console.log("🛒 Creating order for plate:", { plateId, plateName, platePrice, sellerId });
+      
+      await createOrder({
+        customerId: currentUser.id,
+        sellerId: sellerId,
+        items: [{
+          plateId: plateId,
+          quantity: 1,
+          unitPrice: platePrice
+        }],
+        totalAmount: platePrice,
+        deliveryType: 'pickup', // Default to pickup for now
+        notes: `Order for ${plateName}`
+      });
+
+      notifySuccess("Order Placed", `Your order for ${plateName} has been placed successfully! 🍽️`);
+      
+      // Refresh orders data to show the new order
+      if (currentUser) {
+        const updatedOrders = await getCustomerOrders(currentUser.id);
+        setRealOrders(updatedOrders);
+      }
+    } catch (error) {
+      console.error("❌ Error creating order:", error);
+      notifyInfo("Order Failed", "Failed to place order. Please try again.");
+    }
   };
 
   const handleViewSellerMenu = (sellerId: string, sellerName: string) => {
@@ -660,7 +691,7 @@ const CustomerDashboard = () => {
                             className="bg-nextplate-red hover:bg-red-600"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleOrderPlate(plate.id, plate.name);
+                              handleOrderPlate(plate.id, plate.name, plate.price, plate.seller?.id);
                             }}
                           >
                             Order Now
