@@ -25,7 +25,7 @@ import AddSinglePlateForm from "@/components/seller/AddSinglePlateForm";
 
 const bundleSchema = z.object({
   name: z.string().min(3, "Bundle name must be at least 3 characters"),
-  plateCount: z.coerce.number().min(2, "Bundle must contain at least 2 plates").max(10, "Bundle cannot exceed 10 plates"),
+  plateCount: z.coerce.number().min(1, "Bundle must contain at least 1 plate").max(10, "Bundle cannot exceed 10 plates"),
   price: z.coerce.number().min(0.01, "Price must be greater than 0"),
   availableDate: z.date({
     required_error: "Available date is required",
@@ -254,7 +254,7 @@ const CreateBundle = () => {
                     <Input
                       id="plateCount"
                       type="number"
-                      min="2"
+                      min="1"
                       max="10"
                       {...form.register("plateCount", {
                         onChange: () => {
