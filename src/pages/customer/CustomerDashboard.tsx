@@ -11,7 +11,7 @@ import { Plus } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getAvailablePlates, getAvailableSellers } from "@/lib/customer-plates-service";
 import { bundleService } from "@/lib/bundles-service";
-import { getCustomerOrders, createOrder, cancelOrder } from "@/lib/orders-service";
+import { getCustomerOrders, createOrder, cancelOrder, deleteOrder } from "@/lib/orders-service";
 import { Order } from "@/types/order";
 import { useAuth } from "@/context/AuthContext";
 
@@ -349,6 +349,29 @@ const CustomerDashboard = () => {
     } catch (error: any) {
       console.error("❌ Error cancelling order:", error);
       notifyInfo("Cancel Failed", error.message || "Failed to cancel order. Please try again.");
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string, orderName: string) => {
+    if (!currentUser) {
+      notifyInfo("Login Required", "Please log in to delete orders");
+      return;
+    }
+
+    try {
+      console.log("🗑️ Deleting order:", orderId);
+      
+      await deleteOrder(orderId, currentUser.id);
+      
+      notifySuccess("Order Deleted", `${orderName} has been removed from your order history`);
+      
+      // Refresh orders data to remove the deleted order
+      const updatedOrders = await getCustomerOrders(currentUser.id);
+      setRealOrders(updatedOrders);
+      console.log("🔄 Orders refreshed after deletion:", updatedOrders.length, "orders");
+    } catch (error: any) {
+      console.error("❌ Error deleting order:", error);
+      notifyInfo("Delete Failed", error.message || "Failed to delete order. Please try again.");
     }
   };
 
@@ -849,10 +872,20 @@ const CustomerDashboard = () => {
                                     </Button>
                                   </div>
                                 )}
-                                {/* Show cancellation info for cancelled orders */}
+                                {/* Show cancellation info and delete button for cancelled orders */}
                                 {order.status === 'cancelled' && (
-                                  <div className="mt-2 text-xs text-red-400">
-                                    ❌ Order was cancelled on {new Date(order.updatedAt).toLocaleDateString()}
+                                  <div className="mt-2 space-y-2">
+                                    <div className="text-xs text-red-400">
+                                      ❌ Order was cancelled on {new Date(order.updatedAt).toLocaleDateString()}
+                                    </div>
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      className="border-gray-500 text-gray-400 hover:bg-red-500 hover:text-white hover:border-red-500 text-xs animate-fade-in"
+                                      onClick={() => handleDeleteOrder(order.id, order.items[0]?.name || 'Order')}
+                                    >
+                                      🗑️ Delete from History
+                                    </Button>
                                   </div>
                                 )}
                               </div>

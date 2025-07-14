@@ -243,3 +243,68 @@ export const cancelOrder = async (orderId: string, customerId: string) => {
     throw error;
   }
 };
+
+export const deleteOrder = async (orderId: string, customerId: string) => {
+  try {
+    console.log('🗑️ Deleting order:', orderId, 'for customer:', customerId);
+    
+    // First check if the order exists and belongs to the customer
+    const { data: orders, error: fetchError } = await supabase
+      .from('orders')
+      .select('id, customer_id, status')
+      .eq('id', orderId)
+      .eq('customer_id', customerId);
+
+    if (fetchError) {
+      console.error('❌ Error fetching order for deletion:', fetchError);
+      throw fetchError;
+    }
+
+    if (!orders || orders.length === 0) {
+      throw new Error('Order not found or does not belong to this customer');
+    }
+
+    const existingOrder = orders[0];
+    
+    // Only allow deletion of cancelled orders
+    if (existingOrder.status !== 'cancelled') {
+      throw new Error('Only cancelled orders can be deleted');
+    }
+
+    console.log('🗑️ Deleting order and related items:', existingOrder);
+
+    // Delete order items first (foreign key constraint)
+    const { error: itemsDeleteError } = await supabase
+      .from('order_items')
+      .delete()
+      .eq('order_id', orderId);
+
+    if (itemsDeleteError) {
+      console.error('❌ Error deleting order items:', itemsDeleteError);
+      throw itemsDeleteError;
+    }
+
+    // Delete the order
+    const { data: deletedOrder, error: deleteError } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId)
+      .eq('customer_id', customerId)
+      .select();
+
+    if (deleteError) {
+      console.error('❌ Error deleting order:', deleteError);
+      throw deleteError;
+    }
+
+    if (!deletedOrder || deletedOrder.length === 0) {
+      throw new Error('Failed to delete order - no rows affected');
+    }
+
+    console.log('✅ Order deleted successfully:', deletedOrder);
+    return deletedOrder[0];
+  } catch (error) {
+    console.error('❌ Error in deleteOrder:', error);
+    throw error;
+  }
+};
