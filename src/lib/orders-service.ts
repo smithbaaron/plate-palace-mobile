@@ -17,7 +17,8 @@ export const getCustomerOrders = async (customerId: string): Promise<Order[]> =>
           subtotal,
           plates (
             id,
-            name
+            name,
+            image_url
           )
         )
       `)
@@ -62,6 +63,7 @@ export const getCustomerOrders = async (customerId: string): Promise<Order[]> =>
         name: item.plates?.name || 'Unknown Item',
         price: parseFloat(item.unit_price),
         quantity: item.quantity,
+        imageUrl: item.plates?.image_url || 'https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80', // Fallback image
       }));
 
       transformedOrders.push({

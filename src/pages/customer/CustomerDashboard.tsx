@@ -474,9 +474,17 @@ const CustomerDashboard = () => {
                        <Card key={order.id} className="bg-nextplate-darkgray border-gray-800">
                          <CardContent className="p-4">
                            <div className="flex items-center space-x-4">
-                             <div className="w-16 h-16 rounded-lg bg-nextplate-red/20 flex items-center justify-center">
-                               <Package size={24} className="text-nextplate-red" />
-                             </div>
+                              <div className="w-16 h-16 rounded-lg overflow-hidden bg-nextplate-red/20 flex items-center justify-center">
+                                {order.items[0]?.imageUrl ? (
+                                  <img 
+                                    src={order.items[0].imageUrl} 
+                                    alt={order.items[0].name} 
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Package size={24} className="text-nextplate-red" />
+                                )}
+                              </div>
                              <div className="flex-1">
                                <h3 className="font-semibold text-sm">{order.items[0]?.name || "Order"}</h3>
                                <p className="text-xs text-gray-400">by {order.sellerName}</p>
@@ -586,8 +594,16 @@ const CustomerDashboard = () => {
                       <Card key={order.id} className="bg-nextplate-darkgray border-gray-800">
                         <CardContent className="p-6">
                           <div className="flex items-center space-x-4">
-                            <div className="w-20 h-20 rounded-lg bg-nextplate-red/20 flex items-center justify-center">
-                              <Package size={28} className="text-nextplate-red" />
+                            <div className="w-20 h-20 rounded-lg overflow-hidden bg-nextplate-red/20 flex items-center justify-center">
+                              {order.items[0]?.imageUrl ? (
+                                <img 
+                                  src={order.items[0].imageUrl} 
+                                  alt={order.items[0].name} 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <Package size={28} className="text-nextplate-red" />
+                              )}
                             </div>
                             <div className="flex-1">
                               <h3 className="font-semibold mb-1">Recent Order</h3>
@@ -851,8 +867,16 @@ const CustomerDashboard = () => {
                         <Card key={order.id} className="bg-nextplate-darkgray border-gray-800">
                           <CardContent className="p-4">
                             <div className="flex items-center space-x-4">
-                              <div className="w-16 h-16 rounded-lg bg-nextplate-red/20 flex items-center justify-center">
-                                <Package size={24} className="text-nextplate-red" />
+                              <div className="w-16 h-16 rounded-lg overflow-hidden bg-nextplate-red/20 flex items-center justify-center">
+                                {order.items[0]?.imageUrl ? (
+                                  <img 
+                                    src={order.items[0].imageUrl} 
+                                    alt={order.items[0].name} 
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Package size={24} className="text-nextplate-red" />
+                                )}
                               </div>
                               <div className="flex-1">
                                 <h3 className="font-semibold text-sm">{order.items[0]?.name || "Order"}</h3>
