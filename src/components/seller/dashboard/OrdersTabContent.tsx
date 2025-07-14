@@ -71,7 +71,7 @@ const OrdersTabContent: React.FC = () => {
       case "confirmed": return "bg-blue-500";
       case "ready": return "bg-amber-500";
       case "delivered": return "bg-green-500";
-      case "refunded": return "bg-red-500";
+      case "cancelled": return "bg-red-500";
       default: return "bg-gray-500";
     }
   };
@@ -138,7 +138,7 @@ const OrdersTabContent: React.FC = () => {
                 { value: "confirmed", label: "Confirmed" },
                 { value: "ready", label: "Ready" },
                 { value: "delivered", label: "Delivered" },
-                { value: "refunded", label: "Refunded" },
+                { value: "cancelled", label: "Cancelled" },
               ]}
               selectedValues={statusFilter}
               onSelectionChange={setStatusFilter}
@@ -225,7 +225,7 @@ const OrdersTabContent: React.FC = () => {
                 { value: "confirmed", label: "Confirmed" },
                 { value: "ready", label: "Ready" },
                 { value: "delivered", label: "Delivered" },
-                { value: "refunded", label: "Refunded" },
+                { value: "cancelled", label: "Cancelled" },
               ]}
               selectedValues={statusFilter}
               onSelectionChange={setStatusFilter}
@@ -485,24 +485,24 @@ const StatusDropdown: React.FC<StatusDropdownProps> = ({ orderId, currentStatus,
     { value: "confirmed", label: "Confirmed" },
     { value: "ready", label: "Ready" },
     { value: "delivered", label: "Delivered" },
-    { value: "refunded", label: "Refunded" }
+    { value: "cancelled", label: "Cancelled" }
   ];
   
   // Determine which statuses should be available next
   const getAvailableStatuses = (current: OrderStatus) => {
-    if (current === "refunded") {
+    if (current === "cancelled") {
       return [];
     }
     
     switch(current) {
       case "pending":
-        return ["confirmed", "ready", "refunded"];
+        return ["confirmed", "ready", "cancelled"];
       case "confirmed":
-        return ["ready", "refunded"];
+        return ["ready", "cancelled"];
       case "ready":
-        return ["delivered", "refunded"];
+        return ["delivered", "cancelled"];
       case "delivered":
-        return ["refunded"];
+        return ["cancelled"];
       default:
         return [];
     }

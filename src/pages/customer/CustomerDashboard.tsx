@@ -11,7 +11,7 @@ import { Plus } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getAvailablePlates, getAvailableSellers } from "@/lib/customer-plates-service";
 import { bundleService } from "@/lib/bundles-service";
-import { getCustomerOrders, createOrder } from "@/lib/orders-service";
+import { getCustomerOrders, createOrder, cancelOrder } from "@/lib/orders-service";
 import { Order } from "@/types/order";
 import { useAuth } from "@/context/AuthContext";
 
@@ -329,6 +329,28 @@ const CustomerDashboard = () => {
     }
   };
 
+  const handleCancelOrder = async (orderId: string, orderName: string) => {
+    if (!currentUser) {
+      notifyInfo("Login Required", "Please log in to cancel orders");
+      return;
+    }
+
+    try {
+      console.log("🚫 Cancelling order:", orderId);
+      
+      await cancelOrder(orderId, currentUser.id);
+      
+      notifySuccess("Order Cancelled", `${orderName} has been cancelled successfully`);
+      
+      // Refresh orders data to show the updated status
+      const updatedOrders = await getCustomerOrders(currentUser.id);
+      setRealOrders(updatedOrders);
+    } catch (error: any) {
+      console.error("❌ Error cancelling order:", error);
+      notifyInfo("Cancel Failed", error.message || "Failed to cancel order. Please try again.");
+    }
+  };
+
   const handleViewSellerMenu = (sellerId: string, sellerName: string) => {
     // Navigate to seller's individual plates
     navigate(`/seller/${sellerId}/menu`);
@@ -351,6 +373,7 @@ const CustomerDashboard = () => {
       case "ready": return "bg-green-500";
       case "confirmed": return "bg-blue-500";
       case "preparing": return "bg-yellow-500";
+      case "cancelled": return "bg-red-500";
       default: return "bg-gray-500";
     }
   };
@@ -812,6 +835,19 @@ const CustomerDashboard = () => {
                                     </Badge>
                                   </div>
                                 </div>
+                                {/* Cancel button - only show for pending/confirmed orders */}
+                                {(order.status === 'pending' || order.status === 'confirmed') && (
+                                  <div className="mt-2">
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white text-xs"
+                                      onClick={() => handleCancelOrder(order.id, order.items[0]?.name || 'Order')}
+                                    >
+                                      Cancel Order
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </CardContent>
