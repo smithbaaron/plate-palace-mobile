@@ -371,7 +371,21 @@ const CustomerDashboard = () => {
       console.log("🔄 Orders refreshed after deletion:", updatedOrders.length, "orders");
     } catch (error: any) {
       console.error("❌ Error deleting order:", error);
-      notifyInfo("Delete Failed", error.message || "Failed to delete order. Please try again.");
+      
+      // Provide more specific error messages
+      let errorMessage = "Failed to delete order. Please try again.";
+      if (error.message?.includes('no rows affected')) {
+        errorMessage = "Unable to delete order. Database permissions may need to be updated.";
+      } else if (error.message?.includes('permissions')) {
+        errorMessage = "You don't have permission to delete this order.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      notifyInfo("Delete Failed", errorMessage);
+      
+      // Don't throw the error to prevent potential auth context issues
+      return;
     }
   };
 
