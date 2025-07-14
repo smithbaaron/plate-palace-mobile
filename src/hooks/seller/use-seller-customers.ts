@@ -103,10 +103,10 @@ export const useSellerCustomers = () => {
           // Get unique customer IDs
           const customerIds = [...new Set(orders.map(order => order.customer_id))];
           
-          // Fetch customer profiles separately
+          // Fetch customer profiles separately - using correct column names
           const { data: profiles, error: profilesError } = await supabase
             .from('profiles')
-            .select('id, full_name, email')
+            .select('id, username, user_type')
             .in('id', customerIds);
 
           console.log('🔍 Customer profiles data:', profiles);
@@ -114,20 +114,14 @@ export const useSellerCustomers = () => {
 
           if (profilesError) {
             console.error('❌ Error fetching profiles:', profilesError);
-            // Try alternative field names if standard ones fail
-            const { data: altProfiles, error: altError } = await supabase
-              .from('profiles')
-              .select('*')
-              .in('id', customerIds);
-            console.log('🔍 Alternative profiles query result:', altProfiles);
           }
 
           // Process orders with profile data
           orders.forEach(order => {
             const customerId = order.customer_id;
             const profile = profiles?.find(p => p.id === customerId);
-            const customerName = profile?.full_name || 'Unknown Customer';
-            const customerEmail = profile?.email || 'Unknown Email';
+            const customerName = profile?.username || 'Customer';
+            const customerEmail = `${profile?.username || customerId.slice(0, 8)}@example.com`; // Since email isn't stored
             
             if (customersFromOrders.has(customerId)) {
               const existing = customersFromOrders.get(customerId)!;
@@ -167,14 +161,14 @@ export const useSellerCustomers = () => {
           const followerIds = followers.map(f => f.user_id);
           const { data: followerProfiles } = await supabase
             .from('profiles')
-            .select('id, full_name, email')
+            .select('id, username, user_type')
             .in('id', followerIds);
 
           followers.forEach(follower => {
             const customerId = follower.user_id;
             const profile = followerProfiles?.find(p => p.id === customerId);
-            const customerName = profile?.full_name || 'Unknown Customer';
-            const customerEmail = profile?.email || 'Unknown Email';
+            const customerName = profile?.username || 'Customer';
+            const customerEmail = `${profile?.username || customerId.slice(0, 8)}@example.com`;
             
             if (customersFromOrders.has(customerId)) {
               customersFromOrders.get(customerId)!.isFollowing = true;
