@@ -185,6 +185,15 @@ const CreateBundle = () => {
 
     setIsLoading(true);
     try {
+      console.log("Creating bundle with data:", {
+        name: data.name,
+        plateCount: data.plateCount,
+        price: data.price,
+        availableDate: data.availableDate,
+        availabilityScope: data.availabilityScope,
+        selectedPlateIds: data.selectedPlateIds,
+      });
+      
       await bundleService.createBundle({
         name: data.name,
         plateCount: data.plateCount,
@@ -202,9 +211,16 @@ const CreateBundle = () => {
       navigate("/seller/dashboard");
     } catch (error) {
       console.error("Error creating bundle:", error);
+      console.error("Error details:", JSON.stringify(error, null, 2));
+      
+      // Check if it's a Supabase error with more details
+      if (error && typeof error === 'object' && 'message' in error) {
+        console.error("Error message:", error.message);
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to create bundle. Please try again.",
+        description: `Failed to create bundle: ${error?.message || 'Unknown error'}. Please try again.`,
         variant: "destructive",
       });
     } finally {
