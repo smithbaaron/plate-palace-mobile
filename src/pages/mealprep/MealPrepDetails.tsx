@@ -1,13 +1,15 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
-import { ArrowLeft, Calendar, Clock, User, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, User, Package, Loader } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { bundleService } from "@/lib/bundles-service";
+import { getAvailableSellers } from "@/lib/customer-plates-service";
 
 // Mock meal prep package data
 const MOCK_MEAL_PREP = {
@@ -70,9 +72,88 @@ const MealPrepDetails = () => {
   const [selectedSize, setSelectedSize] = React.useState("Regular");
   const [withBreakfast, setWithBreakfast] = React.useState(false);
   const [expandedDays, setExpandedDays] = React.useState<string[]>([]);
+  const [bundle, setBundle] = useState<any>(null);
+  const [seller, setSeller] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const fetchBundleData = async () => {
+      if (!id) {
+        setError("Bundle ID not found");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        console.log("🔍 Fetching bundle data for ID:", id);
+        
+        const [bundlesData, sellersData] = await Promise.all([
+          bundleService.getAvailableBundles(),
+          getAvailableSellers()
+        ]);
+        
+        const foundBundle = bundlesData.find(b => b.id === id);
+        console.log("📦 Found bundle:", foundBundle);
+        console.log("📊 Available bundles:", bundlesData.map(b => ({ id: b.id, name: b.name })));
+        
+        if (!foundBundle) {
+          setError("Bundle not found");
+          setLoading(false);
+          return;
+        }
+        
+        // Find seller by checking which seller profile belongs to the user who created this bundle
+        // For now, we'll match by any seller in the list and show "Unknown Seller" if not found
+        const bundleSeller = sellersData.find(s => {
+          // We'll need to improve this matching later, but for now just pick the first seller
+          // or match by some other logic
+          console.log("🔍 Checking seller:", s.id, "vs bundle seller_id:", foundBundle.seller_id);
+          return true; // For now, just use the first seller or fallback
+        });
+        
+        console.log("👤 Bundle seller_id:", foundBundle.seller_id);
+        console.log("👤 Using seller:", bundleSeller);
+        
+        setBundle(foundBundle);
+        setSeller(bundleSeller || { businessName: "Unknown Seller", id: "unknown" });
+        setLoading(false);
+      } catch (error) {
+        console.error("❌ Error fetching bundle data:", error);
+        setError("Error loading bundle details");
+        setLoading(false);
+      }
+    };
+
+    fetchBundleData();
+  }, [id]);
   
   // In a real app, fetch meal prep data based on the ID
-  const mealPrep = MOCK_MEAL_PREP;
+  const mealPrep = bundle ? {
+    id: bundle.id,
+    name: bundle.name,
+    description: `${bundle.plate_count} plates package - ${bundle.availability_scope} availability`,
+    price: bundle.price,
+    seller: seller?.businessName || "Unknown Seller",
+    sellerUsername: seller?.businessName?.toLowerCase().replace(/\s+/g, '') || "seller",
+    image: bundle.bundle_plates?.[0]?.plates?.image_url || "https://images.unsplash.com/photo-1611599537845-1c7aca0091c0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+    mealCount: bundle.plate_count,
+    withBreakfast: false,
+    availableSizes: ["Regular", "Large"],
+    startDate: bundle.available_date,
+    cutoffDate: new Date(new Date(bundle.available_date).getTime() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 2 days before
+    deliveryDays: bundle.availability_scope === 'week' ? ["Monday", "Wednesday", "Friday"] : ["Next Day"],
+    meals: bundle.bundle_plates?.map((bp: any, index: number) => ({
+      day: bundle.availability_scope === 'week' ? 
+        ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"][index % 5] : 
+        `Plate ${index + 1}`,
+      meals: [{
+        type: "Meal",
+        name: bp.plates?.name || `Plate ${index + 1}`,
+        description: `Size: ${bp.plates?.size || 'Regular'} - Price: $${bp.plates?.price || 0}`
+      }]
+    })) || []
+  } : MOCK_MEAL_PREP;
   
   const handleBack = () => {
     navigate(-1);
@@ -84,6 +165,48 @@ const MealPrepDetails = () => {
       description: `${mealPrep.name} (${selectedSize}) added to your order.`,
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <Navigation />
+        <div className="pt-20 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <Loader className="animate-spin h-8 w-8 text-nextplate-red mx-auto mb-4" />
+                <p className="text-gray-400">Loading bundle details...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !bundle) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <Navigation />
+        <div className="pt-20 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center py-16">
+              <Package className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+              <h1 className="text-2xl font-bold mb-4">Bundle Not Found</h1>
+              <p className="text-gray-400 mb-6">{error || "The bundle you're looking for doesn't exist."}</p>
+              <Button 
+                onClick={handleBack}
+                className="bg-nextplate-red hover:bg-red-600"
+              >
+                <ArrowLeft className="mr-2" size={16} />
+                Go Back
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   const toggleDayExpanded = (day: string) => {
     setExpandedDays(prev => 
