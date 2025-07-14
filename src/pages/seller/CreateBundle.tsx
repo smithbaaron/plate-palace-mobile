@@ -25,7 +25,7 @@ import AddSinglePlateForm from "@/components/seller/AddSinglePlateForm";
 
 const bundleSchema = z.object({
   name: z.string().min(3, "Bundle name must be at least 3 characters"),
-  plateCount: z.coerce.number().min(1, "Bundle must contain at least 1 plate").max(10, "Bundle cannot exceed 10 plates"),
+  plateCount: z.coerce.number().min(1, "Bundle must contain at least 1 plate").max(5, "Bundle cannot exceed 5 plates"),
   price: z.coerce.number().min(0.01, "Price must be greater than 0"),
   availableDate: z.date({
     required_error: "Available date is required",
@@ -58,7 +58,7 @@ const CreateBundle = () => {
     resolver: zodResolver(bundleSchema),
     defaultValues: {
       name: "",
-      plateCount: 2,
+      plateCount: 1,
       price: 0,
       availableDate: new Date(new Date().setHours(0, 0, 0, 0)),
       availabilityScope: "day",
@@ -255,7 +255,7 @@ const CreateBundle = () => {
                       id="plateCount"
                       type="number"
                       min="1"
-                      max="10"
+                      max="5"
                       {...form.register("plateCount", {
                         onChange: () => {
                           setSelectedPlateIds([]);
