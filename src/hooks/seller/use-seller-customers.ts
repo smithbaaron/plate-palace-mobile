@@ -109,8 +109,17 @@ export const useSellerCustomers = () => {
             .select('id, full_name, email')
             .in('id', customerIds);
 
+          console.log('🔍 Customer profiles data:', profiles);
+          console.log('🔍 Customer IDs to lookup:', customerIds);
+
           if (profilesError) {
             console.error('❌ Error fetching profiles:', profilesError);
+            // Try alternative field names if standard ones fail
+            const { data: altProfiles, error: altError } = await supabase
+              .from('profiles')
+              .select('*')
+              .in('id', customerIds);
+            console.log('🔍 Alternative profiles query result:', altProfiles);
           }
 
           // Process orders with profile data
