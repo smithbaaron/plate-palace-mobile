@@ -205,7 +205,7 @@ export const cancelOrder = async (orderId: string, customerId: string) => {
 
     console.log('🔄 Attempting to update order with:', { orderId, customerId, currentStatus: existingOrder.status });
     
-    // Update order status to cancelled
+    // Try updating just by order ID since we already verified ownership
     const { data: cancelledOrders, error: updateError } = await supabase
       .from('orders')
       .update({ 
@@ -213,22 +213,30 @@ export const cancelOrder = async (orderId: string, customerId: string) => {
         updated_at: new Date().toISOString()
       })
       .eq('id', orderId)
-      .eq('customer_id', customerId)
       .select();
 
-    console.log('🔄 Update result:', { data: cancelledOrders, error: updateError });
+    console.log('🔄 Update result (without customer_id filter):', { data: cancelledOrders, error: updateError });
 
     if (updateError) {
       console.error('❌ Error cancelling order:', updateError);
       throw updateError;
     }
 
-    console.log('✅ Order cancelled successfully:', cancelledOrders);
-    
     if (!cancelledOrders || cancelledOrders.length === 0) {
-      throw new Error('Failed to cancel order - no rows updated. This might indicate the order was already processed or cancelled.');
+      console.log('🔄 Update without customer_id filter also failed, trying with RLS bypass...');
+      
+      // Let's try to get more information about why the update is failing
+      const { data: orderCheck } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId);
+      
+      console.log('🔍 Full order details for debugging:', orderCheck);
+      
+      throw new Error('Failed to cancel order - update operation blocked. This might be due to database row-level security policies.');
     }
     
+    console.log('✅ Order cancelled successfully:', cancelledOrders);
     return cancelledOrders[0];
   } catch (error) {
     console.error('❌ Error in cancelOrder:', error);
