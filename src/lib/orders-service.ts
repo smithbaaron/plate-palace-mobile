@@ -158,11 +158,12 @@ export const createOrder = async (orderData: {
 export const cancelOrder = async (orderId: string, customerId: string) => {
   try {
     console.log('🚫 Cancelling order:', orderId, 'for customer:', customerId);
+    console.log('🔍 Types - orderId:', typeof orderId, 'customerId:', typeof customerId);
     
     // First check if the order belongs to the customer and can be cancelled
     const { data: orders, error: fetchError } = await supabase
       .from('orders')
-      .select('id, customer_id, status')
+      .select('id, customer_id, status, seller_id')
       .eq('id', orderId)
       .eq('customer_id', customerId);
 
@@ -174,7 +175,19 @@ export const cancelOrder = async (orderId: string, customerId: string) => {
     console.log('🔍 Found orders for cancellation check:', orders);
 
     if (!orders || orders.length === 0) {
-      throw new Error('Order not found or does not belong to this customer');
+      // Let's also try to find the order without customer_id filter to see if it exists at all
+      const { data: allOrdersWithId } = await supabase
+        .from('orders')
+        .select('id, customer_id, status')
+        .eq('id', orderId);
+      
+      console.log('🔍 Orders with this ID (any customer):', allOrdersWithId);
+      
+      if (!allOrdersWithId || allOrdersWithId.length === 0) {
+        throw new Error('Order not found with this ID');
+      } else {
+        throw new Error(`Order found but belongs to different customer. Order customer_id: ${allOrdersWithId[0].customer_id}, Your customer_id: ${customerId}`);
+      }
     }
 
     if (orders.length > 1) {
@@ -183,12 +196,15 @@ export const cancelOrder = async (orderId: string, customerId: string) => {
     }
 
     const existingOrder = orders[0];
+    console.log('📋 Order details before cancellation:', existingOrder);
 
     // Check if order can be cancelled (only allow cancellation for pending/confirmed orders)
     if (!['pending', 'confirmed'].includes(existingOrder.status)) {
       throw new Error(`Cannot cancel order with status: ${existingOrder.status}`);
     }
 
+    console.log('🔄 Attempting to update order with:', { orderId, customerId, currentStatus: existingOrder.status });
+    
     // Update order status to cancelled
     const { data: cancelledOrders, error: updateError } = await supabase
       .from('orders')
@@ -200,6 +216,8 @@ export const cancelOrder = async (orderId: string, customerId: string) => {
       .eq('customer_id', customerId)
       .select();
 
+    console.log('🔄 Update result:', { data: cancelledOrders, error: updateError });
+
     if (updateError) {
       console.error('❌ Error cancelling order:', updateError);
       throw updateError;
@@ -208,7 +226,7 @@ export const cancelOrder = async (orderId: string, customerId: string) => {
     console.log('✅ Order cancelled successfully:', cancelledOrders);
     
     if (!cancelledOrders || cancelledOrders.length === 0) {
-      throw new Error('Failed to cancel order - no rows updated');
+      throw new Error('Failed to cancel order - no rows updated. This might indicate the order was already processed or cancelled.');
     }
     
     return cancelledOrders[0];
