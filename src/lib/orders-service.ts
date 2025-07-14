@@ -190,7 +190,7 @@ export const cancelOrder = async (orderId: string, customerId: string) => {
     }
 
     // Update order status to cancelled
-    const { data: cancelledOrder, error: updateError } = await supabase
+    const { data: cancelledOrders, error: updateError } = await supabase
       .from('orders')
       .update({ 
         status: 'cancelled',
@@ -198,16 +198,20 @@ export const cancelOrder = async (orderId: string, customerId: string) => {
       })
       .eq('id', orderId)
       .eq('customer_id', customerId)
-      .select()
-      .single();
+      .select();
 
     if (updateError) {
       console.error('❌ Error cancelling order:', updateError);
       throw updateError;
     }
 
-    console.log('✅ Order cancelled successfully:', cancelledOrder);
-    return cancelledOrder;
+    console.log('✅ Order cancelled successfully:', cancelledOrders);
+    
+    if (!cancelledOrders || cancelledOrders.length === 0) {
+      throw new Error('Failed to cancel order - no rows updated');
+    }
+    
+    return cancelledOrders[0];
   } catch (error) {
     console.error('❌ Error in cancelOrder:', error);
     throw error;
