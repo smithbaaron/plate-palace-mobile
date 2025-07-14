@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getAvailablePlates, getAvailableSellers } from "@/lib/customer-plates-service";
 import { bundleService } from "@/lib/bundles-service";
+import { supabase } from "@/lib/supabase";
 import { useNotifications } from "@/hooks/use-notifications";
 
 const SellerMenuView = () => {
@@ -22,7 +23,23 @@ const SellerMenuView = () => {
   useEffect(() => {
     const fetchSellerData = async () => {
       try {
-        console.log("🔍 Fetching seller menu for ID:", sellerId);
+        console.log("🔍 Fetching seller menu for seller profile ID:", sellerId);
+        
+        // First, get the user_id for this seller profile
+        const { data: sellerProfile, error: profileError } = await supabase
+          .from('seller_profiles')
+          .select('user_id')
+          .eq('id', sellerId)
+          .single();
+        
+        if (profileError) {
+          console.error("❌ Error fetching seller profile:", profileError);
+          setLoading(false);
+          return;
+        }
+        
+        const sellerUserId = sellerProfile?.user_id;
+        console.log("🔑 Found seller user_id:", sellerUserId, "for profile ID:", sellerId);
         
         const [sellersData, platesData, bundlesData] = await Promise.all([
           getAvailableSellers(),
@@ -33,24 +50,17 @@ const SellerMenuView = () => {
         const foundSeller = sellersData.find(s => s.id === sellerId);
         const sellerPlates = platesData.filter(p => p.seller?.id === sellerId);
         
-        // Find bundles by getting the user_id that corresponds to this seller profile
-        // We need to query the seller_profiles table to get the user_id
-        console.log("🔍 Looking for bundles for seller profile:", sellerId);
-        console.log("🔍 Available bundles:", bundlesData.map(b => ({ id: b.id, name: b.name, seller_id: b.seller_id })));
-        
-        // For now, try to match bundles. The seller_id in bundles should be the user_id
-        let sellerBundles = bundlesData.filter(b => b.seller_id === sellerId);
-        
-        // If no bundles found with seller profile ID, check if we need to get user_id from seller profile
-        if (sellerBundles.length === 0) {
-          console.log("🔍 No bundles found with seller profile ID, checking debug info...");
-          console.log("🔍 All bundle seller_ids:", bundlesData.map(b => b.seller_id));
-          console.log("🔍 Current sellerId:", sellerId);
-        }
+        // Filter bundles using the seller's user_id (not profile id)
+        const sellerBundles = bundlesData.filter(b => {
+          console.log("🔍 Checking bundle:", b.id, "bundle seller_id:", b.seller_id, "vs seller user_id:", sellerUserId);
+          return b.seller_id === sellerUserId;
+        });
         
         console.log("👤 Found seller:", foundSeller);
         console.log("🍽️ Seller plates:", sellerPlates);
         console.log("📦 Seller bundles found:", sellerBundles);
+        console.log("📊 Total bundles in database:", bundlesData.length);
+        console.log("📊 Bundles for this seller:", sellerBundles.length);
         
         setSeller(foundSeller);
         setPlates(sellerPlates);
