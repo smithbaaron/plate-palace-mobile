@@ -274,22 +274,24 @@ export const deleteOrder = async (orderId: string, customerId: string) => {
     console.log('🗑️ Deleting order and related items:', existingOrder);
 
     // Delete order items first (foreign key constraint)
-    const { error: itemsDeleteError } = await supabase
+    const { data: deletedItems, error: itemsDeleteError } = await supabase
       .from('order_items')
       .delete()
-      .eq('order_id', orderId);
+      .eq('order_id', orderId)
+      .select();
 
     if (itemsDeleteError) {
       console.error('❌ Error deleting order items:', itemsDeleteError);
       throw itemsDeleteError;
     }
 
-    // Delete the order
+    console.log('✅ Deleted order items:', deletedItems);
+
+    // Delete the order - try without customer_id filter first since we already validated ownership
     const { data: deletedOrder, error: deleteError } = await supabase
       .from('orders')
       .delete()
       .eq('id', orderId)
-      .eq('customer_id', customerId)
       .select();
 
     if (deleteError) {
