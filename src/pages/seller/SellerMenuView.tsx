@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getAvailablePlates, getAvailableSellers } from "@/lib/customer-plates-service";
+import { bundleService } from "@/lib/bundles-service";
 import { useNotifications } from "@/hooks/use-notifications";
 
 const SellerMenuView = () => {
@@ -15,6 +16,7 @@ const SellerMenuView = () => {
   
   const [seller, setSeller] = useState<any>(null);
   const [plates, setPlates] = useState<any[]>([]);
+  const [bundles, setBundles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,19 +24,37 @@ const SellerMenuView = () => {
       try {
         console.log("🔍 Fetching seller menu for ID:", sellerId);
         
-        const [sellersData, platesData] = await Promise.all([
+        const [sellersData, platesData, bundlesData] = await Promise.all([
           getAvailableSellers(),
-          getAvailablePlates()
+          getAvailablePlates(),
+          bundleService.getAvailableBundles()
         ]);
         
         const foundSeller = sellersData.find(s => s.id === sellerId);
         const sellerPlates = platesData.filter(p => p.seller?.id === sellerId);
         
+        // Find bundles by getting the user_id that corresponds to this seller profile
+        // We need to query the seller_profiles table to get the user_id
+        console.log("🔍 Looking for bundles for seller profile:", sellerId);
+        console.log("🔍 Available bundles:", bundlesData.map(b => ({ id: b.id, name: b.name, seller_id: b.seller_id })));
+        
+        // For now, try to match bundles. The seller_id in bundles should be the user_id
+        let sellerBundles = bundlesData.filter(b => b.seller_id === sellerId);
+        
+        // If no bundles found with seller profile ID, check if we need to get user_id from seller profile
+        if (sellerBundles.length === 0) {
+          console.log("🔍 No bundles found with seller profile ID, checking debug info...");
+          console.log("🔍 All bundle seller_ids:", bundlesData.map(b => b.seller_id));
+          console.log("🔍 Current sellerId:", sellerId);
+        }
+        
         console.log("👤 Found seller:", foundSeller);
         console.log("🍽️ Seller plates:", sellerPlates);
+        console.log("📦 Seller bundles found:", sellerBundles);
         
         setSeller(foundSeller);
         setPlates(sellerPlates);
+        setBundles(sellerBundles);
         setLoading(false);
       } catch (error) {
         console.error("❌ Error fetching seller data:", error);
@@ -165,10 +185,81 @@ const SellerMenuView = () => {
 
           {/* Menu Section */}
           <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-6">Menu ({plates.length} items)</h2>
+            <h2 className="text-2xl font-bold mb-6">Menu ({plates.length} plates, {bundles.length} bundles)</h2>
             
-            {plates.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Bundles Section */}
+            {bundles.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold mb-4 text-nextplate-red">Meal Prep Bundles</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {bundles.map(bundle => (
+                    <Card key={bundle.id} className="bg-nextplate-darkgray border-gray-800 hover:ring-2 hover:ring-nextplate-red transition-all">
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h4 className="text-lg font-bold text-white mb-1">{bundle.name}</h4>
+                            <p className="text-sm text-gray-400">{bundle.plate_count} plates included</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xl font-bold text-nextplate-red">${bundle.price}</p>
+                            <p className="text-xs text-gray-400">${(bundle.price / bundle.plate_count).toFixed(2)} per plate</p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2 mb-4">
+                          <div className="flex items-center text-xs text-gray-400">
+                            <Calendar size={12} className="mr-1 text-blue-500" />
+                            Available: {new Date(bundle.available_date).toLocaleDateString()}
+                          </div>
+                          <div className="flex items-center text-xs text-gray-400">
+                            <Clock size={12} className="mr-1 text-green-500" />
+                            {bundle.availability_scope} package
+                          </div>
+                        </div>
+
+                        {bundle.bundle_plates && bundle.bundle_plates.length > 0 && (
+                          <div className="mb-4">
+                            <p className="text-xs text-gray-400 mb-2">Includes:</p>
+                            <div className="space-y-1">
+                              {bundle.bundle_plates.slice(0, 3).map((bp: any, idx: number) => (
+                                <p key={idx} className="text-xs text-gray-300">• {bp.plates?.name || 'Plate'}</p>
+                              ))}
+                              {bundle.bundle_plates.length > 3 && (
+                                <p className="text-xs text-gray-400">• +{bundle.bundle_plates.length - 3} more plates</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="flex-1 border-nextplate-red text-nextplate-red hover:bg-nextplate-red hover:text-white"
+                            onClick={() => navigate(`/mealprep/${bundle.id}`)}
+                          >
+                            View Details
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            className="flex-1 bg-nextplate-red hover:bg-red-600"
+                            onClick={() => notifyInfo("Bundle Order", `${bundle.name} bundle order started! 📦`)}
+                          >
+                            Order Bundle
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Individual Plates Section */}
+            {plates.length > 0 && (
+              <div>
+                <h3 className="text-xl font-semibold mb-4">Individual Plates</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {plates.map(plate => (
                   <Card key={plate.id} className="bg-nextplate-darkgray border-gray-800 hover:ring-2 hover:ring-nextplate-red transition-all">
                     <div className="h-48 relative overflow-hidden rounded-t-lg">
@@ -220,16 +311,20 @@ const SellerMenuView = () => {
                     </CardContent>
                   </Card>
                 ))}
+                </div>
               </div>
-            ) : (
+            )}
+            
+            {/* No Content State */}
+            {plates.length === 0 && bundles.length === 0 && (
               <Card className="bg-nextplate-darkgray border-gray-800">
                 <CardContent className="p-12 text-center">
                   <div className="text-gray-500 mb-4">
                     <Clock size={48} className="mx-auto" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">No Plates Available</h3>
+                  <h3 className="text-xl font-semibold mb-2">No Menu Items Available</h3>
                   <p className="text-gray-400">
-                    {seller.businessName || seller.name} doesn't have any plates available right now. 
+                    {seller.businessName || seller.name} doesn't have any plates or bundles available right now. 
                     Check back later for delicious options!
                   </p>
                 </CardContent>
