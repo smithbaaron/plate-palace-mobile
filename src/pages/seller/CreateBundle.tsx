@@ -81,20 +81,11 @@ const CreateBundle = () => {
   // Function to refresh plates data
   const refreshPlatesData = async () => {
     try {
-      console.log('Refreshing plates data...');
       const plates = await fetchPlates();
-      console.log('Fetched plates:', plates);
-      
       setAllPlates(plates); // Store all plates for duplication
       
       // Filter plates that are available for bundles (regular plates, not already bundled)
-      const bundlePlates = plates.filter(plate => {
-        const isEligible = !plate.isBundle && plate.isAvailable;
-        console.log(`Plate ${plate.name} - isBundle: ${plate.isBundle}, isAvailable: ${plate.isAvailable}, eligible: ${isEligible}`);
-        return isEligible;
-      });
-      
-      console.log('Bundle eligible plates:', bundlePlates);
+      const bundlePlates = plates.filter(plate => !plate.isBundle && plate.isAvailable);
       setAvailablePlates(bundlePlates);
     } catch (error) {
       console.error("Error refreshing plates:", error);
@@ -111,10 +102,10 @@ const CreateBundle = () => {
     if (currentUser) {
       refreshPlatesData();
     }
-  }, [currentUser, fetchPlates, toast]);
+  }, [currentUser]);
 
   const handlePlateSelection = (plateId: string, checked: boolean) => {
-    const plateCount = form.getValues("plateCount");
+    const plateCount = form.watch("plateCount"); // Use watch instead of getValues for reactive updates
     
     if (checked) {
       if (selectedPlateIds.length < plateCount) {
