@@ -90,29 +90,35 @@ export const useSellerCustomers = () => {
       const customersFromOrders = new Map<string, Customer>();
       
       if (ordersTableExists) {
+        // First get orders for this seller
         const { data: orders, error: ordersError } = await supabase
           .from('orders')
-          .select(`
-            customer_id,
-            total_amount,
-            created_at,
-            status,
-            profiles!inner(
-              id,
-              full_name,
-              email
-            )
-          `)
+          .select('customer_id, total_amount, created_at, status')
           .eq('seller_id', currentUser.id)
           .neq('status', 'cancelled');
 
         if (ordersError) {
           console.error('❌ Error fetching orders:', ordersError);
         } else if (orders) {
+          // Get unique customer IDs
+          const customerIds = [...new Set(orders.map(order => order.customer_id))];
+          
+          // Fetch customer profiles separately
+          const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', customerIds);
+
+          if (profilesError) {
+            console.error('❌ Error fetching profiles:', profilesError);
+          }
+
+          // Process orders with profile data
           orders.forEach(order => {
             const customerId = order.customer_id;
-            const customerName = (order as any).profiles?.full_name || 'Unknown Customer';
-            const customerEmail = (order as any).profiles?.email || 'Unknown Email';
+            const profile = profiles?.find(p => p.id === customerId);
+            const customerName = profile?.full_name || 'Unknown Customer';
+            const customerEmail = profile?.email || 'Unknown Email';
             
             if (customersFromOrders.has(customerId)) {
               const existing = customersFromOrders.get(customerId)!;
@@ -142,24 +148,24 @@ export const useSellerCustomers = () => {
       if (customerProfilesTableExists) {
         const { data: followers, error: followersError } = await supabase
           .from('customer_profiles')
-          .select(`
-            user_id,
-            followed_sellers,
-            profiles!inner(
-              id,
-              full_name,
-              email
-            )
-          `)
+          .select('user_id, followed_sellers')
           .contains('followed_sellers', [currentUser.id]);
 
         if (followersError) {
           console.error('❌ Error fetching followers:', followersError);
         } else if (followers) {
+          // Get follower profile data separately
+          const followerIds = followers.map(f => f.user_id);
+          const { data: followerProfiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', followerIds);
+
           followers.forEach(follower => {
             const customerId = follower.user_id;
-            const customerName = (follower as any).profiles?.full_name || 'Unknown Customer';
-            const customerEmail = (follower as any).profiles?.email || 'Unknown Email';
+            const profile = followerProfiles?.find(p => p.id === customerId);
+            const customerName = profile?.full_name || 'Unknown Customer';
+            const customerEmail = profile?.email || 'Unknown Email';
             
             if (customersFromOrders.has(customerId)) {
               customersFromOrders.get(customerId)!.isFollowing = true;
@@ -177,21 +183,6 @@ export const useSellerCustomers = () => {
               });
             }
           });
-        }
-      }
-
-      // Update following status for existing customers
-      for (const customer of customersFromOrders.values()) {
-        if (!customer.isFollowing && customerProfilesTableExists) {
-          const { data: customerProfile } = await supabase
-            .from('customer_profiles')
-            .select('followed_sellers')
-            .eq('user_id', customer.id)
-            .single();
-          
-          if (customerProfile?.followed_sellers?.includes(currentUser.id)) {
-            customer.isFollowing = true;
-          }
         }
       }
 
