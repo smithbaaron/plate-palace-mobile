@@ -300,7 +300,15 @@ export const deleteOrder = async (orderId: string, customerId: string) => {
     }
 
     if (!deletedOrder || deletedOrder.length === 0) {
-      throw new Error('Failed to delete order - no rows affected');
+      console.error('❌ No rows affected during order deletion. This may be due to RLS policies.');
+      // Let's check if the order still exists
+      const { data: stillExists } = await supabase
+        .from('orders')
+        .select('id, status')
+        .eq('id', orderId);
+      
+      console.log('🔍 Order still exists after delete attempt:', stillExists);
+      throw new Error('Failed to delete order - no rows affected. This may be due to database permissions.');
     }
 
     console.log('✅ Order deleted successfully:', deletedOrder);
