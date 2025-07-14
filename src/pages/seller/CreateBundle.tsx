@@ -25,7 +25,7 @@ import AddSinglePlateForm from "@/components/seller/AddSinglePlateForm";
 
 const bundleSchema = z.object({
   name: z.string().min(3, "Bundle name must be at least 3 characters"),
-  plateCount: z.coerce.number().min(1, "Bundle must contain at least 1 plate").max(5, "Bundle cannot exceed 5 plates"),
+  plateCount: z.coerce.number().min(3, "Bundle must contain at least 3 plates").max(7, "Bundle cannot exceed 7 plates"),
   price: z.coerce.number().min(0.01, "Price must be greater than 0"),
   availableDate: z.date({
     required_error: "Available date is required",
@@ -58,7 +58,7 @@ const CreateBundle = () => {
     resolver: zodResolver(bundleSchema),
     defaultValues: {
       name: "",
-      plateCount: 1,
+      plateCount: 3,
       price: 0,
       availableDate: new Date(new Date().setHours(0, 0, 0, 0)),
       availabilityScope: "day",
@@ -70,7 +70,7 @@ const CreateBundle = () => {
   React.useEffect(() => {
     form.reset({
       name: "",
-      plateCount: 1,
+      plateCount: 3,
       price: 0,
       availableDate: new Date(new Date().setHours(0, 0, 0, 0)),
       availabilityScope: "day",
@@ -266,8 +266,8 @@ const CreateBundle = () => {
                     <Input
                       id="plateCount"
                       type="number"
-                      min="1"
-                      max="5"
+                      min="3"
+                      max="7"
                       {...form.register("plateCount", {
                         onChange: () => {
                           setSelectedPlateIds([]);
