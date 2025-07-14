@@ -10,6 +10,8 @@ import { ArrowLeft, Calendar, Clock, User, Package, Loader } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { bundleService } from "@/lib/bundles-service";
 import { getAvailableSellers } from "@/lib/customer-plates-service";
+import { createOrder } from "@/lib/orders-service";
+import { useAuth } from "@/context/AuthContext";
 
 // Mock meal prep package data
 const MOCK_MEAL_PREP = {
@@ -69,6 +71,7 @@ const MealPrepDetails = () => {
   const { id } = useParams<{id: string}>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentUser } = useAuth();
   const [selectedSize, setSelectedSize] = React.useState("Regular");
   const [withBreakfast, setWithBreakfast] = React.useState(false);
   const [expandedDays, setExpandedDays] = React.useState<string[]>([]);
@@ -159,11 +162,67 @@ const MealPrepDetails = () => {
     navigate(-1);
   };
   
-  const handleAddToCart = () => {
-    toast({
-      title: "Added to order!",
-      description: `${mealPrep.name} (${selectedSize}) added to your order.`,
-    });
+  const handleAddToCart = async () => {
+    if (!currentUser) {
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to place an order.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!bundle) {
+      toast({
+        title: "Error",
+        description: "Bundle information not available.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log("🛒 Creating order for meal prep bundle:", { 
+        bundleId: bundle.id, 
+        bundleName: bundle.name, 
+        price: finalPrice, 
+        sellerId: bundle.seller_id 
+      });
+
+      // Create order for the meal prep bundle using the first plate as the primary item
+      const primaryPlate = bundle.bundle_plates?.[0]?.plates;
+      if (!primaryPlate) {
+        throw new Error("Bundle has no plates associated");
+      }
+
+      await createOrder({
+        customerId: currentUser.id,
+        sellerId: bundle.seller_id,
+        items: [{
+          plateId: primaryPlate.id,
+          quantity: 1,
+          unitPrice: finalPrice,
+        }],
+        totalAmount: finalPrice,
+        deliveryType: 'delivery', // Default for meal prep bundles
+        notes: `Meal prep bundle: ${bundle.name} (${selectedSize}${withBreakfast ? ' with breakfast' : ''}) - ${bundle.plate_count} plates included`,
+      });
+
+      toast({
+        title: "Order placed successfully!",
+        description: `${mealPrep.name} (${selectedSize}${withBreakfast ? ' with breakfast' : ''}) has been ordered.`,
+      });
+
+      // Navigate back or to orders page
+      navigate('/customer/orders');
+    } catch (error) {
+      console.error("❌ Error creating meal prep order:", error);
+      toast({
+        title: "Order failed",
+        description: "There was an error placing your order. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {

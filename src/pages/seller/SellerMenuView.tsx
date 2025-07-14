@@ -111,6 +111,43 @@ const SellerMenuView = () => {
     }
   };
 
+  const handleOrderBundle = async (bundleId: string, bundleName: string, bundlePrice: number, sellerId: string) => {
+    if (!currentUser) {
+      notifyInfo("Login Required", "Please log in to place orders");
+      return;
+    }
+
+    try {
+      console.log("🛒 Creating order for bundle:", { bundleId, bundleName, bundlePrice, sellerId });
+
+      // Get bundle details to find the primary plate
+      const bundleDetails = bundles.find(b => b.id === bundleId);
+      if (!bundleDetails || !bundleDetails.bundle_plates?.[0]?.plates) {
+        throw new Error("Bundle details not found");
+      }
+
+      const primaryPlate = bundleDetails.bundle_plates[0].plates;
+
+      await createOrder({
+        customerId: currentUser.id,
+        sellerId: sellerUserId || sellerId, // Use the actual user_id
+        items: [{
+          plateId: primaryPlate.id,
+          quantity: 1,
+          unitPrice: bundlePrice,
+        }],
+        totalAmount: bundlePrice,
+        deliveryType: 'delivery',
+        notes: `Meal prep bundle: ${bundleName} - ${bundleDetails.plate_count} plates included`,
+      });
+
+      notifySuccess("Order Placed", `${bundleName} bundle ordered successfully! 📦`);
+    } catch (error) {
+      console.error("❌ Error creating bundle order:", error);
+      notifyInfo("Order Failed", "There was an error placing your bundle order. Please try again.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black text-white">
@@ -283,7 +320,7 @@ const SellerMenuView = () => {
                           <Button 
                             size="sm" 
                             className="flex-1 bg-nextplate-red hover:bg-red-600"
-                            onClick={() => notifyInfo("Bundle Order", `${bundle.name} bundle order started! 📦`)}
+                            onClick={() => handleOrderBundle(bundle.id, bundle.name, bundle.price, sellerId)}
                           >
                             Order Bundle
                           </Button>
