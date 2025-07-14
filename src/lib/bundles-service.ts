@@ -117,16 +117,17 @@ export const bundleService = {
             size,
             image_url
           )
-        ),
-        seller_profiles!inner (
-          business_name,
-          user_id
         )
       `)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data as (Bundle & { seller_profiles: { business_name: string; user_id: string }[] })[];
+    if (error) {
+      console.error('❌ Error fetching available bundles:', error);
+      throw error;
+    }
+    
+    console.log("📦 Raw bundles data:", data);
+    return data as Bundle[];
   },
 
   async deleteBundle(bundleId: string) {

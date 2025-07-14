@@ -279,7 +279,7 @@ const CustomerDashboard = () => {
   const filteredMealPreps = searchQuery
     ? bundlesToUse.filter(prep => 
         (prep.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (prep.seller_profiles?.[0]?.business_name || prep.seller || '').toLowerCase().includes(searchQuery.toLowerCase())
+        (sellersToUse.find(s => s.id === prep.seller_id)?.businessName || '').toLowerCase().includes(searchQuery.toLowerCase())
       )
     : bundlesToUse;
 
@@ -702,7 +702,9 @@ const CustomerDashboard = () => {
                          </div>
                          <div className="p-6 md:w-2/3">
                            <h3 className="text-xl font-bold mb-1">{prep.name}</h3>
-                           <p className="text-sm text-gray-300 mb-1">by {prep.seller_profiles?.[0]?.business_name || prep.seller}</p>
+                           <p className="text-sm text-gray-300 mb-1">
+                             by {sellersToUse.find(s => s.id === prep.seller_id)?.businessName || "Unknown Seller"}
+                           </p>
                            <p className="text-sm text-gray-300 mb-4">
                              {prep.plate_count} plates • {prep.availability_scope} package
                            </p>
