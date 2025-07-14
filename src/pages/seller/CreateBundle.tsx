@@ -208,7 +208,7 @@ const CreateBundle = () => {
         description: `${data.name} with ${data.plateCount} plates for $${data.price.toFixed(2)} has been created.`,
       });
       
-      navigate("/seller/dashboard");
+      navigate("/seller/dashboard?tab=bundles");
     } catch (error: any) {
       console.error("Error creating bundle:", error);
       console.error("Error message:", error?.message);

@@ -18,11 +18,13 @@ import DatabaseSetupRequired from "@/components/seller/dashboard/DatabaseSetupRe
 
 // Import custom hooks
 import { useSellerPlates } from "@/hooks/seller/use-seller-plates";
+import { useSearchParams } from "react-router-dom";
 
 const SellerDashboard = () => {
   const { notifyInfo } = useNotifications();
+  const [searchParams] = useSearchParams();
   const [isAddPlateOpen, setIsAddPlateOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("menu");
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "menu");
   
   const {
     todayPlates,
