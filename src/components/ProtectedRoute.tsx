@@ -86,8 +86,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       return <Navigate to={dashboardUrl} replace />;
     }
     
-    // If no user type and not on onboarding, redirect to required type onboarding only if we have requiredUserType
-    if (!userType && !userRole && !isOnOnboardingPage && requiredUserType) {
+    // If no user type and not on onboarding, redirect to required type onboarding only if we have requiredUserType AND user is not onboarded
+    if (!userType && !userRole && !isOnOnboardingPage && requiredUserType && !isOnboarded) {
       console.log('✅ Redirecting to required type onboarding:', requiredUserType);
       return <Navigate to={`/${requiredUserType}/onboarding`} replace />;
     }
@@ -109,7 +109,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={`/${userType}/onboarding`} replace />;
   }
   
-  // Default redirect for users without type or role - only when requiredUserType is specified
+  // Default redirect for users without type or role - only when requiredUserType is specified AND user is not onboarded
   if (!userType && !userRole && !isOnOnboardingPage && !isOnboarded && requiredUserType) {
     console.log('✅ Default redirect to required type onboarding:', requiredUserType);
     return <Navigate to={`/${requiredUserType}/onboarding`} replace />;
