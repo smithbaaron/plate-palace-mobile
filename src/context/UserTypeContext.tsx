@@ -38,7 +38,10 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
   const resyncUserTypeData = async () => {
     try {
       if (!isAuthenticated || !currentUser) {
-        console.log("Cannot sync user type data - not authenticated or no current user");
+        console.log("❌ UserTypeContext: Cannot sync user type data - not authenticated or no current user", {
+          isAuthenticated,
+          currentUser: currentUser?.id
+        });
         setUserTypeState(null);
         setIsOnboarded(false);
         return;
