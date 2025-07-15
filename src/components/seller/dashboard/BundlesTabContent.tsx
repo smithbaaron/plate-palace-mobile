@@ -143,8 +143,8 @@ const BundlesTabContent: React.FC = () => {
                 <div className="space-y-1">
                   {bundle.bundle_plates?.map((bundlePlate) => (
                     <div key={bundlePlate.plate_id} className="text-xs text-gray-400 flex items-center justify-between">
-                      <span>{bundlePlate.plates.name}</span>
-                      <span>${bundlePlate.plates.price.toFixed(2)}</span>
+                      <span>{bundlePlate.plates.name} x{bundlePlate.quantity}</span>
+                      <span>${(bundlePlate.plates.price * bundlePlate.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -156,13 +156,13 @@ const BundlesTabContent: React.FC = () => {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-400">Individual Total:</span>
                     <span className="text-gray-400">
-                      ${bundle.bundle_plates.reduce((sum, bp) => sum + bp.plates.price, 0).toFixed(2)}
+                      ${bundle.bundle_plates.reduce((sum, bp) => sum + (bp.plates.price * bp.quantity), 0).toFixed(2)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm font-medium">
                     <span className="text-green-400">Bundle Savings:</span>
                     <span className="text-green-400">
-                      ${(bundle.bundle_plates.reduce((sum, bp) => sum + bp.plates.price, 0) - bundle.price).toFixed(2)}
+                      ${(bundle.bundle_plates.reduce((sum, bp) => sum + (bp.plates.price * bp.quantity), 0) - bundle.price).toFixed(2)}
                     </span>
                   </div>
                 </div>

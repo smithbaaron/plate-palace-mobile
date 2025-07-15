@@ -13,6 +13,7 @@ export interface Bundle {
   updated_at: string;
   bundle_plates?: {
     plate_id: string;
+    quantity: number;
     plates: {
       id: string;
       name: string;
@@ -56,10 +57,17 @@ export const bundleService = {
       throw new Error(`Failed to create bundle: ${bundleError.message || bundleError.details || 'Unknown database error'}`);
     }
 
-    // Create bundle_plates relationships
-    const bundlePlatesData = bundleData.selectedPlateIds.map(plateId => ({
+    // Convert selectedPlateIds array to quantities map
+    const plateQuantities: { [plateId: string]: number } = {};
+    bundleData.selectedPlateIds.forEach(plateId => {
+      plateQuantities[plateId] = (plateQuantities[plateId] || 0) + 1;
+    });
+
+    // Create bundle_plates relationships with quantities
+    const bundlePlatesData = Object.entries(plateQuantities).map(([plateId, quantity]) => ({
       bundle_id: bundle.id,
       plate_id: plateId,
+      quantity: quantity,
     }));
 
     const { error: bundlePlatesError } = await supabase
@@ -86,6 +94,7 @@ export const bundleService = {
         *,
         bundle_plates (
           plate_id,
+          quantity,
           plates (
             id,
             name,
@@ -110,6 +119,7 @@ export const bundleService = {
         *,
         bundle_plates (
           plate_id,
+          quantity,
           plates (
             id,
             name,
