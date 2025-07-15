@@ -39,9 +39,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Show loading while user type data is being initialized for authenticated users
   if (isAuthenticated && !userType && !isOnboarded && !isOnOnboardingPage && !userRole) {
+    console.log('⏳ ProtectedRoute: Waiting for user type data - showing loading state');
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <div className="animate-pulse">Loading user data...</div>
+        <div className="text-center">
+          <div className="animate-pulse mb-4">Loading user data...</div>
+          <p className="text-sm text-gray-400">If this persists, please refresh the page</p>
+        </div>
       </div>
     );
   }
