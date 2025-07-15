@@ -37,6 +37,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const isOnOnboardingPage = location.pathname.includes('/onboarding');
   const userRole = supabaseUser?.user_metadata?.role || supabaseUser?.app_metadata?.role;
 
+  // Show loading while user type data is being initialized for authenticated users
+  if (isAuthenticated && !userType && !isOnboarded && !isOnOnboardingPage && !userRole) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className="animate-pulse">Loading user data...</div>
+      </div>
+    );
+  }
+
   console.log('🔍 ProtectedRoute Debug:', {
     userType,
     userRole,

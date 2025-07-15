@@ -280,11 +280,20 @@ export const useOnboardingHandlers = ({
 
       console.log("Successfully saved profile data, completing onboarding...");
 
+      // Wait for database to commit the transaction
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // Complete onboarding in context
       await completeOnboarding();
       
+      // Wait before resyncing to ensure database consistency
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // Resync user data to ensure everything is up to date
       await resyncUserTypeData();
+      
+      // Final wait to ensure all state is updated
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       console.log("Onboarding completed, navigating to dashboard...");
       

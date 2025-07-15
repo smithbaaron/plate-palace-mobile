@@ -44,13 +44,22 @@ export const UserTypeProvider: React.FC<UserTypeProviderProps> = ({
         return;
       }
 
-      console.log("Resyncing user type data for user:", currentUser.id);
+      console.log("🔄 UserTypeContext - Starting resync for user:", currentUser.id);
+      
+      // Add a small delay to ensure database operations are complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const userData = await fetchUserTypeData(currentUser.id);
       
       console.log("🔄 UserTypeContext - Fetched user data:", userData);
       
       if (userData) {
-        console.log("✅ UserTypeContext - Setting user data:", userData);
+        console.log("✅ UserTypeContext - Setting user data:", {
+          previousUserType: userType,
+          newUserType: userData.userType,
+          previousOnboarded: isOnboarded,
+          newOnboarded: userData.isOnboarded
+        });
         setUserTypeState(userData.userType);
         setIsOnboarded(userData.isOnboarded);
       } else {
