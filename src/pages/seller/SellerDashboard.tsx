@@ -126,7 +126,9 @@ const SellerDashboard = () => {
           {/* Stats Overview */}
           <DashboardStats 
             todayPlatesCount={todayPlates.length}
+            todayPlatesQuantity={todayPlates.reduce((sum, plate) => sum + (plate.quantity - plate.soldCount), 0)}
             futurePlatesCount={futurePlates.length}
+            futurePlatesQuantity={futurePlates.reduce((sum, plate) => sum + (plate.quantity - plate.soldCount), 0)}
           />
         </div>
       </div>

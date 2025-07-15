@@ -5,10 +5,12 @@ import { useSellerOrders } from "@/hooks/seller/use-seller-orders";
 
 interface DashboardStatsProps {
   todayPlatesCount: number;
+  todayPlatesQuantity: number;
   futurePlatesCount: number;
+  futurePlatesQuantity: number;
 }
 
-const DashboardStats: React.FC<DashboardStatsProps> = ({ todayPlatesCount, futurePlatesCount }) => {
+const DashboardStats: React.FC<DashboardStatsProps> = ({ todayPlatesCount, todayPlatesQuantity, futurePlatesCount, futurePlatesQuantity }) => {
   const { totalSales, totalOrdersCount, isLoading } = useSellerOrders();
 
   return (
@@ -30,11 +32,11 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({ todayPlatesCount, futur
           </div>
           <div className="p-3 bg-black bg-opacity-50 rounded-lg">
             <p className="text-sm text-gray-400">Current Menu</p>
-            <p className="text-2xl font-bold">{todayPlatesCount}</p>
+            <p className="text-2xl font-bold">{todayPlatesQuantity}/{todayPlatesCount}</p>
           </div>
           <div className="p-3 bg-black bg-opacity-50 rounded-lg">
             <p className="text-sm text-gray-400">Future Menu</p>
-            <p className="text-2xl font-bold">{futurePlatesCount}</p>
+            <p className="text-2xl font-bold">{futurePlatesQuantity}/{futurePlatesCount}</p>
           </div>
         </div>
       </div>
