@@ -33,10 +33,10 @@ const bundleSchema = z.object({
     message: "Date cannot be in the past",
   }),
   availabilityScope: z.enum(["day", "week"]),
-  selectedPlateIds: z.array(z.string()).min(1, "At least one plate must be selected"),
-}).refine((data) => data.selectedPlateIds.length === data.plateCount, {
-  message: "Number of selected plates must match the declared plate count",
-  path: ["selectedPlateIds"],
+  selectedPlateQuantities: z.record(z.string(), z.number().min(0)).refine(
+    (quantities) => Object.values(quantities).reduce((sum, qty) => sum + qty, 0) >= 1,
+    { message: "At least one plate must be selected" }
+  ),
 });
 
 type BundleFormSchema = z.infer<typeof bundleSchema>;
@@ -49,7 +49,7 @@ const CreateBundle = () => {
   
   const [availablePlates, setAvailablePlates] = useState<any[]>([]);
   const [allPlates, setAllPlates] = useState<any[]>([]); // Store all plates for duplication
-  const [selectedPlateIds, setSelectedPlateIds] = useState<string[]>([]);
+  const [selectedPlateQuantities, setSelectedPlateQuantities] = useState<{[plateId: string]: number}>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showAddPlateForm, setShowAddPlateForm] = useState(false);
   const [plateToEdit, setPlateToEdit] = useState<Plate | null>(null);
@@ -62,7 +62,7 @@ const CreateBundle = () => {
       price: 0,
       availableDate: new Date(new Date().setHours(0, 0, 0, 0)),
       availabilityScope: "day",
-      selectedPlateIds: [],
+      selectedPlateQuantities: {},
     },
   });
 
@@ -74,8 +74,9 @@ const CreateBundle = () => {
       price: 0,
       availableDate: new Date(new Date().setHours(0, 0, 0, 0)),
       availabilityScope: "day",
-      selectedPlateIds: [],
+      selectedPlateQuantities: {},
     });
+    setSelectedPlateQuantities({});
   }, []);
 
   // Function to refresh plates data
@@ -104,26 +105,30 @@ const CreateBundle = () => {
     }
   }, [currentUser]);
 
-  const handlePlateSelection = (plateId: string, checked: boolean) => {
-    const plateCount = form.watch("plateCount"); // Use watch instead of getValues for reactive updates
+  const handlePlateQuantityChange = (plateId: string, quantity: number) => {
+    const plateCount = form.watch("plateCount");
+    const currentTotal = Object.values(selectedPlateQuantities).reduce((sum, qty) => sum + qty, 0);
+    const currentPlateQty = selectedPlateQuantities[plateId] || 0;
+    const newTotal = currentTotal - currentPlateQty + quantity;
     
-    if (checked) {
-      if (selectedPlateIds.length < plateCount) {
-        const newSelection = [...selectedPlateIds, plateId];
-        setSelectedPlateIds(newSelection);
-        form.setValue("selectedPlateIds", newSelection);
-      } else {
-        toast({
-          title: "Selection Limit Reached",
-          description: `You can only select ${plateCount} plates for this bundle.`,
-          variant: "destructive",
-        });
-      }
-    } else {
-      const newSelection = selectedPlateIds.filter(id => id !== plateId);
-      setSelectedPlateIds(newSelection);
-      form.setValue("selectedPlateIds", newSelection);
+    if (newTotal > plateCount) {
+      toast({
+        title: "Selection Limit Reached",
+        description: `You can only select ${plateCount} total plates for this bundle.`,
+        variant: "destructive",
+      });
+      return;
     }
+    
+    const newQuantities = { ...selectedPlateQuantities };
+    if (quantity === 0) {
+      delete newQuantities[plateId];
+    } else {
+      newQuantities[plateId] = quantity;
+    }
+    
+    setSelectedPlateQuantities(newQuantities);
+    form.setValue("selectedPlateQuantities", newQuantities);
   };
 
   const handleAddPlate = async (newPlateData: Omit<Plate, "id" | "soldCount">) => {
@@ -174,7 +179,8 @@ const CreateBundle = () => {
   };
 
   const onSubmit = async (data: BundleFormSchema) => {
-    if (data.selectedPlateIds.length !== data.plateCount) {
+    const totalSelected = Object.values(data.selectedPlateQuantities).reduce((sum, qty) => sum + qty, 0);
+    if (totalSelected !== data.plateCount) {
       toast({
         title: "Invalid Selection",
         description: "Number of selected plates must match the declared plate count.",
@@ -185,13 +191,21 @@ const CreateBundle = () => {
 
     setIsLoading(true);
     try {
+      // Convert quantity map to array of plate IDs for the bundle service
+      const selectedPlateIds: string[] = [];
+      Object.entries(data.selectedPlateQuantities).forEach(([plateId, quantity]) => {
+        for (let i = 0; i < quantity; i++) {
+          selectedPlateIds.push(plateId);
+        }
+      });
+
       console.log("Creating bundle with data:", {
         name: data.name,
         plateCount: data.plateCount,
         price: data.price,
         availableDate: data.availableDate,
         availabilityScope: data.availabilityScope,
-        selectedPlateIds: data.selectedPlateIds,
+        selectedPlateIds,
       });
       
       await bundleService.createBundle({
@@ -200,7 +214,7 @@ const CreateBundle = () => {
         price: data.price,
         availableDate: data.availableDate,
         availabilityScope: data.availabilityScope,
-        selectedPlateIds: data.selectedPlateIds,
+        selectedPlateIds,
       });
 
       toast({
@@ -276,8 +290,8 @@ const CreateBundle = () => {
                       max="7"
                       {...form.register("plateCount", {
                         onChange: () => {
-                          setSelectedPlateIds([]);
-                          form.setValue("selectedPlateIds", []);
+                          setSelectedPlateQuantities({});
+                          form.setValue("selectedPlateQuantities", {});
                         }
                       })}
                       className="bg-gray-800 border-gray-700 text-white"
@@ -426,23 +440,26 @@ const CreateBundle = () => {
                           key={plate.id}
                           className="flex items-center space-x-3 p-3 bg-gray-800 rounded-lg"
                         >
-                          <Checkbox
-                            id={plate.id}
-                            checked={selectedPlateIds.includes(plate.id)}
-                            onCheckedChange={(checked) => 
-                              handlePlateSelection(plate.id, checked as boolean)
-                            }
-                            className="data-[state=checked]:bg-nextplate-orange data-[state=checked]:border-nextplate-orange"
-                          />
                           <div className="flex-1">
-                            <Label htmlFor={plate.id} className="text-white cursor-pointer font-medium">
+                            <Label className="text-white font-medium">
                               {plate.name}
                             </Label>
                             <p className="text-sm text-gray-400">
-                              ${plate.price.toFixed(2)} • Size: {plate.size} • Qty: {plate.quantity}
+                              ${plate.price.toFixed(2)} • Size: {plate.size} • Available: {plate.quantity}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm text-gray-400">Qty:</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                max={Math.min(plate.quantity, form.watch("plateCount"))}
+                                value={selectedPlateQuantities[plate.id] || 0}
+                                onChange={(e) => handlePlateQuantityChange(plate.id, parseInt(e.target.value) || 0)}
+                                className="w-16 h-8 bg-gray-700 border-gray-600 text-white text-center"
+                              />
+                            </div>
                             <Button
                               type="button"
                               size="sm"
@@ -504,14 +521,10 @@ const CreateBundle = () => {
                     </div>
                   )}
                   
-                  {form.formState.errors.selectedPlateIds && (
-                    <p className="text-sm text-red-400 mt-2">
-                      {form.formState.errors.selectedPlateIds.message}
-                    </p>
-                  )}
+                  {/* Error messages would show here if needed */}
                   
                   <div className="mt-4 text-sm text-gray-400">
-                    Selected: {selectedPlateIds.length} / {form.watch("plateCount")} plates
+                    Selected: {Object.values(selectedPlateQuantities).reduce((sum, qty) => sum + qty, 0)} / {form.watch("plateCount")} plates
                   </div>
                 </CardContent>
               </Card>
