@@ -194,21 +194,13 @@ const CreateBundle = () => {
 
     setIsLoading(true);
     try {
-      // Convert quantity map to array of plate IDs for the bundle service
-      const selectedPlateIds: string[] = [];
-      Object.entries(data.selectedPlateQuantities).forEach(([plateId, quantity]) => {
-        for (let i = 0; i < quantity; i++) {
-          selectedPlateIds.push(plateId);
-        }
-      });
-
       console.log("Creating bundle with data:", {
         name: data.name,
         plateCount: data.plateCount,
         price: data.price,
         availableDate: data.availableDate,
         availabilityScope: data.availabilityScope,
-        selectedPlateIds,
+        selectedPlateQuantities: data.selectedPlateQuantities,
       });
       
       await bundleService.createBundle({
@@ -217,7 +209,7 @@ const CreateBundle = () => {
         price: data.price,
         availableDate: data.availableDate,
         availabilityScope: data.availabilityScope,
-        selectedPlateIds,
+        selectedPlateQuantities: data.selectedPlateQuantities,
       });
 
       toast({

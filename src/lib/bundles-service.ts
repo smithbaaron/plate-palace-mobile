@@ -31,12 +31,18 @@ export const bundleService = {
     price: number;
     availableDate: Date;
     availabilityScope: 'day' | 'week';
-    selectedPlateIds: string[];
+    selectedPlateQuantities: { [plateId: string]: number };
   }) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
     console.log("Creating bundle with data:", bundleData);
+
+    // Calculate total available plates and maximum possible bundles
+    const totalAvailablePlates = Object.values(bundleData.selectedPlateQuantities).reduce((sum, qty) => sum + qty, 0);
+    const maxBundles = Math.floor(totalAvailablePlates / bundleData.plateCount);
+
+    console.log(`Bundle can theoretically sell ${maxBundles} bundles (${totalAvailablePlates} total plates ÷ ${bundleData.plateCount} plates per bundle)`);
 
     // Create the bundle
     const { data: bundle, error: bundleError } = await supabase
@@ -57,14 +63,8 @@ export const bundleService = {
       throw new Error(`Failed to create bundle: ${bundleError.message || bundleError.details || 'Unknown database error'}`);
     }
 
-    // Convert selectedPlateIds array to quantities map
-    const plateQuantities: { [plateId: string]: number } = {};
-    bundleData.selectedPlateIds.forEach(plateId => {
-      plateQuantities[plateId] = (plateQuantities[plateId] || 0) + 1;
-    });
-
-    // Create bundle_plates relationships with quantities
-    const bundlePlatesData = Object.entries(plateQuantities).map(([plateId, quantity]) => ({
+    // Create bundle_plates relationships with actual quantities
+    const bundlePlatesData = Object.entries(bundleData.selectedPlateQuantities).map(([plateId, quantity]) => ({
       bundle_id: bundle.id,
       plate_id: plateId,
       quantity: quantity,
