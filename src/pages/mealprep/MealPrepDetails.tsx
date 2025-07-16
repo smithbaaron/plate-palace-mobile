@@ -33,12 +33,18 @@ const MealPrepDetails = () => {
 
       try {
         setLoading(true);
-        const bundlesData = await bundleService.getAvailableBundles();
+        
+        // Parallel fetch: bundle data + availability + current plate quantities
+        const [bundlesData, isAvailable] = await Promise.all([
+          bundleService.getAvailableBundles(),
+          bundleService.checkBundleAvailability(bundleId)
+        ]);
+        
         const foundBundle = bundlesData.find(b => b.id === bundleId);
         
         if (!foundBundle) {
           toast({
-            title: "Bundle Not Found",
+            title: "Bundle Not Found", 
             description: "The meal prep bundle you're looking for doesn't exist.",
             variant: "destructive",
           });
@@ -46,8 +52,6 @@ const MealPrepDetails = () => {
           return;
         }
 
-        // Check if bundle is still available
-        const isAvailable = await bundleService.checkBundleAvailability(bundleId);
         if (!isAvailable) {
           toast({
             title: "Bundle Unavailable",
@@ -57,6 +61,21 @@ const MealPrepDetails = () => {
         }
 
         setBundle(foundBundle);
+        
+        // Fetch availability data immediately after setting bundle
+        const maxBundles = await bundleService.getMaxAvailableBundles(foundBundle.id);
+        const plateIds = foundBundle.bundle_plates?.map(bp => bp.plate_id) || [];
+        
+        if (plateIds.length > 0) {
+          const { data: currentPlates } = await supabase
+            .from('plates')
+            .select('id, quantity')
+            .in('id', plateIds);
+          
+          const totalCurrentPlates = currentPlates?.reduce((sum, plate) => sum + plate.quantity, 0) || 0;
+          setCurrentAvailability({ totalPlates: totalCurrentPlates, maxBundles });
+        }
+        
       } catch (error) {
         console.error("Error fetching bundle:", error);
         toast({
@@ -151,25 +170,7 @@ const MealPrepDetails = () => {
     maxBundles: 0
   });
 
-  useEffect(() => {
-    const updateAvailability = async () => {
-      if (bundle) {
-        const maxBundles = await bundleService.getMaxAvailableBundles(bundle.id);
-        // Get current plate quantities for accurate display
-        const plateIds = bundle.bundle_plates?.map(bp => bp.plate_id) || [];
-        if (plateIds.length > 0) {
-          const { data: currentPlates } = await supabase
-            .from('plates')
-            .select('id, quantity')
-            .in('id', plateIds);
-          
-          const totalCurrentPlates = currentPlates?.reduce((sum, plate) => sum + plate.quantity, 0) || 0;
-          setCurrentAvailability({ totalPlates: totalCurrentPlates, maxBundles });
-        }
-      }
-    };
-    updateAvailability();
-  }, [bundle]);
+  // Remove duplicate availability fetch - already done in main useEffect
 
   // Calculate total value and savings (using original bundle structure for pricing)
   const totalIndividualValue = bundle?.bundle_plates?.reduce((sum, bp) => 

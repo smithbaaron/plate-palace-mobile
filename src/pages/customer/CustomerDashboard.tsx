@@ -205,46 +205,37 @@ const CustomerDashboard = () => {
   const { notifyInfo, notifySuccess } = useNotifications();
   const { currentUser } = useAuth();
 
-  // Fetch real data from database
+  // Optimized data fetching with parallel requests and early loading states
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log("🔄 Fetching real sellers, plates, and orders data...");
+        // Show mock data immediately while loading
+        setRealSellers(MOCK_SELLERS);
+        setRealPlates(MOCK_PLATES);
+        setRealBundles(MOCK_MEAL_PREPS);
         
-        // Fetch sellers, plates, and bundles first
+        // Parallel fetch data and orders separately to avoid type conflicts
         const [sellersData, platesData, bundlesData] = await Promise.all([
           getAvailableSellers(),
-          getAvailablePlates(),
+          getAvailablePlates(), 
           bundleService.getAvailableBundles()
         ]);
         
-        console.log("📊 CustomerDashboard - Fetched sellers:", sellersData);
-        console.log("🍽️ CustomerDashboard - Fetched plates:", platesData);
-        console.log("📦 CustomerDashboard - Fetched bundles:", bundlesData);
+        // Only update with real data if it exists and is not empty
+        if (sellersData?.length > 0) setRealSellers(sellersData);
+        if (platesData?.length > 0) setRealPlates(platesData);
+        if (bundlesData?.length > 0) setRealBundles(bundlesData);
         
-        console.log("📊 CustomerDashboard - Sellers length:", sellersData.length);
-        console.log("🍽️ CustomerDashboard - Plates length:", platesData.length);
-        console.log("📦 CustomerDashboard - Bundles length:", bundlesData.length);
-        
-        setRealSellers(sellersData);
-        setRealPlates(platesData);
-        setRealBundles(bundlesData);
-        
-        // Fetch orders if user is available
+        // Fetch orders separately if user exists
         if (currentUser) {
           const ordersData = await getCustomerOrders(currentUser.id);
-          console.log("📦 Fetched orders:", ordersData);
-          setRealOrders(ordersData);
+          if (ordersData) setRealOrders(ordersData);
         }
         
-        setLoading(false);
       } catch (error) {
         console.error("❌ Error fetching data:", error);
-        // Fallback to mock data if real data fails
-        setRealSellers(MOCK_SELLERS);
-        setRealPlates(MOCK_PLATES);
-        setRealBundles([]);
-        setRealOrders([]);
+        // Keep mock data on error
+      } finally {
         setLoading(false);
       }
     };

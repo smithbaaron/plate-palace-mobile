@@ -50,7 +50,8 @@ const PlateDetails = () => {
       }
 
       try {
-        console.log("🔍 Fetching plate details for ID:", id);
+        // Show mock data immediately for better UX
+        setPlate(MOCK_PLATE);
         
         const { data, error } = await supabase
           .from('plates')
@@ -77,11 +78,8 @@ const PlateDetails = () => {
         if (error) {
           console.error("❌ Error fetching plate:", error);
           setError("Plate not found");
-          setLoading(false);
           return;
         }
-
-        console.log("✅ Fetched plate:", data);
 
         // Handle both array and object formats for seller_profiles
         const sellerProfile = Array.isArray(data.seller_profiles) 
@@ -96,11 +94,11 @@ const PlateDetails = () => {
           seller: sellerProfile?.business_name || "Unknown Seller",
           sellerUsername: sellerProfile?.business_name?.toLowerCase().replace(/\s+/g, '') || "unknown",
           seller_id: data.seller_id,
-          seller_user_id: sellerProfile?.user_id, // Add the actual user_id
-          image: data.image_url || "https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+          seller_user_id: sellerProfile?.user_id,
+          image: data.image_url || MOCK_PLATE.image,
           ingredients: "Check with seller for ingredients",
           availableDate: data.available_date,
-          availableSizes: ["Small", "Medium", "Large"], // Default sizes
+          availableSizes: ["Small", "Medium", "Large"],
           allergies: "Please check with seller for allergen information",
           pickupTime: "Contact seller for pickup details"
         };
