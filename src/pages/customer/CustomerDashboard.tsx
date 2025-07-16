@@ -205,14 +205,11 @@ const CustomerDashboard = () => {
   const { notifyInfo, notifySuccess } = useNotifications();
   const { currentUser } = useAuth();
 
-  // Optimized data fetching with parallel requests and early loading states
+  // Fetch real data without showing mock data first
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Show mock data immediately while loading
-        setRealSellers(MOCK_SELLERS);
-        setRealPlates(MOCK_PLATES);
-        setRealBundles(MOCK_MEAL_PREPS);
+        setLoading(true);
         
         // Parallel fetch data and orders separately to avoid type conflicts
         const [sellersData, platesData, bundlesData] = await Promise.all([
@@ -221,10 +218,10 @@ const CustomerDashboard = () => {
           bundleService.getAvailableBundles()
         ]);
         
-        // Only update with real data if it exists and is not empty
-        if (sellersData?.length > 0) setRealSellers(sellersData);
-        if (platesData?.length > 0) setRealPlates(platesData);
-        if (bundlesData?.length > 0) setRealBundles(bundlesData);
+        // Set real data directly, fallback to mock only if no real data exists
+        setRealSellers(sellersData?.length > 0 ? sellersData : MOCK_SELLERS);
+        setRealPlates(platesData?.length > 0 ? platesData : MOCK_PLATES);
+        setRealBundles(bundlesData?.length > 0 ? bundlesData : MOCK_MEAL_PREPS);
         
         // Fetch orders separately if user exists
         if (currentUser) {
@@ -234,7 +231,10 @@ const CustomerDashboard = () => {
         
       } catch (error) {
         console.error("❌ Error fetching data:", error);
-        // Keep mock data on error
+        // Only fallback to mock data on error
+        setRealSellers(MOCK_SELLERS);
+        setRealPlates(MOCK_PLATES);
+        setRealBundles(MOCK_MEAL_PREPS);
       } finally {
         setLoading(false);
       }
