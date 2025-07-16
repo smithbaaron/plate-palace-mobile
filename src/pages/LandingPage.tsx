@@ -9,7 +9,7 @@ import { resetUserProfile } from "@/lib/profile-reset";
 import { useToast } from "@/hooks/use-toast";
 
 const LandingPage = () => {
-  const { isAuthenticated, currentUser } = useAuth();
+  const { isAuthenticated, currentUser, loading } = useAuth();
   const { userType, resyncUserTypeData } = useUserType();
   const { toast } = useToast();
   
@@ -49,20 +49,25 @@ const LandingPage = () => {
     }
   };
   
-  // Show landing page to:
-  // 1. Non-authenticated users OR
-  // 2. Authenticated users without a user type (so they can choose)
-  const shouldShowLanding = !isAuthenticated || (isAuthenticated && !userType);
-  
+  // Wait for auth loading to complete before making redirect decisions
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="animate-pulse">Loading...</div>
+      </div>
+    );
+  }
+
   // Redirect authenticated users with userType to their dashboard
   if (isAuthenticated && userType) {
     const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
     return <Navigate to={dashboardUrl} replace />;
   }
   
-  if (!shouldShowLanding) {
-    return null;
-  }
+  // Show landing page to:
+  // 1. Non-authenticated users OR
+  // 2. Authenticated users without a user type (so they can choose)
+  const shouldShowLanding = !isAuthenticated || (isAuthenticated && !userType);
 
   return (
     <div className="min-h-screen bg-black text-white">
