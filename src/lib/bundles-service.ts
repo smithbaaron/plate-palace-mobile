@@ -152,4 +152,59 @@ export const bundleService = {
 
     if (error) throw error;
   },
+
+  async checkBundleAvailability(bundleId: string): Promise<boolean> {
+    try {
+      // Get bundle details
+      const bundlesData = await this.getAvailableBundles();
+      const bundle = bundlesData.find(b => b.id === bundleId);
+      
+      if (!bundle) return false;
+      
+      // Calculate total available plates
+      const totalAvailablePlates = bundle.bundle_plates?.reduce((sum, bp) => sum + bp.quantity, 0) || 0;
+      
+      // Check if we can still make at least one bundle
+      return totalAvailablePlates >= bundle.plate_count;
+    } catch (error) {
+      console.error('Error checking bundle availability:', error);
+      return false;
+    }
+  },
+
+  async updatePlateQuantitiesAfterPurchase(selectedPlates: { plateId: string; quantity: number }[]): Promise<void> {
+    try {
+      for (const selectedPlate of selectedPlates) {
+        // Get current quantity first, then update
+        const { data: currentPlate, error: fetchError } = await supabase
+          .from('plates')
+          .select('quantity')
+          .eq('id', selectedPlate.plateId)
+          .single();
+
+        if (fetchError || !currentPlate) {
+          throw new Error(`Could not find plate ${selectedPlate.plateId}`);
+        }
+
+        const newQuantity = currentPlate.quantity - selectedPlate.quantity;
+        if (newQuantity < 0) {
+          throw new Error(`Insufficient quantity for plate ${selectedPlate.plateId}`);
+        }
+
+        // Update with the new quantity
+        const { error } = await supabase
+          .from('plates')
+          .update({ quantity: newQuantity })
+          .eq('id', selectedPlate.plateId);
+
+        if (error) {
+          console.error('Error updating plate quantity:', error);
+          throw new Error(`Failed to update quantity for plate ${selectedPlate.plateId}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating plate quantities:', error);
+      throw error;
+    }
+  },
 };

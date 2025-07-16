@@ -102,11 +102,11 @@ const AppWithProviders = () => {
                   <PlateDetails />
                 </ProtectedRoute>
               } />
-              <Route path="/mealprep/:id" element={
-                <ProtectedRoute>
-                  <MealPrepDetails />
-                </ProtectedRoute>
-              } />
+               <Route path="/mealprep/:bundleId" element={
+                 <ProtectedRoute>
+                   <MealPrepDetails />
+                 </ProtectedRoute>
+               } />
               <Route path="/profile" element={
                 <ProtectedRoute>
                   <Profile />

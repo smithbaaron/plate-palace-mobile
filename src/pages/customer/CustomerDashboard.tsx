@@ -283,6 +283,10 @@ const CustomerDashboard = () => {
       )
     : bundlesToUse;
 
+  const handleViewBundle = (bundleId: string, bundleName: string) => {
+    navigate(`/mealprep/${bundleId}`);
+  };
+
   // Get favorite sellers data
   const favoriteSellersList = sellersToUse.filter(seller => 
     favoriteSellers.includes(seller.id)

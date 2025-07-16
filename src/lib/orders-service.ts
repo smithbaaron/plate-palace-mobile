@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { Order } from '@/types/order';
+import { bundleService } from './bundles-service';
 
 export const getCustomerOrders = async (customerId: string): Promise<Order[]> => {
   try {
@@ -317,6 +318,86 @@ export const deleteOrder = async (orderId: string, customerId: string) => {
     return deletedOrder[0];
   } catch (error) {
     console.error('❌ Error in deleteOrder:', error);
+    throw error;
+  }
+};
+
+// New function for creating bundle orders
+export const createBundleOrder = async (orderData: {
+  customerId: string;
+  bundleId: string;
+  sellerId: string;
+  selectedPlates: { plateId: string; quantity: number }[];
+  bundlePrice: number;
+  deliveryType: 'pickup' | 'delivery';
+}) => {
+  try {
+    console.log('🛒 Creating bundle order:', orderData);
+
+    // First, check if the bundle is still available
+    const isAvailable = await bundleService.checkBundleAvailability(orderData.bundleId);
+    if (!isAvailable) {
+      throw new Error('Bundle is no longer available for purchase');
+    }
+
+    // Create the main order
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        customer_id: orderData.customerId,
+        seller_id: orderData.sellerId,
+        total_amount: orderData.bundlePrice,
+        status: 'pending',
+        delivery_type: orderData.deliveryType,
+        notes: `Bundle order: ${orderData.bundleId}`,
+      })
+      .select()
+      .single();
+
+    if (orderError) {
+      console.error('❌ Error creating order:', orderError);
+      throw orderError;
+    }
+
+    // Create order items for each selected plate
+    const orderItems = orderData.selectedPlates.map(item => ({
+      order_id: order.id,
+      plate_id: item.plateId,
+      quantity: item.quantity,
+      unit_price: orderData.bundlePrice / orderData.selectedPlates.reduce((sum, p) => sum + p.quantity, 0), // Distribute bundle price
+      subtotal: (orderData.bundlePrice / orderData.selectedPlates.reduce((sum, p) => sum + p.quantity, 0)) * item.quantity,
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(orderItems);
+
+    if (itemsError) {
+      console.error('❌ Error creating order items:', itemsError);
+      // Clean up the order if items creation fails
+      await supabase.from('orders').delete().eq('id', order.id);
+      throw itemsError;
+    }
+
+    // Update plate quantities to reflect the purchase using the Supabase function
+    for (const selectedPlate of orderData.selectedPlates) {
+      const { error: updateError } = await supabase.rpc('decrease_plate_quantity', {
+        plate_id: selectedPlate.plateId,
+        quantity_to_decrease: selectedPlate.quantity
+      });
+
+      if (updateError) {
+        console.error('⚠️ Error updating plate quantity:', selectedPlate.plateId, updateError);
+        // Clean up the order if plate updates fail
+        await supabase.from('orders').delete().eq('id', order.id);
+        throw new Error(`Failed to update plate quantities: ${updateError.message}`);
+      }
+    }
+
+    console.log('✅ Bundle order created successfully:', order.id);
+    return order;
+  } catch (error) {
+    console.error('❌ Error in createBundleOrder:', error);
     throw error;
   }
 };
