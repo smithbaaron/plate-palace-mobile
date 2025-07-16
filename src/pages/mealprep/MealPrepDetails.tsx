@@ -23,6 +23,10 @@ const MealPrepDetails = () => {
   const [loading, setLoading] = useState(true);
   const [showPlateSelector, setShowPlateSelector] = useState(false);
   const [isOrdering, setIsOrdering] = useState(false);
+  const [currentAvailability, setCurrentAvailability] = useState<{totalPlates: number, maxBundles: number}>({
+    totalPlates: 0,
+    maxBundles: 0
+  });
 
   useEffect(() => {
     const fetchBundle = async () => {
@@ -163,14 +167,6 @@ const MealPrepDetails = () => {
       </div>
     );
   }
-
-  // Calculate current availability (not original bundle quantities)
-  const [currentAvailability, setCurrentAvailability] = useState<{totalPlates: number, maxBundles: number}>({
-    totalPlates: 0,
-    maxBundles: 0
-  });
-
-  // Remove duplicate availability fetch - already done in main useEffect
 
   // Calculate total value and savings (using original bundle structure for pricing)
   const totalIndividualValue = bundle?.bundle_plates?.reduce((sum, bp) => 
