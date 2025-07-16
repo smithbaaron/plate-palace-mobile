@@ -405,12 +405,31 @@ export const createBundleOrder = async (orderData: {
       throw new Error(`Plates not found in database: ${missingPlates.join(', ')}`);
     }
 
-    // Update plate quantities to reflect the purchase using the Supabase function
+    // Update plate quantities directly using SQL instead of RPC function
     for (const selectedPlate of orderData.selectedPlates) {
-      const { error: updateError } = await supabase.rpc('decrease_plate_quantity', {
-        plate_id: selectedPlate.plateId,
-        quantity_to_decrease: selectedPlate.quantity
-      });
+      const currentPlate = existingPlates?.find(p => p.id === selectedPlate.plateId);
+      if (!currentPlate) {
+        console.error('❌ Plate not found in verification:', selectedPlate.plateId);
+        await supabase.from('orders').delete().eq('id', order.id);
+        throw new Error(`Plate not found: ${selectedPlate.plateId}`);
+      }
+
+      if (currentPlate.quantity < selectedPlate.quantity) {
+        console.error('❌ Insufficient quantity:', currentPlate.quantity, 'needed:', selectedPlate.quantity);
+        await supabase.from('orders').delete().eq('id', order.id);
+        throw new Error(`Insufficient quantity for plate ${selectedPlate.plateId}`);
+      }
+
+      const newQuantity = currentPlate.quantity - selectedPlate.quantity;
+      
+      // Direct SQL update instead of RPC function
+      const { error: updateError } = await supabase
+        .from('plates')
+        .update({ 
+          quantity: newQuantity,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedPlate.plateId);
 
       if (updateError) {
         console.error('⚠️ Error updating plate quantity:', selectedPlate.plateId, updateError);
@@ -418,6 +437,8 @@ export const createBundleOrder = async (orderData: {
         await supabase.from('orders').delete().eq('id', order.id);
         throw new Error(`Failed to update plate quantities: ${updateError.message}`);
       }
+
+      console.log(`✅ Updated plate ${selectedPlate.plateId} quantity from ${currentPlate.quantity} to ${newQuantity}`);
     }
 
     console.log('✅ Bundle order created successfully:', order.id);
