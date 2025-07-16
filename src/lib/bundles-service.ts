@@ -169,15 +169,32 @@ export const bundleService = {
       const bundlesData = await this.getAvailableBundles();
       const bundle = bundlesData.find(b => b.id === bundleId);
       
-      if (!bundle) return 0;
+      if (!bundle || !bundle.bundle_plates) return 0;
       
-      // Calculate total available plates
-      const totalAvailablePlates = bundle.bundle_plates?.reduce((sum, bp) => sum + bp.quantity, 0) || 0;
+      // Get CURRENT plate quantities from plates table (not bundle_plates original quantities)
+      const plateIds = bundle.bundle_plates.map(bp => bp.plate_id);
+      const { data: currentPlates, error } = await supabase
+        .from('plates')
+        .select('id, quantity')
+        .in('id', plateIds);
+        
+      if (error || !currentPlates) {
+        console.error('Error fetching current plate quantities:', error);
+        return 0;
+      }
       
-      // Calculate maximum possible bundles (total plates ÷ plates per bundle)
-      const maxBundles = Math.floor(totalAvailablePlates / bundle.plate_count);
+      // Calculate total CURRENT available plates 
+      let totalCurrentPlates = 0;
+      for (const bundlePlate of bundle.bundle_plates) {
+        const currentPlate = currentPlates.find(p => p.id === bundlePlate.plate_id);
+        const currentQuantity = currentPlate?.quantity || 0;
+        totalCurrentPlates += currentQuantity;
+      }
       
-      console.log(`📊 Bundle ${bundle.name}: ${totalAvailablePlates} plates ÷ ${bundle.plate_count} = ${maxBundles} possible bundles`);
+      // Calculate maximum possible bundles based on CURRENT quantities
+      const maxBundles = Math.floor(totalCurrentPlates / bundle.plate_count);
+      
+      console.log(`📊 Bundle ${bundle.name}: ${totalCurrentPlates} current plates ÷ ${bundle.plate_count} = ${maxBundles} available bundles`);
       
       return maxBundles;
     } catch (error) {

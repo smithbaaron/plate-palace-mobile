@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { bundleService, Bundle } from "@/lib/bundles-service";
 import { createBundleOrder } from "@/lib/orders-service";
+import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import Navigation from "@/components/Navigation";
 import BundlePlateSelector from "@/components/customer/BundlePlateSelector";
@@ -144,12 +145,39 @@ const MealPrepDetails = () => {
     );
   }
 
-  // Calculate total value and savings
-  const totalIndividualValue = bundle.bundle_plates?.reduce((sum, bp) => 
+  // Calculate current availability (not original bundle quantities)
+  const [currentAvailability, setCurrentAvailability] = useState<{totalPlates: number, maxBundles: number}>({
+    totalPlates: 0,
+    maxBundles: 0
+  });
+
+  useEffect(() => {
+    const updateAvailability = async () => {
+      if (bundle) {
+        const maxBundles = await bundleService.getMaxAvailableBundles(bundle.id);
+        // Get current plate quantities for accurate display
+        const plateIds = bundle.bundle_plates?.map(bp => bp.plate_id) || [];
+        if (plateIds.length > 0) {
+          const { data: currentPlates } = await supabase
+            .from('plates')
+            .select('id, quantity')
+            .in('id', plateIds);
+          
+          const totalCurrentPlates = currentPlates?.reduce((sum, plate) => sum + plate.quantity, 0) || 0;
+          setCurrentAvailability({ totalPlates: totalCurrentPlates, maxBundles });
+        }
+      }
+    };
+    updateAvailability();
+  }, [bundle]);
+
+  // Calculate total value and savings (using original bundle structure for pricing)
+  const totalIndividualValue = bundle?.bundle_plates?.reduce((sum, bp) => 
     sum + (bp.plates.price * bp.quantity), 0) || 0;
-  const savings = totalIndividualValue - bundle.price;
-  const totalAvailablePlates = bundle.bundle_plates?.reduce((sum, bp) => sum + bp.quantity, 0) || 0;
-  const maxPossibleBundles = Math.floor(totalAvailablePlates / bundle.plate_count);
+  const savings = totalIndividualValue - (bundle?.price || 0);
+
+  // Use current availability for display
+  const { totalPlates: currentTotalPlates, maxBundles: currentMaxBundles } = currentAvailability;
 
   if (showPlateSelector) {
     return (
@@ -215,13 +243,13 @@ const MealPrepDetails = () => {
                   <h3 className="text-white font-medium">Bundle Information</h3>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex justify-between text-sm">
+                  <div className="flex items-center gap-2">
                     <span className="text-gray-400">Total Plates Available:</span>
-                    <span className="text-white">{totalAvailablePlates}</span>
+                    <span className="text-white">{currentTotalPlates}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex items-center gap-2">
                     <span className="text-gray-400">Max Bundles Possible:</span>
-                    <span className="text-white">{maxPossibleBundles}</span>
+                    <span className="text-white">{currentMaxBundles}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Plates Per Bundle:</span>
@@ -268,10 +296,10 @@ const MealPrepDetails = () => {
               </div>
 
               {/* Availability Status */}
-              {maxPossibleBundles > 0 ? (
+              {currentMaxBundles > 0 ? (
                 <div className="p-4 bg-green-900/20 border border-green-800 rounded-lg">
                   <p className="text-green-400 font-medium">
-                    ✅ Available - {maxPossibleBundles} bundle{maxPossibleBundles !== 1 ? 's' : ''} can be made
+                    ✅ Available - {currentMaxBundles} bundle{currentMaxBundles !== 1 ? 's' : ''} can be made
                   </p>
                 </div>
               ) : (
@@ -306,7 +334,7 @@ const MealPrepDetails = () => {
               <div className="space-y-3">
                 <Button
                   onClick={handleStartOrder}
-                  disabled={maxPossibleBundles === 0 || isOrdering}
+                  disabled={currentMaxBundles === 0 || isOrdering}
                   className="w-full bg-nextplate-orange hover:bg-orange-600 text-white font-medium py-3"
                   size="lg"
                 >
