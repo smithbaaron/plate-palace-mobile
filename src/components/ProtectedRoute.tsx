@@ -38,9 +38,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const userRole = supabaseUser?.user_metadata?.role || supabaseUser?.app_metadata?.role;
 
   // Show loading while user type data is being initialized for authenticated users
-  // Only show loading if we're waiting for initial user type data AND not on a seller route that should work without user type
+  // Only show loading in very specific cases to avoid infinite loading
   const isSellerRoute = location.pathname.startsWith('/seller');
-  const shouldShowLoading = isAuthenticated && !userType && !isOnboarded && !isOnOnboardingPage && !userRole && !isSellerRoute;
+  const isCustomerRoute = location.pathname.startsWith('/customer');
+  const hasAnyUserData = userType || isOnboarded || userRole;
+  
+  // Only show loading if we're on a generic route (not seller/customer specific) AND have no user data at all
+  const shouldShowLoading = isAuthenticated && !hasAnyUserData && !isOnOnboardingPage && !isSellerRoute && !isCustomerRoute;
   
   if (shouldShowLoading) {
     console.log('⏳ ProtectedRoute: Waiting for user type data - showing loading state', {
@@ -50,6 +54,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       isOnOnboardingPage,
       userRole,
       isSellerRoute,
+      isCustomerRoute,
       currentPath: location.pathname
     });
     return (
