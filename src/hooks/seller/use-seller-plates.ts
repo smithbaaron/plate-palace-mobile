@@ -96,8 +96,15 @@ export const useSellerPlates = () => {
       console.log('Loaded plates from database:', fetchedPlates);
       setPlates(fetchedPlates);
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error loading plates:", err);
+      
+      // Handle seller onboarding error specifically
+      if (err?.message?.includes('Please complete seller onboarding')) {
+        setError("onboarding_required");
+        return;
+      }
+      
       setError("Failed to load your menu. Please try again.");
       notifyError("Error loading plates", "Could not load your menu. Please try again.");
     } finally {

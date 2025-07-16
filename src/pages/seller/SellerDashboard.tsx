@@ -60,8 +60,22 @@ const SellerDashboard = () => {
             mealPrepPlatesCount={mealPrepPlates.length}
           />
           
-          {/* Error message if plates failed to load */}
-          {error && tableExists !== false && (
+          {/* Handle onboarding requirement */}
+          {error === "onboarding_required" && (
+            <div className="mb-6 p-6 bg-nextplate-orange/20 border border-nextplate-orange rounded-lg">
+              <h3 className="text-lg font-medium text-nextplate-orange mb-2">Complete Your Seller Setup</h3>
+              <p className="text-gray-300 mb-4">You need to complete your seller onboarding before you can manage plates and start selling.</p>
+              <button 
+                onClick={() => window.location.href = '/seller/onboarding'} 
+                className="bg-nextplate-orange text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+              >
+                Complete Onboarding
+              </button>
+            </div>
+          )}
+          
+          {/* Error message for other errors */}
+          {error && error !== "onboarding_required" && tableExists !== false && (
             <div className="mb-6 p-4 bg-red-900 bg-opacity-30 border border-red-500 rounded-lg">
               <p className="text-red-300">{error}</p>
               <button 
