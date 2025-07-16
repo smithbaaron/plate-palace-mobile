@@ -83,10 +83,18 @@ const CreateBundle = () => {
   const refreshPlatesData = async () => {
     try {
       const plates = await fetchPlates();
+      console.log("🍽️ All fetched plates:", plates);
       setAllPlates(plates); // Store all plates for duplication
       
       // Filter plates that are available for bundles (regular plates, not already bundled)
       const bundlePlates = plates.filter(plate => !plate.isBundle && plate.isAvailable);
+      console.log("🍽️ Filtered available plates for bundles:", bundlePlates);
+      console.log("🍽️ All plates details:", plates.map(p => ({ 
+        id: p.id, 
+        name: p.name, 
+        isBundle: p.isBundle, 
+        isAvailable: p.isAvailable 
+      })));
       setAvailablePlates(bundlePlates);
     } catch (error) {
       console.error("Error refreshing plates:", error);
