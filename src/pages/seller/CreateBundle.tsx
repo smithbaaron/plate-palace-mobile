@@ -105,12 +105,17 @@ const CreateBundle = () => {
     }
   }, [currentUser]);
 
-  const handlePlateQuantityChange = (plateId: string, quantity: number) => {
+  const handlePlateSelectionChange = (plateId: string, isSelected: boolean) => {
     const newQuantities = { ...selectedPlateQuantities };
-    if (quantity === 0) {
-      delete newQuantities[plateId];
+    if (isSelected) {
+      // When selecting a plate, automatically use its full available quantity
+      const plate = availablePlates.find(p => p.id === plateId);
+      if (plate) {
+        newQuantities[plateId] = plate.quantity;
+      }
     } else {
-      newQuantities[plateId] = quantity;
+      // When deselecting, remove from selection
+      delete newQuantities[plateId];
     }
     
     setSelectedPlateQuantities(newQuantities);
@@ -167,21 +172,21 @@ const CreateBundle = () => {
   const onSubmit = async (data: BundleFormSchema) => {
     const totalAvailablePlates = Object.values(data.selectedPlateQuantities).reduce((sum, qty) => sum + qty, 0);
     
-    // Check if we have enough total plates to create at least one bundle
-    if (totalAvailablePlates < data.plateCount) {
-      toast({
-        title: "Insufficient Plates",
-        description: `You need at least ${data.plateCount} total plates to create this bundle. Currently selected: ${totalAvailablePlates}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     // Check if at least one plate type is selected
     if (Object.keys(data.selectedPlateQuantities).length === 0) {
       toast({
         title: "No Plates Selected",
         description: "Please select at least one plate type for your bundle.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if we have enough total plates to create at least one bundle
+    if (totalAvailablePlates < data.plateCount) {
+      toast({
+        title: "Insufficient Plates",
+        description: `You need at least ${data.plateCount} total plates to create this bundle. Currently available: ${totalAvailablePlates}, required: ${data.plateCount}`,
         variant: "destructive",
       });
       return;
@@ -446,18 +451,22 @@ const CreateBundle = () => {
                               ${plate.price.toFixed(2)} • Size: {plate.size} • Available: {plate.quantity}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-2">
-                              <Label className="text-sm text-gray-400">Qty:</Label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max={plate.quantity}
-                                  value={selectedPlateQuantities[plate.id] || 0}
-                                  onChange={(e) => handlePlateQuantityChange(plate.id, parseInt(e.target.value) || 0)}
-                                  className="w-16 h-8 bg-gray-700 border-gray-600 text-white text-center"
-                                />
-                            </div>
+                           <div className="flex items-center gap-2">
+                             <div className="flex items-center gap-2">
+                               <input
+                                 type="checkbox"
+                                 id={`plate-${plate.id}`}
+                                 checked={!!selectedPlateQuantities[plate.id]}
+                                 onChange={(e) => handlePlateSelectionChange(plate.id, e.target.checked)}
+                                 className="w-4 h-4 text-nextplate-orange bg-gray-700 border-gray-600 rounded focus:ring-nextplate-orange"
+                               />
+                               <Label 
+                                 htmlFor={`plate-${plate.id}`}
+                                 className="text-sm text-gray-400 cursor-pointer"
+                               >
+                                 Include all {plate.quantity} plates
+                               </Label>
+                             </div>
                             <Button
                               type="button"
                               size="sm"
