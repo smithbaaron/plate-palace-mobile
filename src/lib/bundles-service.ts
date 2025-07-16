@@ -155,20 +155,34 @@ export const bundleService = {
 
   async checkBundleAvailability(bundleId: string): Promise<boolean> {
     try {
+      const maxBundles = await this.getMaxAvailableBundles(bundleId);
+      return maxBundles > 0;
+    } catch (error) {
+      console.error('Error checking bundle availability:', error);
+      return false;
+    }
+  },
+
+  async getMaxAvailableBundles(bundleId: string): Promise<number> {
+    try {
       // Get bundle details
       const bundlesData = await this.getAvailableBundles();
       const bundle = bundlesData.find(b => b.id === bundleId);
       
-      if (!bundle) return false;
+      if (!bundle) return 0;
       
       // Calculate total available plates
       const totalAvailablePlates = bundle.bundle_plates?.reduce((sum, bp) => sum + bp.quantity, 0) || 0;
       
-      // Check if we can still make at least one bundle
-      return totalAvailablePlates >= bundle.plate_count;
+      // Calculate maximum possible bundles (total plates ÷ plates per bundle)
+      const maxBundles = Math.floor(totalAvailablePlates / bundle.plate_count);
+      
+      console.log(`📊 Bundle ${bundle.name}: ${totalAvailablePlates} plates ÷ ${bundle.plate_count} = ${maxBundles} possible bundles`);
+      
+      return maxBundles;
     } catch (error) {
-      console.error('Error checking bundle availability:', error);
-      return false;
+      console.error('Error calculating max available bundles:', error);
+      return 0;
     }
   },
 

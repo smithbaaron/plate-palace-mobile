@@ -12,6 +12,7 @@ const BundlesTabContent: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [bundles, setBundles] = useState<Bundle[]>([]);
+  const [bundleStats, setBundleStats] = useState<{[bundleId: string]: number}>({});
   const [isLoading, setIsLoading] = useState(true);
 
   const loadBundles = async () => {
@@ -19,6 +20,14 @@ const BundlesTabContent: React.FC = () => {
       setIsLoading(true);
       const bundlesData = await bundleService.getBundles();
       setBundles(bundlesData);
+      
+      // Calculate max available bundles for each bundle
+      const stats: {[bundleId: string]: number} = {};
+      for (const bundle of bundlesData) {
+        const maxBundles = await bundleService.getMaxAvailableBundles(bundle.id);
+        stats[bundle.id] = maxBundles;
+      }
+      setBundleStats(stats);
     } catch (error) {
       console.error("Error loading bundles:", error);
       toast({
@@ -97,79 +106,104 @@ const BundlesTabContent: React.FC = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {bundles.map((bundle) => (
-          <Card key={bundle.id} className="bg-nextplate-darkgray border-gray-800">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-white text-lg">{bundle.name}</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    {bundle.plate_count} plates
-                  </CardDescription>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDeleteBundle(bundle.id, bundle.name)}
-                  className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Price and Date */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center text-green-400">
-                  <DollarSign className="h-4 w-4 mr-1" />
-                  <span className="font-semibold">${bundle.price.toFixed(2)}</span>
-                </div>
-                <Badge variant="outline" className="text-gray-300 border-gray-600">
-                  {bundle.availability_scope === 'day' ? 'Daily' : 'Weekly'}
-                </Badge>
-              </div>
-
-              {/* Available Date */}
-              <div className="flex items-center text-gray-400">
-                <Calendar className="h-4 w-4 mr-2" />
-                <span className="text-sm">
-                  Available: {format(new Date(bundle.available_date), "MMM d, yyyy")}
-                </span>
-              </div>
-
-              {/* Plates in Bundle */}
-              <div>
-                <h4 className="text-sm font-medium text-white mb-2">Included Plates:</h4>
-                <div className="space-y-1">
-                  {bundle.bundle_plates?.map((bundlePlate) => (
-                    <div key={bundlePlate.plate_id} className="text-xs text-gray-400 flex items-center justify-between">
-                      <span>{bundlePlate.plates.name} x{bundlePlate.quantity}</span>
-                      <span>${(bundlePlate.plates.price * bundlePlate.quantity).toFixed(2)}</span>
+        {bundles.map((bundle) => {
+          const maxBundles = bundleStats[bundle.id] || 0;
+          const totalAvailablePlates = bundle.bundle_plates?.reduce((sum, bp) => sum + bp.quantity, 0) || 0;
+          
+          return (
+            <Card key={bundle.id} className="bg-nextplate-darkgray border-gray-800">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-white text-lg">{bundle.name}</CardTitle>
+                    <CardDescription className="text-gray-400">
+                      {bundle.plate_count} plates per bundle
+                    </CardDescription>
+                    {/* Bundle Sales Stats */}
+                    <div className="mt-2 space-y-1">
+                      <div className="text-sm text-nextplate-orange font-medium">
+                        📊 Can sell {maxBundles} bundle{maxBundles !== 1 ? 's' : ''}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {totalAvailablePlates} total plates available
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteBundle(bundle.id, bundle.name)}
+                    className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-              </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Price and Availability Status */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center text-green-400">
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    <span className="font-semibold">${bundle.price.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-gray-300 border-gray-600">
+                      {bundle.availability_scope === 'day' ? 'Daily' : 'Weekly'}
+                    </Badge>
+                    {maxBundles > 0 ? (
+                      <Badge className="bg-green-600 text-white">
+                        Available
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-red-600 text-white">
+                        Sold Out
+                      </Badge>
+                    )}
+                  </div>
+                </div>
 
-              {/* Value Calculation */}
-              {bundle.bundle_plates && bundle.bundle_plates.length > 0 && (
-                <div className="pt-2 border-t border-gray-700">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Individual Total:</span>
-                    <span className="text-gray-400">
-                      ${bundle.bundle_plates.reduce((sum, bp) => sum + (bp.plates.price * bp.quantity), 0).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm font-medium">
-                    <span className="text-green-400">Bundle Savings:</span>
-                    <span className="text-green-400">
-                      ${(bundle.bundle_plates.reduce((sum, bp) => sum + (bp.plates.price * bp.quantity), 0) - bundle.price).toFixed(2)}
-                    </span>
+                {/* Available Date */}
+                <div className="flex items-center text-gray-400">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <span className="text-sm">
+                    Available: {format(new Date(bundle.available_date), "MMM d, yyyy")}
+                  </span>
+                </div>
+
+                {/* Plates in Bundle */}
+                <div>
+                  <h4 className="text-sm font-medium text-white mb-2">Included Plates:</h4>
+                  <div className="space-y-1">
+                    {bundle.bundle_plates?.map((bundlePlate) => (
+                      <div key={bundlePlate.plate_id} className="text-xs text-gray-400 flex items-center justify-between">
+                        <span>{bundlePlate.plates.name} x{bundlePlate.quantity}</span>
+                        <span>${(bundlePlate.plates.price * bundlePlate.quantity).toFixed(2)}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+
+                {/* Value Calculation */}
+                {bundle.bundle_plates && bundle.bundle_plates.length > 0 && (
+                  <div className="pt-2 border-t border-gray-700">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-400">Individual Total:</span>
+                      <span className="text-gray-400">
+                        ${bundle.bundle_plates.reduce((sum, bp) => sum + (bp.plates.price * bp.quantity), 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm font-medium">
+                      <span className="text-green-400">Bundle Savings:</span>
+                      <span className="text-green-400">
+                        ${(bundle.bundle_plates.reduce((sum, bp) => sum + (bp.plates.price * bp.quantity), 0) - bundle.price).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
