@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -53,6 +53,12 @@ const LandingPage = () => {
   // 1. Non-authenticated users OR
   // 2. Authenticated users without a user type (so they can choose)
   const shouldShowLanding = !isAuthenticated || (isAuthenticated && !userType);
+  
+  // Redirect authenticated users with userType to their dashboard
+  if (isAuthenticated && userType) {
+    const dashboardUrl = userType === "seller" ? "/seller/dashboard" : "/customer/dashboard";
+    return <Navigate to={dashboardUrl} replace />;
+  }
   
   if (!shouldShowLanding) {
     return null;
