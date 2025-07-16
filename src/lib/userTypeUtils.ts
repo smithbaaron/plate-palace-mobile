@@ -57,9 +57,6 @@ export const getUserTypeData = async (userId: string | undefined) => {
     } catch (err: any) {
       if (err.message === 'Seller profile query timeout') {
         console.log("⏰ Seller profile query timed out");
-        // Based on the route (/seller/create-bundle), assume this is a seller
-        console.log("🔄 Applying seller fallback based on route");
-        return { userType: 'seller' as UserType, isOnboarded: true };
       } else {
         console.error("❌ Exception checking seller profile:", err);
       }
@@ -137,38 +134,12 @@ export const getUserTypeData = async (userId: string | undefined) => {
       }
     }
     
-    // If all queries failed or timed out, apply smart fallback based on the current route
-    console.log("🔄 All profile queries timed out, using fallback logic");
-    
-    // Check current URL to determine user type
-    if (typeof window !== 'undefined') {
-      const currentPath = window.location.pathname;
-      if (currentPath.includes('/seller/')) {
-        console.log("🔄 Applying seller fallback based on route:", currentPath);
-        return { userType: 'seller' as UserType, isOnboarded: true };
-      } else if (currentPath.includes('/customer/')) {
-        console.log("🔄 Applying customer fallback based on route:", currentPath);
-        return { userType: 'customer' as UserType, isOnboarded: true };
-      }
-    }
-    
-    // Default fallback - assume seller based on previous successful requests
-    console.log("🔄 Applying default seller fallback");
-    return { userType: 'seller' as UserType, isOnboarded: true };
+    // No profile found in any table - return null to let user choose
+    console.log("ℹ️ No user type found in any table - user needs to choose their type");
+    return { userType: null, isOnboarded: false };
   } catch (err) {
     console.error("Unexpected error in getUserTypeData:", err);
-    
-    // Apply route-based fallback in case of unexpected errors
-    if (typeof window !== 'undefined') {
-      const currentPath = window.location.pathname;
-      if (currentPath.includes('/seller/')) {
-        console.log("🔄 Applying seller fallback due to error based on route:", currentPath);
-        return { userType: 'seller' as UserType, isOnboarded: true };
-      }
-    }
-    
-    console.log("🔄 Applying default seller fallback due to error");
-    return { userType: 'seller' as UserType, isOnboarded: true };
+    return { userType: null, isOnboarded: false };
   }
 };
 

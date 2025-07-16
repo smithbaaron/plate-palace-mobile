@@ -4,14 +4,57 @@ import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useUserType } from "@/context/UserTypeContext";
-import { Package, Calendar, Bell } from "lucide-react";
+import { Package, Calendar, Bell, RefreshCw } from "lucide-react";
+import { resetUserProfile } from "@/lib/profile-reset";
+import { useToast } from "@/hooks/use-toast";
 
 const LandingPage = () => {
-  const { isAuthenticated } = useAuth();
-  const { userType } = useUserType();
+  const { isAuthenticated, currentUser } = useAuth();
+  const { userType, resyncUserTypeData } = useUserType();
+  const { toast } = useToast();
   
-  // Don't show landing page to authenticated users at all
-  if (isAuthenticated) {
+  const handleResetProfile = async () => {
+    if (!currentUser) return;
+    
+    try {
+      toast({
+        title: "Resetting Profile...",
+        description: "Clearing your user type data...",
+      });
+      
+      const success = await resetUserProfile(currentUser.id);
+      
+      if (success) {
+        // Refresh user type data
+        await resyncUserTypeData();
+        
+        toast({
+          title: "Profile Reset",
+          description: "Your profile has been reset. Please choose your user type again.",
+        });
+      } else {
+        toast({
+          title: "Reset Failed",
+          description: "Could not reset your profile. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error resetting profile:', error);
+      toast({
+        title: "Reset Failed", 
+        description: "Could not reset your profile. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Show landing page to:
+  // 1. Non-authenticated users OR
+  // 2. Authenticated users without a user type (so they can choose)
+  const shouldShowLanding = !isAuthenticated || (isAuthenticated && !userType);
+  
+  if (!shouldShowLanding) {
     return null;
   }
 
@@ -33,12 +76,28 @@ const LandingPage = () => {
             The platform for independent food sellers to connect with hungry customers
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link to="/auth?type=seller">
+            {/* Show reset button for authenticated users */}
+            {isAuthenticated && (
+              <div className="mb-4">
+                <Button 
+                  onClick={handleResetProfile}
+                  variant="outline" 
+                  className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Reset My Profile
+                </Button>
+                <p className="text-sm text-gray-400 mt-2">
+                  Having issues? Reset your profile to choose again.
+                </p>
+              </div>
+            )}
+            <Link to={isAuthenticated ? "/seller/onboarding" : "/auth?type=seller"}>
               <Button className="bg-nextplate-orange hover:bg-orange-600 text-white text-lg px-8 py-6">
                 I'm a Seller
               </Button>
             </Link>
-            <Link to="/auth?type=customer">
+            <Link to={isAuthenticated ? "/customer/onboarding" : "/auth?type=customer"}>
               <Button className="bg-nextplate-red hover:bg-red-600 text-white text-lg px-8 py-6">
                 I'm a Customer
               </Button>
