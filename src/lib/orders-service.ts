@@ -379,6 +379,32 @@ export const createBundleOrder = async (orderData: {
       throw itemsError;
     }
 
+    // Debug: Check if all plate IDs exist before updating quantities
+    console.log('🔍 Checking plate IDs before update:', orderData.selectedPlates.map(p => p.plateId));
+    
+    // Verify all plate IDs exist in the database first
+    const plateIds = orderData.selectedPlates.map(p => p.plateId);
+    const { data: existingPlates, error: checkError } = await supabase
+      .from('plates')
+      .select('id, quantity')
+      .in('id', plateIds);
+    
+    if (checkError) {
+      console.error('❌ Error checking plate existence:', checkError);
+      await supabase.from('orders').delete().eq('id', order.id);
+      throw new Error(`Failed to verify plate existence: ${checkError.message}`);
+    }
+    
+    console.log('🔍 Found plates in database:', existingPlates?.map(p => ({ id: p.id, quantity: p.quantity })));
+    
+    // Check for missing plates
+    const missingPlates = plateIds.filter(id => !existingPlates?.find(p => p.id === id));
+    if (missingPlates.length > 0) {
+      console.error('❌ Missing plates:', missingPlates);
+      await supabase.from('orders').delete().eq('id', order.id);
+      throw new Error(`Plates not found in database: ${missingPlates.join(', ')}`);
+    }
+
     // Update plate quantities to reflect the purchase using the Supabase function
     for (const selectedPlate of orderData.selectedPlates) {
       const { error: updateError } = await supabase.rpc('decrease_plate_quantity', {
