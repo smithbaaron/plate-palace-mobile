@@ -38,8 +38,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const userRole = supabaseUser?.user_metadata?.role || supabaseUser?.app_metadata?.role;
 
   // Show loading while user type data is being initialized for authenticated users
-  if (isAuthenticated && !userType && !isOnboarded && !isOnOnboardingPage && !userRole) {
-    console.log('⏳ ProtectedRoute: Waiting for user type data - showing loading state');
+  // Only show loading if we're waiting for initial user type data AND not on a seller route that should work without user type
+  const isSellerRoute = location.pathname.startsWith('/seller');
+  const shouldShowLoading = isAuthenticated && !userType && !isOnboarded && !isOnOnboardingPage && !userRole && !isSellerRoute;
+  
+  if (shouldShowLoading) {
+    console.log('⏳ ProtectedRoute: Waiting for user type data - showing loading state', {
+      isAuthenticated,
+      userType,
+      isOnboarded,
+      isOnOnboardingPage,
+      userRole,
+      isSellerRoute,
+      currentPath: location.pathname
+    });
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <div className="text-center">
