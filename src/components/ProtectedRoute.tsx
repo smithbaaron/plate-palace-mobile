@@ -16,7 +16,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredUserType, 
   requireOnboarded = true 
 }) => {
-  const { isAuthenticated, loading, supabaseUser } = useAuth();
+  const { isAuthenticated, loading, supabaseUser, currentUser } = useAuth();
   const { userType, isOnboarded } = useUserType();
   const location = useLocation();
 
@@ -37,35 +37,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const isOnOnboardingPage = location.pathname.includes('/onboarding');
   const userRole = supabaseUser?.user_metadata?.role || supabaseUser?.app_metadata?.role;
 
-  // Show loading while user type data is being initialized for authenticated users
-  // Only show loading in very specific cases to avoid infinite loading
-  const isSellerRoute = location.pathname.startsWith('/seller');
-  const isCustomerRoute = location.pathname.startsWith('/customer');
-  const hasAnyUserData = userType || isOnboarded || userRole;
-  
-  // Only show loading if we're on a generic route (not seller/customer specific) AND have no user data at all
-  const shouldShowLoading = isAuthenticated && !hasAnyUserData && !isOnOnboardingPage && !isSellerRoute && !isCustomerRoute;
-  
-  if (shouldShowLoading) {
-    console.log('⏳ ProtectedRoute: Waiting for user type data - showing loading state', {
-      isAuthenticated,
-      userType,
-      isOnboarded,
-      isOnOnboardingPage,
-      userRole,
-      isSellerRoute,
-      isCustomerRoute,
-      currentPath: location.pathname
-    });
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <div className="text-center">
-          <div className="animate-pulse mb-4">Loading user data...</div>
-          <p className="text-sm text-gray-400">If this persists, please refresh the page</p>
-        </div>
-      </div>
-    );
-  }
+  // NEVER show infinite loading - always let users through after initial auth
+  // The app will work with partial user data
 
   console.log('🔍 ProtectedRoute Debug:', {
     userType,
