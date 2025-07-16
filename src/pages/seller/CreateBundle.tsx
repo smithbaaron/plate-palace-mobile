@@ -106,20 +106,6 @@ const CreateBundle = () => {
   }, [currentUser]);
 
   const handlePlateQuantityChange = (plateId: string, quantity: number) => {
-    const plateCount = form.watch("plateCount");
-    const currentTotal = Object.values(selectedPlateQuantities).reduce((sum, qty) => sum + qty, 0);
-    const currentPlateQty = selectedPlateQuantities[plateId] || 0;
-    const newTotal = currentTotal - currentPlateQty + quantity;
-    
-    if (newTotal > plateCount) {
-      toast({
-        title: "Selection Limit Reached",
-        description: `You can only select ${plateCount} total plates for this bundle.`,
-        variant: "destructive",
-      });
-      return;
-    }
-    
     const newQuantities = { ...selectedPlateQuantities };
     if (quantity === 0) {
       delete newQuantities[plateId];
@@ -179,11 +165,23 @@ const CreateBundle = () => {
   };
 
   const onSubmit = async (data: BundleFormSchema) => {
-    const totalSelected = Object.values(data.selectedPlateQuantities).reduce((sum, qty) => sum + qty, 0);
-    if (totalSelected !== data.plateCount) {
+    const totalAvailablePlates = Object.values(data.selectedPlateQuantities).reduce((sum, qty) => sum + qty, 0);
+    
+    // Check if we have enough total plates to create at least one bundle
+    if (totalAvailablePlates < data.plateCount) {
       toast({
-        title: "Invalid Selection",
-        description: "Number of selected plates must match the declared plate count.",
+        title: "Insufficient Plates",
+        description: `You need at least ${data.plateCount} total plates to create this bundle. Currently selected: ${totalAvailablePlates}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if at least one plate type is selected
+    if (Object.keys(data.selectedPlateQuantities).length === 0) {
+      toast({
+        title: "No Plates Selected",
+        description: "Please select at least one plate type for your bundle.",
         variant: "destructive",
       });
       return;
@@ -386,7 +384,7 @@ const CreateBundle = () => {
                     <div>
                       <CardTitle className="text-white">Select Plates</CardTitle>
                       <CardDescription className="text-gray-400">
-                        Choose {form.watch("plateCount")} plates for your bundle
+                        Select plate types for your {form.watch("plateCount")}-plate bundle
                       </CardDescription>
                     </div>
                     <div className="flex gap-2">
@@ -451,14 +449,14 @@ const CreateBundle = () => {
                           <div className="flex items-center gap-2">
                             <div className="flex items-center gap-2">
                               <Label className="text-sm text-gray-400">Qty:</Label>
-                              <Input
-                                type="number"
-                                min="0"
-                                max={Math.min(plate.quantity, form.watch("plateCount"))}
-                                value={selectedPlateQuantities[plate.id] || 0}
-                                onChange={(e) => handlePlateQuantityChange(plate.id, parseInt(e.target.value) || 0)}
-                                className="w-16 h-8 bg-gray-700 border-gray-600 text-white text-center"
-                              />
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max={plate.quantity}
+                                  value={selectedPlateQuantities[plate.id] || 0}
+                                  onChange={(e) => handlePlateQuantityChange(plate.id, parseInt(e.target.value) || 0)}
+                                  className="w-16 h-8 bg-gray-700 border-gray-600 text-white text-center"
+                                />
                             </div>
                             <Button
                               type="button"
@@ -524,7 +522,12 @@ const CreateBundle = () => {
                   {/* Error messages would show here if needed */}
                   
                   <div className="mt-4 text-sm text-gray-400">
-                    Selected: {Object.values(selectedPlateQuantities).reduce((sum, qty) => sum + qty, 0)} / {form.watch("plateCount")} plates
+                    Total plates available: {Object.values(selectedPlateQuantities).reduce((sum, qty) => sum + qty, 0)} 
+                    {Object.values(selectedPlateQuantities).reduce((sum, qty) => sum + qty, 0) > 0 && (
+                      <span className="ml-2 text-green-400">
+                        • Can create {Math.floor(Object.values(selectedPlateQuantities).reduce((sum, qty) => sum + qty, 0) / form.watch("plateCount"))} bundles
+                      </span>
+                    )}
                   </div>
                 </CardContent>
               </Card>
