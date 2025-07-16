@@ -2,14 +2,16 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { useAuth } from "@/context/AuthContext";
-import { getCustomerOrders } from "@/lib/orders-service";
+import { getCustomerOrders, cancelOrder, deleteOrder } from "@/lib/orders-service";
 import { 
   Calendar, 
   Package, 
   Search, 
   Filter, 
   ChevronDown, 
-  Clock
+  Clock,
+  Trash2,
+  X
 } from "lucide-react";
 import { 
   Card, 
@@ -28,36 +30,97 @@ import {
   DropdownMenuContent, 
   DropdownMenuCheckboxItem 
 } from "@/components/ui/dropdown-menu";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 import { Order, OrderStatus } from "@/types/order";
 import { format } from "date-fns";
 
 // Real orders will be fetched from the database
 
+
 const CustomerOrders: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      if (!currentUser) return;
-      
-      try {
-        setLoading(true);
-        const customerOrders = await getCustomerOrders(currentUser.id);
-        setOrders(customerOrders);
-      } catch (error) {
-        console.error('❌ Failed to fetch orders:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchOrders = async () => {
+    if (!currentUser) return;
+    
+    try {
+      setLoading(true);
+      const customerOrders = await getCustomerOrders(currentUser.id);
+      setOrders(customerOrders);
+    } catch (error) {
+      console.error('❌ Failed to fetch orders:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load orders. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchOrders();
   }, [currentUser]);
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      await cancelOrder(orderId, currentUser.id);
+      toast({
+        title: "Order Cancelled",
+        description: "Your order has been cancelled successfully.",
+      });
+      // Refresh orders
+      fetchOrders();
+    } catch (error) {
+      console.error('❌ Failed to cancel order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel order. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      await deleteOrder(orderId, currentUser.id);
+      toast({
+        title: "Order Deleted",
+        description: "Your order has been deleted successfully.",
+      });
+      // Refresh orders
+      fetchOrders();
+    } catch (error) {
+      console.error('❌ Failed to delete order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete order. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getStatusBadgeColor = (status: OrderStatus) => {
     switch(status) {
@@ -212,6 +275,8 @@ const CustomerOrders: React.FC = () => {
                       order={order} 
                       getStatusBadgeColor={getStatusBadgeColor}
                       getPickupTimeText={getPickupTimeText}
+                      onCancel={handleCancelOrder}
+                      onDelete={handleDeleteOrder}
                     />
                   ))}
                 </div>
@@ -237,6 +302,8 @@ const CustomerOrders: React.FC = () => {
                       order={order} 
                       getStatusBadgeColor={getStatusBadgeColor}
                       getPickupTimeText={getPickupTimeText}
+                      onCancel={handleCancelOrder}
+                      onDelete={handleDeleteOrder}
                       isCompleted
                     />
                   ))}
@@ -297,6 +364,8 @@ interface OrderCardProps {
   order: Order;
   getStatusBadgeColor: (status: OrderStatus) => string;
   getPickupTimeText: (order: Order) => string;
+  onCancel: (orderId: string) => void;
+  onDelete: (orderId: string) => void;
   isCompleted?: boolean;
 }
 
@@ -304,6 +373,8 @@ const OrderCard: React.FC<OrderCardProps> = ({
   order, 
   getStatusBadgeColor, 
   getPickupTimeText,
+  onCancel,
+  onDelete,
   isCompleted = false
 }) => {
   return (
@@ -359,8 +430,79 @@ const OrderCard: React.FC<OrderCardProps> = ({
           </Badge>
         </div>
         
-        <div className="font-bold">
-          Total: ${order.total.toFixed(2)}
+        <div className="flex items-center gap-3">
+          <div className="font-bold">
+            Total: ${order.total.toFixed(2)}
+          </div>
+          
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            {/* Cancel button - only for pending orders */}
+            {order.status === "pending" && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                  >
+                    <X size={14} className="mr-1" />
+                    Cancel
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-nextplate-darkgray border-gray-800">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-white">Cancel Order?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-gray-400">
+                      Are you sure you want to cancel this order? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="border-gray-700">Keep Order</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={() => onCancel(order.id)}
+                      className="bg-red-500 hover:bg-red-600"
+                    >
+                      Cancel Order
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            
+            {/* Delete button - only for cancelled orders */}
+            {order.status === "cancelled" && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                  >
+                    <Trash2 size={14} className="mr-1" />
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-nextplate-darkgray border-gray-800">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-white">Delete Order?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-gray-400">
+                      Are you sure you want to permanently delete this order? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="border-gray-700">Keep Order</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={() => onDelete(order.id)}
+                      className="bg-red-500 hover:bg-red-600"
+                    >
+                      Delete Order
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
         </div>
       </CardFooter>
     </Card>
